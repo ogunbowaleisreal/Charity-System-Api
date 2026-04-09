@@ -1,0 +1,111 @@
+# name: 🚀 Deploy Backend API to DigitalOcean
+
+# on:
+#   push:
+#     branches:
+#       - main
+
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       # 1️⃣ Checkout repository
+#       - name: Checkout Repository
+#         uses: actions/checkout@v4
+
+#       # 2️⃣ Install dependencies & build 
+#       - name: Install & Build
+#         run: |
+#           npm ci
+#           npm run build
+
+#       # 3️⃣ Setup SSH
+#       - name: Setup SSH
+#         run: |
+#           mkdir -p ~/.ssh
+#           echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+#           chmod 600 ~/.ssh/id_ed25519
+#           ssh-keyscan -H ${{ secrets.DEPLOY_IP }} >> ~/.ssh/known_hosts
+
+#       # 4️⃣ Deploy code, ecosystem file & restart PM2
+#       - name: Deploy to Droplet
+#         run: |
+#           # Upload build output
+#           rsync -avz --delete dist \
+#             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_IP }}:/var/www/floathr-backend/
+
+#           # Upload package files
+#           rsync -avz package.json package-lock.json \
+#             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_IP }}:/var/www/floathr-backend/
+
+#           # ✅ Upload ecosystem file
+#           rsync -avz ecosystem.config.js \
+#             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_IP }}:/var/www/floathr-backend/
+
+#           # Remote commands
+#           ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
+#             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_IP }} << 'EOF'
+#               cd /var/www/floathr-backend
+
+#               # Load Node environment (NVM)
+#               export NVM_DIR="$HOME/.nvm"
+#               [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+#               [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+#               # Install production dependencies
+#               npm ci --production
+
+#               # Safe zero-downtime restart using ecosystem file
+#               pm2 reload ecosystem.config.js --env production
+#           EOF
+
+
+# # name: Deploy Backend API to DigitalOcean
+
+# # on:
+# #   push:
+# #     branches:
+# #       - main
+
+# # jobs:
+# #   deploy:
+# #     runs-on: ubuntu-latest
+
+# #     steps:
+# #       - name: Checkout code
+# #         uses: actions/checkout@v4
+
+# #       - name: Setup Node.js
+# #         uses: actions/setup-node@v4
+# #         with:
+# #           node-version: 18
+
+# #       - name: Install dependencies
+# #         run: npm ci
+
+# #       - name: Build backend
+# #         run: npm run build
+
+# #       - name: Upload backend to server
+# #         uses: appleboy/scp-action@v0.1.7
+# #         with:
+# #           host: ${{ secrets.DEPLOY_IP }}
+# #           username: root
+# #           key: ${{ secrets.DEPLOY_SSH_KEY }}
+# #           source: "dist,package.json,package-lock.json,ecosystem.config.js"
+# #           target: "/var/www/floathr-backend"
+
+# #       - name: Restart API
+# #         uses: appleboy/ssh-action@v1.2.0
+# #         with:
+# #           host: ${{ secrets.DEPLOY_IP }}
+# #           username: root
+# #           key: ${{ secrets.DEPLOY_SSH_KEY }}
+# #           script: |
+# #             cd /var/www/floathr-backend
+# #             npm install --production
+# #             pm2 restart floathr-api || pm2 start dist/server.js --name floathr-api
+# #             pm2 save
+# #             sudo nginx -t
+# #             sudo systemctl reload nginx
