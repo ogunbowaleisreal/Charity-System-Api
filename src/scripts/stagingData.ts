@@ -35,7 +35,7 @@
 
 // moveData();
 import mongoose from "mongoose";
-import { Account, IUser } from "../models/Accounts"; // adjust path
+import { Account } from "../models/Accounts"; // adjust path
 import ConsultantProfile from "../models/ConsultantProfile"; // adjust path
 import dotenv from "dotenv"
 

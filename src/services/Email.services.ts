@@ -4,7 +4,7 @@ import Mailgun from "mailgun.js";
 import logger from "../logger";
 import { EnquiryDocument } from "../models/clientEnquiries";
 import { IBids } from "../models/Bids";
-import { IUser } from "../models/Accounts";
+//import { IUser } from "../models/Accounts";
 //import { IUser, IVendor } from "@/types";
 // import { IWedding } from "@/models/Wedding";
 // import { IGuest } from "@/models/Guest";
@@ -442,7 +442,7 @@ class EmailService {
 
 
   private getBidApprovalOrDeclineTemplate(
-    consultant: IUser,
+    consultant: any,
     bid: IBids,
     status: "approved" | "declined"
   ): string {
@@ -1808,6 +1808,7 @@ class EmailService {
     </html>
   `;
   }
+
   private getOTPEmailTemplate(
     otp: string,
     type: "registration" | "password_reset" | "2fa"
@@ -1818,7 +1819,7 @@ class EmailService {
           return {
             title: "Verify Your Account",
             message:
-              "Thank you for registering with Floathr. Please use the OTP below to verify your account.",
+              "Thank you for registering with Help Me Nigeria. Please use the OTP below to verify your account.",
           };
         case "password_reset":
           return {
@@ -1850,18 +1851,22 @@ class EmailService {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>${title}</title>
     </head>
-    <body style="margin: 0; padding: 0; background-color: #e6f0fa; font-family: Arial, sans-serif;">
+    <body style="margin: 0; padding: 0; background-color: #e8f5e9; font-family: Arial, sans-serif;">
       <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px;">
+        
+        <!-- Header -->
         <div style="text-align: center; padding: 20px 0;">
-          <h1 style="color: #1a73e8; margin: 0;">Floathr</h1>
+          <h1 style="color: #2e7d32; margin: 0;">Help Me Nigeria</h1>
         </div>
         
-        <div style="padding: 20px; background-color: #f0f6ff; border-radius: 8px; margin: 20px 0;">
-          <h2 style="color: #1a73e8; margin-top: 0;">${title}</h2>
+        <!-- Content -->
+        <div style="padding: 20px; background-color: #f1f8f4; border-radius: 8px; margin: 20px 0;">
+          <h2 style="color: #2e7d32; margin-top: 0;">${title}</h2>
           <p style="color: #555; line-height: 1.6;">${message}</p>
           
+          <!-- OTP Box -->
           <div style="text-align: center; margin: 30px 0;">
-            <div style="background-color: #1a73e8; color: white; padding: 15px 30px; border-radius: 4px; font-size: 24px; font-weight: bold; letter-spacing: 3px; display: inline-block;">
+            <div style="background-color: #2e7d32; color: white; padding: 15px 30px; border-radius: 4px; font-size: 24px; font-weight: bold; letter-spacing: 3px; display: inline-block;">
               ${otp}
             </div>
           </div>
@@ -1871,14 +1876,86 @@ class EmailService {
           </p>
         </div>
         
+        <!-- Footer -->
         <div style="text-align: center; padding: 20px 0; color: #888; font-size: 12px;">
-          <p>© 2024 Floathr. All rights reserved.</p>
+          <p>© 2026 Help Me Nigeria. All rights reserved.</p>
         </div>
       </div>
     </body>
   </html>
 `;
   }
+  //   private getOTPEmailTemplate(
+  //     otp: string,
+  //     type: "registration" | "password_reset" | "2fa"
+  //   ): string {
+  //     const getTemplateContent = (type: string) => {
+  //       switch (type) {
+  //         case "registration":
+  //           return {
+  //             title: "Verify Your Account",
+  //             message:
+  //               "Thank you for registering with Floathr. Please use the OTP below to verify your account.",
+  //           };
+  //         case "password_reset":
+  //           return {
+  //             title: "Reset Your Password",
+  //             message:
+  //               "You have requested to reset your password. Please use the OTP below to proceed.",
+  //           };
+  //         case "2fa":
+  //           return {
+  //             title: "Two-Factor Authentication",
+  //             message:
+  //               "Please use the OTP below to complete your two-factor authentication and secure your account.",
+  //           };
+  //         default:
+  //           return {
+  //             title: "Verification Required",
+  //             message: "Please use the OTP below to proceed with verification.",
+  //           };
+  //       }
+  //     };
+
+  //     const { title, message } = getTemplateContent(type);
+
+  //     return `
+  //   <!DOCTYPE html>
+  //   <html>
+  //     <head>
+  //       <meta charset="utf-8">
+  //       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  //       <title>${title}</title>
+  //     </head>
+  //     <body style="margin: 0; padding: 0; background-color: #e6f0fa; font-family: Arial, sans-serif;">
+  //       <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px;">
+  //         <div style="text-align: center; padding: 20px 0;">
+  //           <h1 style="color: #1a73e8; margin: 0;">Floathr</h1>
+  //         </div>
+
+  //         <div style="padding: 20px; background-color: #f0f6ff; border-radius: 8px; margin: 20px 0;">
+  //           <h2 style="color: #1a73e8; margin-top: 0;">${title}</h2>
+  //           <p style="color: #555; line-height: 1.6;">${message}</p>
+
+  //           <div style="text-align: center; margin: 30px 0;">
+  //             <div style="background-color: #1a73e8; color: white; padding: 15px 30px; border-radius: 4px; font-size: 24px; font-weight: bold; letter-spacing: 3px; display: inline-block;">
+  //               ${otp}
+  //             </div>
+  //           </div>
+
+  //           <p style="color: #555; font-size: 14px;">
+  //             This OTP will expire in 10 minutes. If you didn't request this, please ignore this email.
+  //           </p>
+  //         </div>
+
+  //         <div style="text-align: center; padding: 20px 0; color: #888; font-size: 12px;">
+  //           <p>© 2024 Floathr. All rights reserved.</p>
+  //         </div>
+  //       </div>
+  //     </body>
+  //   </html>
+  // `;
+  //   }
 
 
   // private getOTPEmailTemplate(

@@ -7,7 +7,7 @@ import { HTTP_STATUS, ERROR_CODES } from "../utils/constants";
 import { CacheService } from "../services/cacheServices";
 import logger from "../logger";
 import { Account } from "../models/Accounts";
-import { IUser } from "../models/Accounts";
+//import { IUser } from "../models/Accounts";
 // import { Listing } from "@/models/Listing";
 //import { AuthenticatedRequest } from "./verifyClients";
 import { JWTPayload } from "../types/auth";
@@ -225,173 +225,173 @@ const requireRole = (roles: string[]) => {
     };
 };
 
-const getUserSubscriptionData = async (userId: string) => {
-    const cacheKey = `user_subscription:${userId}`;
+// const getUserSubscriptionData = async (userId: string) => {
+//     const cacheKey = `user_subscription:${userId}`;
 
-    let subscriptionData = await CacheService.get<{
-        subscriptionPlan?: string | undefined;
-        subscriptionEndDate?: Date | undefined;
-        subscriptionStartDate?: Date | undefined;
-    }>(cacheKey);
+//     let subscriptionData = await CacheService.get<{
+//         subscriptionPlan?: string | undefined;
+//         subscriptionEndDate?: Date | undefined;
+//         subscriptionStartDate?: Date | undefined;
+//     }>(cacheKey);
 
-    if (!subscriptionData) {
-        const user = await Account.findById(userId)
-            .select(
-                "subscriptionPlan subscriptionStatus subscriptionEndDate subscriptionStartDate"
-            )
-            .lean();
+//     if (!subscriptionData) {
+//         const user = await Account.findById(userId)
+//             .select(
+//                 "subscriptionPlan subscriptionStatus subscriptionEndDate subscriptionStartDate"
+//             )
+//             .lean();
 
-        if (user) {
-            subscriptionData = {
-                subscriptionPlan: user.subscriptionPlan || "free",
-                subscriptionEndDate: user.subscriptionEndDate,
-                subscriptionStartDate: user.subscriptionStartDate,
-            };
+//         if (user) {
+//             subscriptionData = {
+//                 subscriptionPlan: user.subscriptionPlan || "free",
+//                 subscriptionEndDate: user.subscriptionEndDate,
+//                 subscriptionStartDate: user.subscriptionStartDate,
+//             };
 
-            await CacheService.set(cacheKey, subscriptionData, 300);
-        }
-    }
+//             await CacheService.set(cacheKey, subscriptionData, 300);
+//         }
+//     }
 
-    return subscriptionData;
-};
+//     return subscriptionData;
+// };
 
-const attachSubscriptionInfo = async (req: AuthenticatedRequest) => {
-    const { user } = req;
+// const attachSubscriptionInfo = async (req: AuthenticatedRequest) => {
+//     const { user } = req;
 
-    if (!user || user.role !== "vendor") {
-        return;
-    }
+//     if (!user || user.role !== "vendor") {
+//         return;
+//     }
 
-    const subscriptionData = await getUserSubscriptionData(
-        user.userId || user.id
-    );
+//     const subscriptionData = await getUserSubscriptionData(
+//         user.userId || user.id
+//     );
 
-    if (!subscriptionData) {
-        req.subscription = {
-            plan: "free" as const,
-            currentPeriod: {
-                start: new Date(),
-                end: null,
-            },
-            isExpired: false,
-            daysUntilExpiry: Infinity,
-        };
-        return;
-    }
+//     if (!subscriptionData) {
+//         req.subscription = {
+//             plan: "free" as const,
+//             currentPeriod: {
+//                 start: new Date(),
+//                 end: null,
+//             },
+//             isExpired: false,
+//             daysUntilExpiry: Infinity,
+//         };
+//         return;
+//     }
 
-    const now = new Date();
-    const subscriptionPlan = subscriptionData.subscriptionPlan || "free";
-    const subscriptionEndDate = subscriptionData.subscriptionEndDate
-        ? new Date(subscriptionData.subscriptionEndDate)
-        : null;
-    const subscriptionStartDate = subscriptionData.subscriptionStartDate
-        ? new Date(subscriptionData.subscriptionStartDate)
-        : null;
+//     const now = new Date();
+//     const subscriptionPlan = subscriptionData.subscriptionPlan || "free";
+//     const subscriptionEndDate = subscriptionData.subscriptionEndDate
+//         ? new Date(subscriptionData.subscriptionEndDate)
+//         : null;
+//     const subscriptionStartDate = subscriptionData.subscriptionStartDate
+//         ? new Date(subscriptionData.subscriptionStartDate)
+//         : null;
 
-    // Check if subscription is expired (only for standard plans)
-    const isExpired =
-        subscriptionPlan === "standard" &&
-        subscriptionEndDate &&
-        now > subscriptionEndDate;
+//     // Check if subscription is expired (only for standard plans)
+//     const isExpired =
+//         subscriptionPlan === "standard" &&
+//         subscriptionEndDate &&
+//         now > subscriptionEndDate;
 
-    const daysUntilExpiry =
-        subscriptionPlan === "standard" && subscriptionEndDate
-            ? Math.ceil(
-                (subscriptionEndDate.getTime() - now.getTime()) /
-                (24 * 60 * 60 * 1000)
-            )
-            : Infinity;
+//     const daysUntilExpiry =
+//         subscriptionPlan === "standard" && subscriptionEndDate
+//             ? Math.ceil(
+//                 (subscriptionEndDate.getTime() - now.getTime()) /
+//                 (24 * 60 * 60 * 1000)
+//             )
+//             : Infinity;
 
-    req.subscription = {
-        plan: subscriptionPlan as "free" | "standard",
-        currentPeriod: {
-            start: subscriptionStartDate || new Date(),
-            end: subscriptionEndDate || new Date("2099-12-31"),
-        },
-        isExpired: isExpired || false,
-        daysUntilExpiry,
-    };
-};
+//     req.subscription = {
+//         plan: subscriptionPlan as "free" | "standard",
+//         currentPeriod: {
+//             start: subscriptionStartDate || new Date(),
+//             end: subscriptionEndDate || new Date("2099-12-31"),
+//         },
+//         isExpired: isExpired || false,
+//         daysUntilExpiry,
+//     };
+// };
 
-const allowFreePlan = async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction
-) => {
-    const { user } = req;
+// const allowFreePlan = async (
+//     req: AuthenticatedRequest,
+//     res: Response,
+//     next: NextFunction
+// ) => {
+//     const { user } = req;
 
-    if (!user || user.role !== "vendor") {
-        sendErrorResponse(
-            res,
-            "Access denied. Vendors only.",
-            HTTP_STATUS.FORBIDDEN
-        );
-        return;
-    }
+//     if (!user || user.role !== "vendor") {
+//         sendErrorResponse(
+//             res,
+//             "Access denied. Vendors only.",
+//             HTTP_STATUS.FORBIDDEN
+//         );
+//         return;
+//     }
 
-    await attachSubscriptionInfo(req);
+//     await attachSubscriptionInfo(req);
 
-    const subscriptionPlan = req.subscription?.plan || "free";
+//     const subscriptionPlan = req.subscription?.plan || "free";
 
-    if (subscriptionPlan === "free") {
-        return next();
-    }
+//     if (subscriptionPlan === "free") {
+//         return next();
+//     }
 
-    // For standard plan users, check if expired
-    if (subscriptionPlan === "standard" && req.subscription?.isExpired) {
-        return sendErrorResponse(
-            res,
-            "Your subscription has expired. Please renew to continue using premium features.",
-            HTTP_STATUS.PAYMENT_REQUIRED,
-            "SUBSCRIPTION_EXPIRED"
-        );
-    }
+//     // For standard plan users, check if expired
+//     if (subscriptionPlan === "standard" && req.subscription?.isExpired) {
+//         return sendErrorResponse(
+//             res,
+//             "Your subscription has expired. Please renew to continue using premium features.",
+//             HTTP_STATUS.PAYMENT_REQUIRED,
+//             "SUBSCRIPTION_EXPIRED"
+//         );
+//     }
 
-    return next();
-};
+//     return next();
+// };
 
-const requireStandardPlan = async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction
-) => {
-    const { user } = req;
+// const requireStandardPlan = async (
+//     req: AuthenticatedRequest,
+//     res: Response,
+//     next: NextFunction
+// ) => {
+//     const { user } = req;
 
-    if (!user || user.role !== "vendor") {
-        sendErrorResponse(
-            res,
-            "Access denied. Vendors only.",
-            HTTP_STATUS.FORBIDDEN
-        );
-        return;
-    }
+//     if (!user || user.role !== "vendor") {
+//         sendErrorResponse(
+//             res,
+//             "Access denied. Vendors only.",
+//             HTTP_STATUS.FORBIDDEN
+//         );
+//         return;
+//     }
 
-    await attachSubscriptionInfo(req);
+//     await attachSubscriptionInfo(req);
 
-    const subscriptionPlan = req.subscription?.plan || "free";
+//     const subscriptionPlan = req.subscription?.plan || "free";
 
-    // Check if user has standard plan
-    if (subscriptionPlan !== "standard") {
-        return sendErrorResponse(
-            res,
-            "This feature requires a Standard subscription plan",
-            HTTP_STATUS.PAYMENT_REQUIRED,
-            "SUBSCRIPTION_REQUIRED"
-        );
-    }
+//     // Check if user has standard plan
+//     if (subscriptionPlan !== "standard") {
+//         return sendErrorResponse(
+//             res,
+//             "This feature requires a Standard subscription plan",
+//             HTTP_STATUS.PAYMENT_REQUIRED,
+//             "SUBSCRIPTION_REQUIRED"
+//         );
+//     }
 
-    // Check if standard plan is expired
-    if (req.subscription?.isExpired) {
-        return sendErrorResponse(
-            res,
-            "Your subscription has expired. Please renew to continue using this feature.",
-            HTTP_STATUS.PAYMENT_REQUIRED,
-            "SUBSCRIPTION_EXPIRED"
-        );
-    }
+//     // Check if standard plan is expired
+//     if (req.subscription?.isExpired) {
+//         return sendErrorResponse(
+//             res,
+//             "Your subscription has expired. Please renew to continue using this feature.",
+//             HTTP_STATUS.PAYMENT_REQUIRED,
+//             "SUBSCRIPTION_EXPIRED"
+//         );
+//     }
 
-    return next();
-};
+//     return next();
+// };
 
 // const checkListingPermissions = async (
 //   req: AuthenticatedRequest,
@@ -468,28 +468,28 @@ const requireStandardPlan = async (
 // };
 
 // Non-blocking subscription status check
-const checkSubscriptionStatus = async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction
-) => {
-    await attachSubscriptionInfo(req);
-    next();
-};
+// const checkSubscriptionStatus = async (
+//     req: AuthenticatedRequest,
+//     res: Response,
+//     next: NextFunction
+// ) => {
+//     await attachSubscriptionInfo(req);
+//     next();
+// };
 
-// For Premium features (standard plan required)
-const requireVendorWithStandardPlan = [
-    verifyClientToken,
-    requireRole(["vendor"]),
-    requireStandardPlan,
-];
+// // For Premium features (standard plan required)
+// const requireVendorWithStandardPlan = [
+//     verifyClientToken,
+//     requireRole(["vendor"]),
+//     requireStandardPlan,
+// ];
 
-// For basic vendor operations (allows free plan)
-const requireVendorBasicAccess = [
-    verifyClientToken,
-    requireRole(["vendor"]),
-    allowFreePlan,
-];
+// // For basic vendor operations (allows free plan)
+// const requireVendorBasicAccess = [
+//     verifyClientToken,
+//     requireRole(["vendor"]),
+//     allowFreePlan,
+// ];
 
 // const requireVendorForListings = [
 //   verifyClientToken,
@@ -499,7 +499,7 @@ const requireVendorBasicAccess = [
 
 const authenticateWithSubscriptionCheck = [
     verifyClientToken,
-    checkSubscriptionStatus,
+    // checkSubscriptionStatus,
 ];
 
 export {
@@ -509,14 +509,14 @@ export {
     optionalClientAuth,
 
     // Subscription middlewares
-    requireStandardPlan, // For premium features only
-    allowFreePlan, // NEW: Allows free plan users
-    checkSubscriptionStatus,
+    // requireStandardPlan, // For premium features only
+    // allowFreePlan, // NEW: Allows free plan users
+    //checkSubscriptionStatus,
     //checkListingPermissions, // NEW: For listing operations
 
     // Combined middlewares
-    requireVendorWithStandardPlan, // For premium features
-    requireVendorBasicAccess, // NEW: For basic vendor operations
+    // requireVendorWithStandardPlan, // For premium features
+    // requireVendorBasicAccess, // NEW: For basic vendor operations
     //requireVendorForListings, // NEW: For listing operations ( for posting listings)
     authenticateWithSubscriptionCheck,
 };

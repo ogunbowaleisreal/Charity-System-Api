@@ -14,7 +14,7 @@ export class Notification {
             const account = await Account.findById(userId);
             if (!account) throw new Error("Account not found");
 
-            if (account.role === "client") throw new Error("Unauthorized client account");
+            // if (account.role === "user") throw new Error("Unauthorized client account");
 
 
             await NotificationService.saveToken(userId, token);

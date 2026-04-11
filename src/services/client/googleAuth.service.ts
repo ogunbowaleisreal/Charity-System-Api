@@ -76,7 +76,7 @@ export class GoogleAuthService {
         /**
          * 4️⃣ Account state checks
          */
-        if (user.status === "restricted") {
+        if (user.status === "suspended") {
             throw {
                 message: "Account is restricted. Contact support.",
                 statusCode: HTTP_STATUS.FORBIDDEN,

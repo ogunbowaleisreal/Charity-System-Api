@@ -8,11 +8,13 @@ import { CacheService } from "../../services/cacheServices";
 import { Account } from "../../models/Accounts";
 import jwtUtil from "../../utils/jwt";
 import { OTPService } from "../otp.services";
-import { IUser } from "../../models/Accounts";
+import { IAccount } from "../../models/Accounts";
 import { LoginRequest, AuthResponse } from "../../types/auth";
 import { HTTP_STATUS } from "../../utils/constants";
+//import OTPService from "../otp.services";
 import logger from "../../logger";
 import { clientJwtPayload } from "../../types/clientAuth";
+
 
 
 const otpService = new OTPService();
@@ -42,14 +44,14 @@ export class authService {
     }
 
     private formatLoginResponse = async (
-        user: IUser,
+        user: IAccount,
         tokens: {
             accessToken: string;
             refreshToken: string;
             expiresIn: number;
         }
     ): Promise<AuthResponse> => {
-        if (user.role === "client") {
+        if (user.role === "user") {
             return {
                 // message: "Account verified successfully",
                 user: {
@@ -59,12 +61,19 @@ export class authService {
                     email: user.email,
                     role: user.role,
                     status: user.status,
-                    isVerified: user.verified,
+                    isVerified: user.isVerified,
                     // profilePicture: user.profilePicture,
-                    phone: user.phone,
+                    phone: user.phoneNumber,
+                    country: user.country,
+                    houseAddress: user.houseAddress,
+                    state: user.state,
+                    visibility: user.visibility,
+                    dateOfBirth: user.dateOfBirth,
+                    gender: user.gender,
+                    profilePicture: user.profilePicture,
                     // businessName: user.businessName,
-                    companyName: user.companyName,
-                    businessCategory: user.businessCategory,
+                    //companyName: user.companyName,
+                    // businessCategory: user.businessCategory,
                     // businessPhone: user.businessPhone,
                     // businessAddress: user.businessAddress,
                     // location: user.location,
@@ -72,31 +81,36 @@ export class authService {
                     // totalListings: user.totalListings,
                     // averageRating: user.averageRating,
                     // totalReviews: user.totalReviews,
-                    subscriptionPlan: user.subscriptionPlan,
-                    subscriptionStartDate: user.subscriptionStartDate,
-                    subscriptionEndDate: user.subscriptionEndDate,
-                    subscibtionStatus: user.subscriptionStatus,
+                    // subscriptionPlan: user.subscriptionPlan,
+                    // subscriptionStartDate: user.subscriptionStartDate,
+                    // subscriptionEndDate: user.subscriptionEndDate,
+                    // subscibtionStatus: user.subscriptionStatus,
                     // orderNotifications: user.orderNotifications,
-                    // twoFactorEnabled: user.twoFactorEnabled,
-                    //createdAt: user.createdAt,
-                    //updatedAt: user.updatedAt,
+                    twoFactorEnabled: user.twoFactorEnabled,
+                    createdAt: user.createdAt,
+                    updatedAt: user.updatedAt,
                 } as any,
                 tokens,
             };
         }
-        console.log("got here")
+        // console.log("got here")
         return {
             // message: "Account verified successfully",
             user: {
                 id: user._id as string,
                 email: user.email,
                 firstName: user.firstName,
-                phone: user.phone,
-                //profilePicture: user.profilePicture,
                 lastName: user.lastName,
+                phone: user.phoneNumber,
+                profilePicture: user.profilePicture,
+                logo: user.logo,
+                //lastName: user.lastName,
                 role: user.role,
                 gender: user.gender,
-                isVerified: user.verified,
+                isVerified: user.isVerified,
+                twoFactorEnabled: user.twoFactorEnabled,
+                companyName: user.companyName,
+                organizationType: user.organizationType,
 
                 //twoFactorEnabled: user.twoFactorEnabled,
             },
@@ -127,17 +141,17 @@ export class authService {
         //     }
 
         // check is account is verified
-        // if (!user.isVerified) {
-        //   this.otpService.generateAndSendOTP(email, "registration");
-        //   throw {
-        //     success: true,
-        //     message:
-        //       "Just one more step! We've sent a verification code to your email. Please check your inbox and enter the code to complete your login.",
-        //     statusCode: HTTP_STATUS.LOCKED,
-        //   };
+        // if (!client.isVerified) {
+        //     otpService.generateAndSendOTP(email, "registration");
+        //     throw {
+        //         success: true,
+        //         message:
+        //             "Just one more step! We've sent a verification code to your email. Please check your inbox and enter the code to complete your login.",
+        //         statusCode: HTTP_STATUS.LOCKED,
+        //     };
         // }
 
-        if (client.status === "restricted") {
+        if (client.status === "suspended") {
             throw {
                 message:
                     "Your account has been suspended by the administrator due to a violation of our policies. Please contact support for further assistance.",
@@ -165,16 +179,16 @@ export class authService {
         // user.lastLogin = new Date();
         // await user.save();
 
-        // if (user.twoFactorEnabled) {
-        //   this.otpService.generateAndSendOTP(email, "2fa");
+        if (client.twoFactorEnabled) {
+            otpService.generateAndSendOTP(email, "2fa");
 
-        //   throw {
-        //     message:
-        //       "Just one more step! We've sent a verification code to your email. Please check your inbox and enter the code to complete your login.",
-        //     success: true,
-        //     statusCode: HTTP_STATUS.FORBIDDEN,
-        //   };
-        // }
+            throw {
+                message:
+                    "Just one more step! We've sent a verification code to your email. Please check your inbox and enter the code to complete your login.",
+                success: true,
+                statusCode: HTTP_STATUS.FORBIDDEN,
+            };
+        }
         // compmare password for client
         const isPasswordValid = await bcryptUtil.comparePassword(
             password, client.password as string
@@ -198,6 +212,34 @@ export class authService {
             tokens.refreshToken,
             ip,
             userAgent
+        );
+
+        return this.formatLoginResponse(client, tokens);
+    }
+
+    async verify2FA(email: string, otp: string) {
+        const client = await Account.findOne({ email });
+        if (!client) {
+            throw { message: "User not found", statusCode: HTTP_STATUS.NOT_FOUND };
+        }
+        // const user = await Account.findByEmail(email);
+        // if (!user) {
+        //   throw { message: "User not found", statusCode: HTTP_STATUS.NOT_FOUND };
+        // }
+
+        await otpService.verifyOTP(email, otp, "2fa");
+
+        const tokens = jwtUtil.generateTokenPair({
+            userId: client._id as string,
+            email: client.email,
+            role: client.role,
+        });
+
+        await this.saveRefreshToken(
+            tokens.tokenId,
+            client._id as string,
+            client.role,
+            tokens.refreshToken
         );
 
         return this.formatLoginResponse(client, tokens);

@@ -117,9 +117,13 @@ export interface AuthResponse {
         gender?: string;
         status?: string;
         profilePicture?: string;
+        logo?: string;
         totalViews?: number;
         totalListings?: number;
         averageRating?: number;
+        twoFactorEnabled?: boolean;
+        companyName?: string;
+        organizationType?: string;
         totalReviews?: number;
         subscriptionPlan?: string;
         subscriptionStartDate?: Date;
