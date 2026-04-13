@@ -4,6 +4,7 @@ import authRoutes from './auth.route'
 import profileRoutes from "./profile.routes"
 //import subscriptionRoutes from "./subscription"
 import accountRoutes from "./accounts.route"
+import campaignRoutes from "./campaign.routes"
 import faqRoutes from './faq.routes'
 //import bidRoutes from "./bid.routes"
 //import assignmentRoutes from "./assignments.routes"
@@ -25,6 +26,7 @@ router.use('/profile', profileRoutes)
 //router.use('/subscription', subscriptionRoutes)
 router.use('/account', accountRoutes)
 router.use('/faqs', faqRoutes)
+router.use('/campaign', campaignRoutes)
 //router.use('/bid', bidRoutes)
 //router.use('/assignments', assignmentRoutes)
 //router.use("/requests", requestRoutes)

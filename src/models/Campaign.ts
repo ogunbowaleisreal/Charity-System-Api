@@ -1,4 +1,5 @@
 import mongoose, { Schema, model, Document, Types } from "mongoose";
+import { ref } from "process";
 
 export interface ICampaign extends Document {
     // ===== BASIC =====
@@ -93,7 +94,12 @@ const CampaignSchema = new Schema<ICampaign>(
             required: true,
         },
 
-        tags: [String],
+        tags: [{
+            type: Types.ObjectId,
+            trim: true,
+            ref: "Tag",
+            required: true,
+        }],
 
         // ===== OWNER =====
         owner: {

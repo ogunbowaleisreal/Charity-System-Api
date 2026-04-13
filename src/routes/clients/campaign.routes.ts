@@ -16,33 +16,33 @@ router.use(verifyClientToken);
 // =============================
 // 🔹 CAMPAIGNS
 // =============================
-router.post("/campaign/create", campaignCtrl.createCampaign);
+router.post("/create", campaignCtrl.createCampaign);
 
-router.patch("/campaign/update/:campaignId", campaignCtrl.updateCampaign);
+router.patch("/update/:campaignId", campaignCtrl.updateCampaign);
 
-router.delete("/campaign/delete/:campaignId", campaignCtrl.deleteCampaign);
+router.delete("/delete/:campaignId", campaignCtrl.deleteCampaign);
 
 // =============================
 // 🔹 FETCH CAMPAIGNS
 // =============================
-router.get("/campaigns", campaignCtrl.getAllCampaigns);
+router.get("/", campaignCtrl.getAllCampaigns);
 
-router.get("/campaign/:campaignId", campaignCtrl.getCampaignById);
+router.get("/:campaignId", campaignCtrl.getCampaignById);
 
-router.get("/campaign/user/all", campaignCtrl.getUserCampaigns);
+router.get("/user/all", campaignCtrl.getUserCampaigns);
 
 // =============================
 // 🔹 STATS
 // =============================
-router.get("/campaign/stats/:campaignId", campaignCtrl.getCampaignStats);
+router.get("/stats/:campaignId", campaignCtrl.getCampaignStats);
 
-router.get("/campaign/user/stats", campaignCtrl.getUserCampaignStats);
+router.get("/user/stats", campaignCtrl.getUserCampaignStats);
 
 // =============================
 // 🔹 DONATIONS
 // =============================
 router.get(
-    "/campaign/:campaignId/donations",
+    "/:campaignId/donations",
     campaignCtrl.getCampaignDonations
 );
 
@@ -50,17 +50,17 @@ router.get(
 // 🔹 COMMENTS
 // =============================
 router.post(
-    "/campaign/:campaignId/comment",
+    "/:campaignId/comment",
     campaignCtrl.addComment
 );
 
 router.get(
-    "/campaign/:campaignId/comments",
+    "/:campaignId/comments",
     campaignCtrl.getCampaignComments
 );
 
 router.delete(
-    "/campaign/comment/:commentId",
+    "/comment/:commentId",
     campaignCtrl.deleteComment
 );
 
@@ -68,7 +68,7 @@ router.delete(
 // 🔹 PREFERENCES
 // =============================
 router.patch(
-    "/campaign/:campaignId/preferences",
+    "/:campaignId/preferences",
     campaignCtrl.updatePreferences
 );
 
@@ -76,7 +76,7 @@ router.patch(
 // 🔹 INTERNAL (WEBHOOK / SYSTEM)
 // =============================
 router.post(
-    "/campaign/donation/confirm",
+    "/donation/confirm",
     campaignCtrl.confirmDonation
 );
 
