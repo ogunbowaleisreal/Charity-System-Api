@@ -150,6 +150,12 @@ export class authService {
         //         statusCode: HTTP_STATUS.LOCKED,
         //     };
         // }
+        if (client.isDeleted) {
+            throw {
+                message: "Account has been deleted",
+                statusCode: HTTP_STATUS.FORBIDDEN,
+            };
+        }
 
         if (client.status === "suspended") {
             throw {
@@ -354,15 +360,7 @@ export class authService {
         }
     }
 
-    async deleteAccount(userId: mongoose.Types.ObjectId) {
-        const deletedData = await Account.deleteOne({ _id: userId });
-        const deletedRefreshTokens = await RefreshToken.deleteMany({ userId: userId });
-        if (deletedData.deletedCount && deletedData.deletedCount > 0) {
-            return true;
-        } else {
-            return false;
-        }
-    }
+
 
     async verifyRefreshToken(token: string) {
         const hashedtoken = hashToken(token);

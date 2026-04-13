@@ -21,7 +21,7 @@ export class authController {
             if (!firstName || !lastName || !password || !email || !phoneNumber || !role) {
                 return res.status(400).json({ message: "username, password and email are required" })
             }
-            const user = await Account.findOne({ email })
+            const user = await Account.findOne({ email, isDeleted: false })
             if (!user) {
                 const hashedPassword = await bcryptUtil.hashPassword(password);
                 const newUser = new Account({
@@ -167,22 +167,7 @@ export class authController {
         }
     }
 
-    async deleteAccount(req: Request, res: Response) {
-        try {
-            const { email } = req.body;
-            if (!email) {
-                return res.status(400).json({ message: "Email is required" });
-            }
-            const deleted = await Authservice.deleteAccount(email);
-            if (deleted) {
-                return res.status(200).json({ message: "Account deleted successfully" });
-            } else {
-                return res.status(400).json({ message: "Account not found" });
-            }
-        } catch (err) {
-            return res.status(500).json({ message: "Internal Server Error", error: err })
-        }
-    }
+
 
     async refreshToken(req: Request, res: Response, next: NextFunction) {
         try {

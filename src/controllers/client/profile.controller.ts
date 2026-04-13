@@ -7,6 +7,7 @@ import { authService } from "../../services/client/Auth.services";
 import { sendSuccessResponse, sendErrorResponse } from "../../utils/helpers";
 import { AuthenticatedClientRequest } from "../../middleware/auth";
 import { th } from "zod/v4/locales";
+import { cli } from "winston/lib/winston/config";
 
 
 const clientServices = new clientProfileServices()
@@ -45,6 +46,23 @@ export class profileController {
             //sendErrorResponse(res, "update failed", 403)
         }
 
+    }
+
+    async deleteAccount(req: Request, res: Response) {
+        try {
+            const { email } = req.body;
+            if (!email) {
+                return res.status(400).json({ message: "Email is required" });
+            }
+            const deleted = await clientServices.deleteAccount(email);
+            if (deleted) {
+                return res.status(200).json({ message: "Account deleted successfully", data: deleted });
+            } else {
+                return res.status(400).json({ message: "Account not found" });
+            }
+        } catch (err) {
+            return res.status(500).json({ message: "Internal Server Error", error: err })
+        }
     }
 
     async changePassword(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {

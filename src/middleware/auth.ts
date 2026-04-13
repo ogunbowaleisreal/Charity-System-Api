@@ -123,6 +123,14 @@ const verifyClientToken = async (
                 ERROR_CODES.USER_NOT_FOUND
             );
         }
+        if (user.isDeleted) {
+            return sendErrorResponse(
+                res,
+                "Account has been deleted",
+                HTTP_STATUS.UNAUTHORIZED,
+                ERROR_CODES.USER_NOT_FOUND
+            );
+        }
 
         if (user.status === "restricted") {
             return sendErrorResponse(

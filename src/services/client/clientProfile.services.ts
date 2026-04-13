@@ -4,6 +4,7 @@ import clientProfile from "../../models/clientProfile";
 import { ClientSubscription } from "../../models/clientSubcription";
 import { Account } from "../../models/Accounts";
 import { IAccount } from "../../models/Accounts";
+import RefreshToken from "../../models/refresh.token";
 // import { comparePassword } from "../../utils/hash.utils";
 
 export class clientProfileServices {
@@ -99,5 +100,15 @@ export class clientProfileServices {
         //     delete profile.account.subscriptionPlan;
         // }
         // return null
+    }
+
+    async deleteAccount(userId: mongoose.Types.ObjectId) {
+        const updatedData = await Account.findByIdAndUpdate({ _id: userId }, { isDeleted: true }, { new: true });
+        const deletedRefreshTokens = await RefreshToken.deleteMany({ userId: userId });
+        if (updatedData) {
+            return updatedData;
+        } else {
+            return false;
+        }
     }
 }

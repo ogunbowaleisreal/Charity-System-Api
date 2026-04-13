@@ -63,6 +63,7 @@ export interface IAccount extends Document {
     // ===== SECURITY =====
     twoFactorEnabled: boolean;
     twoFactorWithdrawalEnabled: boolean;
+    isDeleted: boolean;
     //lastLogin?: Date;
     loginAttempts: number;
     lastLoginIp: string;
@@ -225,6 +226,11 @@ const AccountSchema = new Schema<IAccount>(
         twoFactorEnabled: {
             type: Boolean,
             default: false,
+        },
+
+        isDeleted: {
+            type: Boolean,
+            default: false
         },
 
         // ===== SYSTEM =====
