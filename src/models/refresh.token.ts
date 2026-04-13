@@ -32,7 +32,7 @@ const refreshTokenSchema = new Schema<IRefreshToken>({
     userType: {
         type: String,
         required: true,
-        enum: ['client', 'consultant', 'admin']
+        enum: ['user', 'organization', 'admin']
     },
     token: {
         type: String,

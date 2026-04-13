@@ -3,7 +3,6 @@ import formData from "form-data";
 import Mailgun from "mailgun.js";
 import logger from "../logger";
 import { EnquiryDocument } from "../models/clientEnquiries";
-import { IBids } from "../models/Bids";
 //import { IUser } from "../models/Accounts";
 //import { IUser, IVendor } from "@/types";
 // import { IWedding } from "@/models/Wedding";
@@ -158,7 +157,7 @@ class EmailService {
       const html = this.getOTPEmailTemplate(otp, type);
 
       await this.transport.sendMail({
-        from: process.env.MAILGUN_SENDER || "Pelbliss <no-reply@pelbliss.com>",
+        from: `Help me nigeria <${process.env.MAILGUN_SENDER}>` || "softweb <no-reply@softweb.com",
         to: email,
         subject,
         html,
@@ -426,118 +425,118 @@ class EmailService {
   `;
   }
 
-  async sendBidApprovalOrDenialEmail(consultant: any, bid: any, email: string, status: "approved" | "declined"): Promise<void> {
-    try {
-      const html = this.getBidApprovalOrDeclineTemplate(consultant, bid, status);
-      await this.transport.sendMail({
-        from: `Floatthr <${process.env.MAILGUN_SENDER}>` || "softweb <no-reply@softweb.com",
-        to: email,
-        subject: "Bid Approval or Denial - Notification",
-        html,
-      });
-    } catch (error) {
-      logger.error("Failed to send bid approval or denial notification", { bidId: bid._id, error });
-    }
-  }
+  // async sendBidApprovalOrDenialEmail(consultant: any, bid: any, email: string, status: "approved" | "declined"): Promise<void> {
+  //   try {
+  //     const html = this.getBidApprovalOrDeclineTemplate(consultant, bid, status);
+  //     await this.transport.sendMail({
+  //       from: `Floatthr <${process.env.MAILGUN_SENDER}>` || "softweb <no-reply@softweb.com",
+  //       to: email,
+  //       subject: "Bid Approval or Denial - Notification",
+  //       html,
+  //     });
+  //   } catch (error) {
+  //     logger.error("Failed to send bid approval or denial notification", { bidId: bid._id, error });
+  //   }
+  // }
 
 
-  private getBidApprovalOrDeclineTemplate(
-    consultant: any,
-    bid: IBids,
-    status: "approved" | "declined"
-  ): string {
-    const fullName = `${consultant.firstName} ${consultant.lastName}`;
-    const bidDate = bid.createdAt.toDateString();
-    const year = new Date().getFullYear();
+  // private getBidApprovalOrDeclineTemplate(
+  //   consultant: any,
+  //   bid: IBids,
+  //   status: "approved" | "declined"
+  // ): string {
+  //   const fullName = `${consultant.firstName} ${consultant.lastName}`;
+  //   const bidDate = bid.createdAt.toDateString();
+  //   const year = new Date().getFullYear();
 
-    const isApproved = status === "approved";
+  //   const isApproved = status === "approved";
 
-    return `
-  <!DOCTYPE html>
-  <html lang="en">
-    <head>
-      <meta charset="UTF-8" />
-      <title>Bid ${isApproved ? "Approved" : "Declined"}</title>
-    </head>
-    <body style="margin:0; padding:0; background-color:#f4f8fc; font-family:Arial, Helvetica, sans-serif;">
-      <table width="100%" cellpadding="0" cellspacing="0">
-        <tr>
-          <td align="center" style="padding:40px 16px;">
-            <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:8px; overflow:hidden;">
+  //   return `
+  // <!DOCTYPE html>
+  // <html lang="en">
+  //   <head>
+  //     <meta charset="UTF-8" />
+  //     <title>Bid ${isApproved ? "Approved" : "Declined"}</title>
+  //   </head>
+  //   <body style="margin:0; padding:0; background-color:#f4f8fc; font-family:Arial, Helvetica, sans-serif;">
+  //     <table width="100%" cellpadding="0" cellspacing="0">
+  //       <tr>
+  //         <td align="center" style="padding:40px 16px;">
+  //           <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:8px; overflow:hidden;">
 
-              <!-- Header -->
-              <tr>
-                <td style="background:#0a66c2; padding:24px; text-align:center;">
-                  <h1 style="margin:0; color:#ffffff; font-size:22px;">
-                    Floatthr
-                  </h1>
-                </td>
-              </tr>
+  //             <!-- Header -->
+  //             <tr>
+  //               <td style="background:#0a66c2; padding:24px; text-align:center;">
+  //                 <h1 style="margin:0; color:#ffffff; font-size:22px;">
+  //                   Floatthr
+  //                 </h1>
+  //               </td>
+  //             </tr>
 
-              <!-- Body -->
-              <tr>
-                <td style="padding:32px; color:#1f2937;">
-                  <h2 style="margin-top:0; color:#0a66c2; font-size:20px;">
-                    Bid ${isApproved ? "Approved" : "Declined"}
-                  </h2>
+  //             <!-- Body -->
+  //             <tr>
+  //               <td style="padding:32px; color:#1f2937;">
+  //                 <h2 style="margin-top:0; color:#0a66c2; font-size:20px;">
+  //                   Bid ${isApproved ? "Approved" : "Declined"}
+  //                 </h2>
 
-                  <p style="font-size:15px; line-height:1.6;">
-                    Hello <strong>${fullName}</strong>,
-                  </p>
+  //                 <p style="font-size:15px; line-height:1.6;">
+  //                   Hello <strong>${fullName}</strong>,
+  //                 </p>
 
-                  <p style="font-size:15px; line-height:1.6;">
-                    Your bid submitted on <strong>${bidDate}</strong>
-                    has been <strong style="color:#0a66c2;">
-                      ${isApproved ? "approved" : "declined"}
-                    </strong>.
-                  </p>
+  //                 <p style="font-size:15px; line-height:1.6;">
+  //                   Your bid submitted on <strong>${bidDate}</strong>
+  //                   has been <strong style="color:#0a66c2;">
+  //                     ${isApproved ? "approved" : "declined"}
+  //                   </strong>.
+  //                 </p>
 
-                  ${isApproved
-        ? `
-                      <p style="font-size:15px; line-height:1.6;">
-                        This approval confirms that your bid has met the requirements.
-                        Please note that approval does <strong>not</strong> mean you have
-                        been assigned to the client yet.
-                      </p>
-                      <p style="font-size:15px; line-height:1.6;">
-                        You will receive a separate notification once an assignment
-                        decision is made.
-                      </p>
-                      `
-        : `
-                      <p style="font-size:15px; line-height:1.6;">
-                        Unfortunately, your bid was not selected at this time.
-                        You are encouraged to continue submitting bids for other requests.
-                      </p>
-                      `
-      }
+  //                 ${isApproved
+  //       ? `
+  //                     <p style="font-size:15px; line-height:1.6;">
+  //                       This approval confirms that your bid has met the requirements.
+  //                       Please note that approval does <strong>not</strong> mean you have
+  //                       been assigned to the client yet.
+  //                     </p>
+  //                     <p style="font-size:15px; line-height:1.6;">
+  //                       You will receive a separate notification once an assignment
+  //                       decision is made.
+  //                     </p>
+  //                     `
+  //       : `
+  //                     <p style="font-size:15px; line-height:1.6;">
+  //                       Unfortunately, your bid was not selected at this time.
+  //                       You are encouraged to continue submitting bids for other requests.
+  //                     </p>
+  //                     `
+  //     }
 
-                  <p style="font-size:14px; line-height:1.6; color:#4b5563;">
-                    Thank you for being part of Floatthr.
-                  </p>
+  //                 <p style="font-size:14px; line-height:1.6; color:#4b5563;">
+  //                   Thank you for being part of Floatthr.
+  //                 </p>
 
-                  <p style="font-size:14px; line-height:1.6;">
-                    Regards,<br />
-                    <strong>The Floatthr Team</strong>
-                  </p>
-                </td>
-              </tr>
+  //                 <p style="font-size:14px; line-height:1.6;">
+  //                   Regards,<br />
+  //                   <strong>The Floatthr Team</strong>
+  //                 </p>
+  //               </td>
+  //             </tr>
 
-              <!-- Footer -->
-              <tr>
-                <td style="background:#f1f5f9; padding:16px; text-align:center; font-size:12px; color:#64748b;">
-                  © ${year} Floatthr. All rights reserved.
-                </td>
-              </tr>
+  //             <!-- Footer -->
+  //             <tr>
+  //               <td style="background:#f1f5f9; padding:16px; text-align:center; font-size:12px; color:#64748b;">
+  //                 © ${year} Floatthr. All rights reserved.
+  //               </td>
+  //             </tr>
 
-            </table>
-          </td>
-        </tr>
-      </table>
-    </body>
-  </html>
-  `;
-  }
+  //           </table>
+  //         </td>
+  //       </tr>
+  //     </table>
+  //   </body>
+  // </html>
+  // `;
+  // }
   // async sendSubscriptionCreatedEmail(user: any): Promise<void> {
   //   try {
   //     const html = this.getSubscriptionCreatedTemplate(user);

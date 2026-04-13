@@ -50,7 +50,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '/public')))
 
-app.use('/api/v1/', allRoutes)
+app.use('/api/', allRoutes)
 
 app.use("*", (req: Request, res: Response) => {
     res.status(404).json({

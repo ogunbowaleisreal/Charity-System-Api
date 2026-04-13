@@ -16,13 +16,13 @@ import enquiryRoutes from "./enquiries.routes"
 //import reportRoutes from "./reports.route"
 import subscriptionManagementRoutes from "./subscriptionManagement"
 import planRoutes from "./adminPlanManagement"
-import adminDashboardRoutes from "./adminDashboard"
+// import adminDashboardRoutes from "./adminDashboard"
 
 const router = Router();
 
 router.use('/auth', adminAuthRoute);
 router.use('/management', managementRoutes);
-router.use('/dashboard', adminDashboardRoutes)
+// router.use('/dashboard', adminDashboardRoutes)
 router.use('/roles', roleRoutes)
 router.use('/category', categoryRoutes)
 router.use('/faqs', faqRoutes)

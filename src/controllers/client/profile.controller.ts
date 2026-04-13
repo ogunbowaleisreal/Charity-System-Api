@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 import { NextFunction, Request, Response } from "express";
 import { clientProfileServices } from "../../services/client/clientProfile.services";
-import { ConsultantProfileServices } from "../../services/client/consultantProfileServices";
 //import { AuthenticatedRequest } from "../../middleware/verifyClients";
 import logger from "../../logger";
 import { authService } from "../../services/client/Auth.services";
@@ -12,7 +11,6 @@ import { th } from "zod/v4/locales";
 
 const clientServices = new clientProfileServices()
 const authServices = new authService()
-const consultantServices = new ConsultantProfileServices()
 export class profileController {
 
     async updateClientProfile(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
@@ -30,28 +28,19 @@ export class profileController {
             const accountId = req.user?.userId
             const role = req.user?.role
             console.log(role)
-            if (role == "client") {
 
-                const update = await clientServices.updateClientProfile(accountId, req.body)
-                //console.log(update)
-                if (update) {
-                    logger.info("profile updated successfully")
-                    return sendSuccessResponse(res, update, "profile updated successfully", 200)
-                }
-                sendErrorResponse(res, "update failed")
-
-            }
 
             const update = await clientServices.updateClientProfile(accountId, req.body)
-            console.log(update)
+            //console.log(update)
             if (update) {
                 logger.info("profile updated successfully")
                 return sendSuccessResponse(res, update, "profile updated successfully", 200)
             }
-            sendErrorResponse(res, "update failed")
+            sendErrorResponse(res, "update failed", 403)
 
         } catch (err) {
             logger.error("update failed",)
+            sendErrorResponse(res, "update failed", 403)
             next(err)
             //sendErrorResponse(res, "update failed", 403)
         }
@@ -80,9 +69,7 @@ export class profileController {
         try {
             const clientId = req.user.userId
             const role = req.user.role
-            if (role !== "client") {
-                throw new Error("unauthorized")
-            }
+
             const profile = await clientServices.getClientProfile(clientId)
             sendSuccessResponse(res, profile, "profile fetched")
         } catch (err: any) {
@@ -90,85 +77,6 @@ export class profileController {
             next(err)
         }
     }
-
-    async getConsultantProfile(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
-        try {
-            const clientId = req.user.userId
-            const role = req.user.role
-            console.log(clientId, role)
-            if (role !== "consultant") {
-                throw new Error("unauthorized, u are not a consultant")
-            }
-            const profile = await consultantServices.getConsultantProfile(clientId)
-            sendSuccessResponse(res, profile, "profile fetched")
-        } catch (err: any) {
-            logger.error("profile fetch failed",)
-            next(err)
-        }
-    }
-
-    async updateConsultantProfile(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
-        try {
-            const clientId = req.user.userId
-            const role = req.user.role
-            console.log(role)
-            if (role !== "consultant") {
-                throw new Error("unauthorized")
-            }
-            const profile = await consultantServices.updateConsultantProfile(clientId, req.body)
-            sendSuccessResponse(res, profile, "profile updated")
-        } catch (err: any) {
-            logger.error("profile fetch failed",)
-            next(err)
-        }
-    }
-
-    async deleteEducation(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
-        try {
-            const clientId = req.user.userId
-            const educationId = req.params.educationId
-            const role = req.user.role
-            console.log(role)
-            if (role !== "consultant") {
-                throw new Error("unauthorized")
-            }
-            const profile = await consultantServices.deleteEducation(clientId, educationId)
-            sendSuccessResponse(res, profile, "education deleted")
-        } catch (error: any) {
-            logger.error("delete education failed", error.message)
-            sendErrorResponse(res, error.message, 400)
-            next(error)
-        }
-    }
-
-    async deleteCertificate(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
-        try {
-            const clientId = req.user.userId
-            const certificateId = req.params.certificateId
-            const role = req.user.role
-            console.log(role)
-            if (role !== "consultant") {
-                throw new Error("unauthorized")
-            }
-            const profile = await consultantServices.deleteCertificate(clientId, certificateId)
-            sendSuccessResponse(res, profile, "certificate deleted")
-        } catch (error: any) {
-            logger.error("delete certificate failed", error.message)
-            sendErrorResponse(res, error.message, 400)
-            next(error)
-        }
-    }
-
-    // async getProfile(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-    //     try {
-    //         const clientId = req.user.user_id
-    //         const profile = await clientServices.getClientProfile(clientId)
-    //         sendSuccessResponse(res, profile, "profile fetched")
-    //     } catch (err: any) {
-    //         logger.error("profile fetch failed",)
-    //         next(err)
-    //     }
-    // }
 
 
 }

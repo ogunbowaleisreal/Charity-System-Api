@@ -14,7 +14,7 @@ import enquiryRoutes from "./enquiries.route"
 //import reportRoutes from "./reports.route"
 import transactionRoutes from "./transactions.route"
 import planRoutes from "./plan.routes"
-import dashBoardRoutes from "./dashboard"
+// import dashBoardRoutes from "./dashboard"
 import notificationRoutes from "./notification.routes"
 
 const router = Router();
@@ -34,7 +34,7 @@ router.use("/transactions", transactionRoutes)
 router.use("/enquiries", enquiryRoutes)
 //router.use("/reports", reportRoutes)
 router.use("/plans", planRoutes)
-router.use("/dashboard", dashBoardRoutes)
+// router.use("/dashboard", dashBoardRoutes)
 router.use("/notifications", notificationRoutes)
 
 export default router;  

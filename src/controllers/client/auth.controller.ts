@@ -17,8 +17,8 @@ export class authController {
         try {
             // Registration logic here
             //const { username, password, email } = req.body;
-            const { firstName, lastName, password, email, phone, role, companyName, organizationType } = req.body
-            if (!firstName || !lastName || !password || !email || !phone || !role) {
+            const { firstName, lastName, password, email, phoneNumber, role, companyName, organizationType } = req.body
+            if (!firstName || !lastName || !password || !email || !phoneNumber || !role) {
                 return res.status(400).json({ message: "username, password and email are required" })
             }
             const user = await Account.findOne({ email })
@@ -30,7 +30,7 @@ export class authController {
                     role: role,
                     password: hashedPassword,
                     email,
-                    phone,
+                    phoneNumber,
                     //phoneCountryCode,
                     //gender,
                     //companyName,
@@ -109,17 +109,6 @@ export class authController {
                 return res.status(404).json({ message: "User not found" });
             }
             const response = await Authservice.login({ email, password })
-            // const { accessToken, refreshToken } = await authservice.createUserSession({
-            //     user_id: user._id as string,
-            //     role: user.role as string,
-            //     password: password
-            // });
-            // res.cookie("refreshToken", refreshToken, {
-            //     httpOnly: true,
-            //     secure: process.env.NODE_ENV === "production",
-            //     sameSite: "strict",
-            //     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-            // });
 
             const normalizeIp = (ip: string) => {
                 if (ip.startsWith("::ffff:")) {
@@ -158,7 +147,7 @@ export class authController {
 
     async logout(req: Request, res: Response) {
         try {
-            const refreshToken = req.cookies.refreshToken;
+            const refreshToken = req.body.refreshToken;
             if (!refreshToken) {
                 return res.status(400).json({ message: "No refresh token provided" });
             }
@@ -172,6 +161,23 @@ export class authController {
                 return res.status(200).json({ message: "Logout successful" });
             } else {
                 return res.status(400).json({ message: "Invalid refresh token" });
+            }
+        } catch (err) {
+            return res.status(500).json({ message: "Internal Server Error", error: err })
+        }
+    }
+
+    async deleteAccount(req: Request, res: Response) {
+        try {
+            const { email } = req.body;
+            if (!email) {
+                return res.status(400).json({ message: "Email is required" });
+            }
+            const deleted = await Authservice.deleteAccount(email);
+            if (deleted) {
+                return res.status(200).json({ message: "Account deleted successfully" });
+            } else {
+                return res.status(400).json({ message: "Account not found" });
             }
         } catch (err) {
             return res.status(500).json({ message: "Internal Server Error", error: err })
@@ -249,11 +255,15 @@ export class authController {
                 return res.status(400).json({ message: "Email, OTP and new password are required" });
             }
 
-            await Authservice.resetPassword(email, otp, newPassword);
+            const response = await Authservice.resetPassword(email, otp, newPassword);
+            if (!response) {
+                throw new Error("Password reset failed")
+            }
             logger.info("password reset successful",)
             return res.status(200).json({ message: "Password reset successful" });
         } catch (err: any) {
             logger.error("password reset error", err)
+            sendErrorResponse(res, err.message, err.statusCode)
             next(err)
             //return res.status(500).json({ message: "Internal Server Error", error: err })
         }

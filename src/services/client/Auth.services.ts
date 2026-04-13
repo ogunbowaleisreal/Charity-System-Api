@@ -126,7 +126,7 @@ export class authService {
         const { email, password } = data;
 
         // Find user
-        const client = await Account.findOne({ email }).populate("businessCategory");
+        const client = await Account.findOne({ email });
         if (!client) {
             throw { message: "Invalid credentials", statusCode: HTTP_STATUS.UNAUTHORIZED };
         }
@@ -189,12 +189,14 @@ export class authService {
                 statusCode: HTTP_STATUS.FORBIDDEN,
             };
         }
+        console.log(client.password)
+        console.log(password)
         // compmare password for client
         const isPasswordValid = await bcryptUtil.comparePassword(
             password, client.password as string
         );
         if (!isPasswordValid) {
-            throw { message: "Invalid credentials", statusCode: HTTP_STATUS.UNAUTHORIZED };
+            throw { message: "Invalid credential", statusCode: HTTP_STATUS.UNAUTHORIZED };
         }
 
         // // Generate tokens
@@ -343,8 +345,18 @@ export class authService {
         }
     }
     async deleteRefreshToken(token: string) {
-        const hashedtoken = hashToken(token);
-        const deletedData = await RefreshToken.deleteOne({ hashedToken: hashedtoken });
+        //const hashedtoken = hashToken(token);
+        const deletedData = await RefreshToken.deleteOne({ token: token });
+        if (deletedData.deletedCount && deletedData.deletedCount > 0) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    async deleteAccount(userId: mongoose.Types.ObjectId) {
+        const deletedData = await Account.deleteOne({ _id: userId });
+        const deletedRefreshTokens = await RefreshToken.deleteMany({ userId: userId });
         if (deletedData.deletedCount && deletedData.deletedCount > 0) {
             return true;
         } else {
@@ -360,17 +372,20 @@ export class authService {
 
     async resetPassword(email: string, OTP: string, newPassword: string) {
         // try{
-        const isValidOTP = await otpService.verifyOTP(email, OTP, "password_reset");
+        console.log("got here first ")
+        await otpService.verifyOTP(email, OTP, "password_reset");
         // if (!isValidOTP) {
         //     throw new Error("Invalid or expired OTP");
         // }
         const user = await Account.findOne({ email, provider: 'local' });
+        console.log(user)
         if (!user) {
             throw new Error("User not found");
         }
         const password = await bcryptUtil.hashPassword(newPassword);
         user.password = password
         await user.save();
+        console.log(user)
         return true;
         // }catch(err:any){
         //     logger.error("password reset failed")

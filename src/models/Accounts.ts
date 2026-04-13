@@ -62,6 +62,7 @@ export interface IAccount extends Document {
 
     // ===== SECURITY =====
     twoFactorEnabled: boolean;
+    twoFactorWithdrawalEnabled: boolean;
     //lastLogin?: Date;
     loginAttempts: number;
     lastLoginIp: string;
@@ -122,6 +123,10 @@ const AccountSchema = new Schema<IAccount>(
             type: Boolean,
             default: false,
         },
+        twoFactorWithdrawalEnabled: {
+            type: Boolean,
+            default: false,
+        },
 
         otp: String,
         otpExpires: Date,
@@ -134,9 +139,6 @@ const AccountSchema = new Schema<IAccount>(
         fullName: String,
         gender: {
             type: String,
-            required: function (this: IAccount) {
-                return this.role === "user";
-            },
         },
         profilePicture: String,
 
@@ -205,9 +207,9 @@ const AccountSchema = new Schema<IAccount>(
         facialVerification: String,
         bvn: {
             type: String,
-            required: function (this: IAccount) {
-                return this.role === "user";
-            },
+            // required: function (this: IAccount) {
+            //     return this.role === "user";
+            // },
         },
 
         cacDocument: {

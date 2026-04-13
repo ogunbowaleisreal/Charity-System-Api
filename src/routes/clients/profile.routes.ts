@@ -20,16 +20,4 @@ router.get("/client/profile",
     //verifyJwt,
     profileCtrl.getClientProfile)
 
-router.get("/consultant/profile",
-    //verifyJwt,
-    profileCtrl.getConsultantProfile)
-
-router.patch("/update/consultant",
-    //verifyJwt,
-    profileCtrl.updateConsultantProfile)
-
-router.delete("/delete/education/:educationId", profileCtrl.deleteEducation)
-
-router.delete("/delete/certificate/:certificateId", profileCtrl.deleteCertificate)
-
 export default router

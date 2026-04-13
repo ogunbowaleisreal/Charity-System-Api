@@ -2,8 +2,6 @@ import app from "./app";
 import mongoose from "mongoose";
 import connectDB from "./config/database";
 import { connectRedis, disconnectRedis } from "./config/redis"; // add disconnect function
-import { handleBiddingLifecycle } from "./cron/biddingCronJob";
-import { closeExpiredAssignment } from "./cron/assignmentJob";
 import http from "http";
 import { start } from "repl";
 
@@ -18,8 +16,6 @@ async function startServer() {
         await connectDB();
         await connectRedis();
 
-        handleBiddingLifecycle();
-        closeExpiredAssignment();
 
         mongoose.connection.once('open', () => {
             console.log('Successfully connected to MongoDB');
@@ -68,25 +64,4 @@ const gracefulShutdown = async (signal: string) => {
 // Listen for termination signals
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-
-// import app from "./app"
-// import mongoose from "mongoose"
-// import connectDB from "./config/database"
-// import { connectRedis } from "./config/redis"
-
-// require('dotenv').config()
-// const PORT = process.env.PORT || 3000
-// try {
-//     connectDB()
-//     connectRedis()
-//     mongoose.connection.once('open', (): void => {
-//         console.log('successfully connected to mongoose ')
-//         app.listen(PORT, () => {
-//             console.log(`server running on port ${PORT}`)
-//         })
-//     })
-
-// } catch (error) {
-//     console.log("Error starting the database:", error)
-// }
 
