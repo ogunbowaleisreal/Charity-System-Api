@@ -1,83 +1,166 @@
-import { Schema, model, Document, Types } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
 
-export interface ITransaction extends Document {
-    user?: Types.ObjectId;
-    subscription?: Types.ObjectId;
-    reference: string;
+//import { Document, Types } from "mongoose";
+
+export interface IWalletTransaction extends Document {
+    walletId: Types.ObjectId;
+
+    type: "credit" | "debit";
+
+    category: "donation" | "withdrawal" | "refund" | "adjustment" | "bonus";
+
+    status: "pending" | "processing" | "successful" | "failed";
+
     amount: number;
+
     currency: string;
-    status: string;
-    paidAt?: Date;
-    plan?: string;
-    transactionReference?: string;
-    transactionId?: string;
-    subscriptionTempId: string
-    customer: string;
-    intent: string;
-    type: string;
-    channel?: string;
-    intentId?: string;
-    startDate?: Date;
-    expiryDate?: Date;
+
+    grossAmount: number;
+
+    serviceCharge: number;
+
+    vat: number;
+
+    netAmount: number;
+
+    method: "card" | "bank_transfer" | "wallet";
+
+    reference: string; // internal idempotency key
+
+    providerReference?: string; // Safe Haven reference
+
+    bankDetails?: {
+        bankName: string;
+        accountNumber: string;
+        accountName: string;
+    };
+
+    metadata?: {
+        campaignId?: Types.ObjectId;
+        donationId?: Types.ObjectId;
+        withdrawalId?: Types.ObjectId;
+    };
+
+    balanceBefore: number;
+    balanceAfter: number;
+
     createdAt: Date;
-    metadata?: Record<string, any>;
+    updatedAt: Date;
 }
 
-const TransactionSchema = new Schema<ITransaction>(
+//import mongoose, { Schema } from "mongoose";
+
+const WalletTransactionSchema = new Schema<IWalletTransaction>(
     {
-        user: { type: Schema.Types.ObjectId, ref: "Account", index: true },
+        walletId: {
+            type: Schema.Types.ObjectId,
+            ref: "Wallet",
+            required: true,
+            index: true,
+        },
 
-        subscription: { type: Schema.Types.ObjectId, ref: "ClientSubscription" },
-
-        subscriptionTempId: { type: String },
-
-        plan: { type: Schema.Types.ObjectId, ref: "Plan" },
-
-        intentId: { type: String },
-
-        reference: { type: String, required: true, unique: true },
-
-        amount: { type: Number, required: true },
-
-        type: { type: String, required: true },
-
-        currency: { type: String, default: "NGN" },
-        customer: {},
-
-        status: {
+        type: {
             type: String,
-            enum: ["Pending", "Completed", "Failed"],
+            enum: ["credit", "debit"],
             required: true,
         },
 
-        channel: { type: String },
+        category: {
+            type: String,
+            enum: ["donation", "withdrawal", "refund", "adjustment", "bonus"],
+            required: true,
+            index: true,
+        },
 
-        metadata: { type: Schema.Types.Mixed },
+        status: {
+            type: String,
+            enum: ["pending", "processing", "successful", "failed"],
+            default: "pending",
+            index: true,
+        },
 
-        startDate: Date,
-        expiryDate: Date,
+        amount: {
+            type: Number,
+            required: true,
+        },
+
+        currency: {
+            type: String,
+            required: true,
+            default: "NGN",
+        },
+
+        grossAmount: {
+            type: Number,
+            required: true,
+        },
+
+        serviceCharge: {
+            type: Number,
+            default: 0,
+        },
+
+        vat: {
+            type: Number,
+            default: 0,
+        },
+
+        netAmount: {
+            type: Number,
+            required: true,
+        },
+
+        method: {
+            type: String,
+            enum: ["card", "bank_transfer", "wallet"],
+            required: true,
+        },
+
+        reference: {
+            type: String,
+            required: true,
+            unique: true,
+            index: true,
+        },
+
+        providerReference: {
+            type: String,
+            index: true,
+        },
+
+        bankDetails: {
+            bankName: { type: String },
+            accountNumber: { type: String },
+            accountName: { type: String },
+        },
+
+        metadata: {
+            campaignId: { type: Schema.Types.ObjectId, ref: "Campaign" },
+            donationId: { type: Schema.Types.ObjectId, ref: "Donation" },
+            withdrawalId: { type: Schema.Types.ObjectId, ref: "Withdrawal" },
+        },
+
+        balanceBefore: {
+            type: Number,
+            required: true,
+        },
+
+        balanceAfter: {
+            type: Number,
+            required: true,
+        },
     },
-    { timestamps: true }
+    {
+        timestamps: true,
+    }
 );
 
+// Indexes for performance + safety
+WalletTransactionSchema.index({ walletId: 1, createdAt: -1 });
+WalletTransactionSchema.index({ category: 1, status: 1 });
 
-// const TransactionSchema = new Schema<ITransaction>({
-//     user: { type: Schema.Types.ObjectId, ref: "Account" },
-//     //plan: { type: Schema.Types.ObjectId, ref: "Plan" },
-//     subscription: { type: Schema.Types.ObjectId, ref: "Subscription" },
-//     reference: { type: String, required: true, unique: true },
-//     amount: { type: Number, required: true },
-//     plan: { type: Schema.Types.ObjectId, ref: "Plan" },
-//     transactionReference: { type: String },
-//     currency: { type: String, default: "NGN" },
-//     status: {
-//         type: String,
-//         enum: ["Ongoing", "Completed", "Failed"],
-//         required: true
-//     },
-//     startDate: Date,
-//     expiryDate: Date,
-//     //paidAt: Date,
-// }, { timestamps: true });
+export const WalletTransaction = mongoose.model<IWalletTransaction>(
+    "WalletTransaction",
+    WalletTransactionSchema
+);
 
-export default model<ITransaction>("Transaction", TransactionSchema);

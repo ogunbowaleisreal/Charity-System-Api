@@ -1,21 +1,105 @@
 // middlewares/errorHandler.ts
-import { Request, Response, NextFunction } from "express";
+// import { Request, Response, NextFunction } from "express";
 
-export function errorHandler(
-    err: any,
+// export function errorHandler(
+//     err: any,
+//     req: Request,
+//     res: Response,
+//     next: NextFunction
+// ) {
+//     console.error("🔥 ERROR:", err);
+
+//     const statusCode = err.statusCode || 500;
+
+//     // Standard error response format
+//     res.status(statusCode).json({
+//         success: false,
+//         message: err.message || "Internal server error",
+//         // Only show stack trace in development:
+//         ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
+//     });
+// }
+
+
+import { Request, Response, NextFunction } from 'express';
+import { sendErrorResponse } from '../utils/helpers';
+import { HTTP_STATUS, ERROR_CODES } from '../utils/constants';
+
+export class AppError extends Error {
+    constructor(
+        public message: string,
+        public statusCode: number = HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        public errorCode: string = ERROR_CODES.INTERNAL_ERROR,
+        public details?: any
+    ) {
+        super(message);
+        this.name = this.constructor.name;
+        Error.captureStackTrace(this, this.constructor);
+    }
+}
+
+export const errorHandler = (
+    err: Error | AppError,
     req: Request,
     res: Response,
     next: NextFunction
-) {
-    console.error("🔥 ERROR:", err);
+) => {
+    if (err instanceof AppError) {
+        return sendErrorResponse(
+            res,
+            err.message,
+            err.statusCode,
+            err.errorCode,
+            err.details
+        );
+    }
 
-    const statusCode = err.statusCode || 500;
+    // Mongoose validation error
+    if (err.name === 'ValidationError') {
+        return sendErrorResponse(
+            res,
+            'Validation error',
+            HTTP_STATUS.UNPROCESSABLE_ENTITY,
+            ERROR_CODES.VALIDATION_ERROR,
+            err.message
+        );
+    }
 
-    // Standard error response format
-    res.status(statusCode).json({
-        success: false,
-        message: err.message || "Internal server error",
-        // Only show stack trace in development:
-        ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
-    });
-}
+    // Mongoose duplicate key error
+    if (err.name === 'MongoServerError' && (err as any).code === 11000) {
+        return sendErrorResponse(
+            res,
+            'Duplicate entry',
+            HTTP_STATUS.CONFLICT,
+            ERROR_CODES.DUPLICATE_ENTRY
+        );
+    }
+
+    // JWT errors
+    if (err.name === 'JsonWebTokenError') {
+        return sendErrorResponse(
+            res,
+            'Invalid token',
+            HTTP_STATUS.UNAUTHORIZED,
+            ERROR_CODES.INVALID_TOKEN
+        );
+    }
+
+    if (err.name === 'TokenExpiredError') {
+        return sendErrorResponse(
+            res,
+            'Token expired',
+            HTTP_STATUS.UNAUTHORIZED,
+            ERROR_CODES.TOKEN_EXPIRED
+        );
+    }
+
+    // Default error
+    console.error('Unhandled error:', err);
+    return sendErrorResponse(
+        res,
+        'Internal server error',
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        ERROR_CODES.INTERNAL_ERROR
+    );
+};

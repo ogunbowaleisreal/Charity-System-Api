@@ -7,7 +7,7 @@ import accountRoutes from "./accounts.route"
 import campaignRoutes from "./campaign.routes"
 import faqRoutes from './faq.routes'
 import contactRoutes from "./contact"
-import businessCategoryRoutes from "./businessCategory"
+import businessCategoryRoutes from "./campaignCategory"
 import enquiryRoutes from "./enquiries.route"
 import transactionRoutes from "./transactions.route"
 import tagRoutes from "./tags.route"
