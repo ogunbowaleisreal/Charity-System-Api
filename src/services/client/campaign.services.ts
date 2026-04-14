@@ -15,6 +15,8 @@ import { Account } from "../../models/Accounts";
 
 export type donationFilter = {
     sort: "top" | "latest";
+    page: number;
+    limit: number;
 }
 export type commentFilter = {
     sort: "top" | "latest";
@@ -29,13 +31,13 @@ export type CreateCampaignDTO = {
     category: string;
     image: string;
     title: string;
-    tags: string[];
+    tags: Types.ObjectId[];
     authors: string[]; // usually Account IDs or names depending on your system
-    target: number;
+    targetAmount: number;
     opening: Date;
     startImmediately: boolean;
     startDate?: Date; // optional if startImmediately = false
-    closing: Date;
+    endDate: Date;
     description: string;
     allowComments: boolean;
     isActive: boolean;
@@ -54,6 +56,7 @@ export type UpdateCampaign = {
     description: string;
     category: string;
     targetAmount: number;
+    tags: Types.ObjectId[];
     //deadline: Date;
     closing: Date;
     isActive: boolean;
@@ -130,7 +133,9 @@ export class CampaignService {
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
-            .populate("owner", "firstName lastName companyName logo");
+            .populate("owner", "firstName lastName companyName logo ")
+            .populate("category", "name")
+            .populate("tags", "name");
 
         const total = await Campaign.countDocuments(filter);
         const totalPages = Math.ceil(total / limit);
@@ -150,7 +155,9 @@ export class CampaignService {
 
     async getCampaignById(campaignId: string) {
         const campaign = await Campaign.findById(campaignId)
-            .populate("owner", "firstName lastName companyName logo");
+            .populate("owner", "firstName lastName companyName logo")
+            .populate("category", "name")
+            .populate("tags", "name");
 
         if (!campaign || campaign.isDeleted) {
             throw new Error("Campaign not found");
@@ -169,7 +176,7 @@ export class CampaignService {
         if (query.category) filter.category = query.category;
         if (query.status) filter.status = query.status;
 
-        const campaigns = await Campaign.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit);
+        const campaigns = await Campaign.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).populate("category", "name").populate("tags", "name");
 
         const total = await Campaign.countDocuments({
             owner: userId,
@@ -300,13 +307,39 @@ export class CampaignService {
             ]);
         }
 
-        return await Donation.find({
+
+        const donations = await Donation.find({
             campaign: campaignId,
             paymentStatus: "success",
         })
             .sort(sort)
-            .limit(20)
+            .skip((filter.page - 1) * filter.limit)
+            .limit(filter.limit)
             .populate("donor", "firstName lastName");
+
+        const total = await Donation.countDocuments({
+            campaign: campaignId,
+            paymentStatus: "success",
+        });
+
+        const totalPages = Math.ceil(total / filter.limit);
+
+
+        // donations.forEach((d) => {
+        //     d.createdAt = moment(d.createdAt).fromNow();
+        // })
+
+        return {
+            donations,
+            pagination: {
+                current_page: filter.page,
+                total_pages: totalPages,
+                per_page: filter.limit,
+                total_records: total,
+                has_next_page: filter.page < totalPages,
+                has_prev_page: filter.page > 1,
+            }
+        }
     }
 
     // =============================

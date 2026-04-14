@@ -1,7 +1,6 @@
 import mongoose, { Schema, model, Document } from 'mongoose';
-import { BusinessCategory } from './BusinessCategory';
-import { de } from 'zod/v4/locales';
-import { updateClientProfile } from '../types/clientprofile';
+//import { BusinessCategory } from './campaignCategory';
+
 
 export interface UpdateClientProfile extends Document {
     account: Schema.Types.ObjectId;
@@ -61,17 +60,17 @@ const ClientProfileSchema = new Schema<UpdateClientProfile>(
         role: { type: String, default: "client" },
         businessCategory: {
             type: String,
-            validate: {
-                validator: async function (value: string) {
-                    // Only validate if role is client
-                    // if (this.role !== "client") return true;
+            // validate: {
+            //     validator: async function (value: string) {
+            //         // Only validate if role is client
+            //         // if (this.role !== "client") return true;
 
-                    // Check if the category exists in the DB
-                    const category = await BusinessCategory.findById(value);
-                    return !!category; // true if found, false otherwise
-                },
-                message: (props: any) => `Business category '${props.value}' does not exist.`
-            }
+            //         // Check if the category exists in the DB
+            //         const category = await BusinessCategory.findById(value);
+            //         return !!category; // true if found, false otherwise
+            //     },
+            //     message: (props: any) => `Business category '${props.value}' does not exist.`
+            // }
         },
         profilePicture: { type: String, default: null },
         //contactPhone: { type: String },

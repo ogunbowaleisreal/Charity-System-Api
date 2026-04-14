@@ -26,7 +26,7 @@ export class CampaignController {
                 req.user._id
             );
 
-            return sendSuccessResponse(res, { campaign });
+            return sendSuccessResponse(res, campaign);
         } catch (error: any) {
             logger.error(error);
             return sendErrorResponse(res, error);
@@ -47,7 +47,7 @@ export class CampaignController {
                 req.body
             );
 
-            return sendSuccessResponse(res, { campaign });
+            return sendSuccessResponse(res, campaign);
         } catch (error: any) {
             logger.error(error);
             return sendErrorResponse(res, error);
@@ -67,7 +67,7 @@ export class CampaignController {
                 req.user._id
             );
 
-            return sendSuccessResponse(res, { campaign });
+            return sendSuccessResponse(res, campaign);
         } catch (error: any) {
             logger.error(error);
             return sendErrorResponse(res, error);
@@ -107,7 +107,7 @@ export class CampaignController {
                 campaignId
             );
 
-            return sendSuccessResponse(res, { campaign });
+            return sendSuccessResponse(res, campaign);
         } catch (error: any) {
             logger.error(error);
             return sendErrorResponse(res, error);
@@ -125,7 +125,7 @@ export class CampaignController {
                 req.query as any
             );
 
-            return sendSuccessResponse(res, { campaigns });
+            return sendSuccessResponse(res, campaigns);
         } catch (error: any) {
             logger.error(error);
             return sendErrorResponse(res, error);
@@ -148,7 +148,7 @@ export class CampaignController {
                 campaignId
             );
 
-            return sendSuccessResponse(res, { stats });
+            return sendSuccessResponse(res, stats);
         } catch (error: any) {
             logger.error(error);
             return sendErrorResponse(res, error);
@@ -165,7 +165,7 @@ export class CampaignController {
                 req.user._id
             );
 
-            return sendSuccessResponse(res, { stats });
+            return sendSuccessResponse(res, stats);
         } catch (error: any) {
             logger.error(error);
             return sendErrorResponse(res, error);
@@ -191,7 +191,7 @@ export class CampaignController {
                     req.query as any
                 );
 
-            return sendSuccessResponse(res, { donations });
+            return sendSuccessResponse(res, donations);
         } catch (error: any) {
             logger.error(error);
             return sendErrorResponse(res, error);
@@ -216,7 +216,7 @@ export class CampaignController {
                 req.body.message
             );
 
-            return sendSuccessResponse(res, { comment });
+            return sendSuccessResponse(res, comment);
         } catch (error: any) {
             logger.error(error);
             return sendErrorResponse(res, error);
@@ -235,7 +235,7 @@ export class CampaignController {
             const comments =
                 await campaignServices.getCampaignComments(campaignId, req.query as any);
 
-            return sendSuccessResponse(res, { comments });
+            return sendSuccessResponse(res, comments);
         } catch (error: any) {
             logger.error(error);
             return sendErrorResponse(res, error);
@@ -255,7 +255,7 @@ export class CampaignController {
                 req.user._id
             );
 
-            return sendSuccessResponse(res, { comment });
+            return sendSuccessResponse(res, comment);
         } catch (error: any) {
             logger.error(error);
             return sendErrorResponse(res, error);
@@ -303,7 +303,7 @@ export class CampaignController {
             const donation =
                 await campaignServices.confirmDonation(transactionRef);
 
-            return sendSuccessResponse(res, { donation });
+            return sendSuccessResponse(res, donation);
         } catch (error: any) {
             logger.error(error);
             return sendErrorResponse(res, error);

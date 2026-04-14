@@ -1,5 +1,4 @@
 import mongoose, { Schema, model, Document, Types } from "mongoose";
-import { ref } from "process";
 
 export interface ICampaign extends Document {
     // ===== BASIC =====
@@ -7,12 +6,14 @@ export interface ICampaign extends Document {
     description: string;
     image: string;
 
-    category: string;
+    category: Types.ObjectId;
     tags: string[];
 
     // ===== OWNER =====
     owner: Types.ObjectId; // Account
     ownerType: "user" | "organization";
+
+    authors: Types.ObjectId[];
 
     // ===== FUNDING =====
     targetAmount: number;
@@ -90,12 +91,20 @@ const CampaignSchema = new Schema<ICampaign>(
         },
 
         category: {
-            type: String,
+            type: Schema.Types.ObjectId,
             required: true,
+            ref: "CampaignCategory",
         },
 
+        authors: [{
+            type: Schema.Types.ObjectId,
+            trim: true,
+            ref: "Account",
+            required: true,
+        }],
+
         tags: [{
-            type: Types.ObjectId,
+            type: Schema.Types.ObjectId,
             trim: true,
             ref: "Tag",
             required: true,

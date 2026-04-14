@@ -1,6 +1,6 @@
-import { BusinessCategory } from "../../models/BusinessCategory";
+import { CampaignCategory } from "../../models/campaignCategory";
 import { HTTP_STATUS } from "../../utils/constants";
-import { BusinessCategoryDocument, CategoryStatus } from "../../models/BusinessCategory";
+import { CampaignCategoryDocument, CategoryStatus } from "../../models/campaignCategory";
 import { Document } from "mongoose";
 
 type Lean<T> = Omit<T, keyof Document>;
@@ -38,7 +38,7 @@ export class BusinessCategoryService {
         }
         /* ============================= */
 
-        return await BusinessCategory.find(filter)
+        return await CampaignCategory.find(filter)
             .sort({ createdAt: -1 })
             .lean();
     }
@@ -47,8 +47,8 @@ export class BusinessCategoryService {
     // -------------------------
     // GET SINGLE
     // -------------------------
-    async getCategoryById(id: string): Promise<Lean<BusinessCategoryDocument>> {
-        const category = await BusinessCategory.findOne({
+    async getCategoryById(id: string): Promise<Lean<CampaignCategoryDocument>> {
+        const category = await CampaignCategory.findOne({
             _id: id,
             isDeleted: false,
         }).lean();
@@ -66,9 +66,9 @@ export class BusinessCategoryService {
     // -------------------------
     // CREATE
     // -------------------------
-    async createCategory(data: Partial<BusinessCategoryDocument>) {
+    async createCategory(data: Partial<CampaignCategoryDocument>) {
         // Check name conflict
-        const exists = await BusinessCategory.findOne({
+        const exists = await CampaignCategory.findOne({
             name: data.name,
             isDeleted: false,
         });
@@ -80,7 +80,7 @@ export class BusinessCategoryService {
             };
         }
 
-        const category = new BusinessCategory(data);
+        const category = new CampaignCategory(data);
         await category.save(); // slug auto-generated
 
         return category.toObject();
@@ -91,9 +91,9 @@ export class BusinessCategoryService {
     // -------------------------
     async updateCategory(
         id: string,
-        updateData: Partial<BusinessCategoryDocument>
-    ): Promise<Lean<BusinessCategoryDocument>> {
-        const existing = await BusinessCategory.findOne({
+        updateData: Partial<CampaignCategoryDocument>
+    ): Promise<Lean<CampaignCategoryDocument>> {
+        const existing = await CampaignCategory.findOne({
             _id: id,
             isDeleted: false,
         });
@@ -107,7 +107,7 @@ export class BusinessCategoryService {
 
         // Check for conflicting category name
         if (updateData.name) {
-            const conflict = await BusinessCategory.findOne({
+            const conflict = await CampaignCategory.findOne({
                 name: updateData.name,
                 _id: { $ne: id },
                 isDeleted: false,
@@ -132,7 +132,7 @@ export class BusinessCategoryService {
     // SOFT DELETE
     // -------------------------
     async deleteCategory(id: string): Promise<void> {
-        const category = await BusinessCategory.findOne({
+        const category = await CampaignCategory.findOne({
             _id: id,
             isDeleted: false,
         });
@@ -154,8 +154,8 @@ export class BusinessCategoryService {
     async updateCategoryStatus(
         id: string,
         status: CategoryStatus
-    ): Promise<Lean<BusinessCategoryDocument>> {
-        const category = await BusinessCategory.findOne({
+    ): Promise<Lean<CampaignCategoryDocument>> {
+        const category = await CampaignCategory.findOne({
             _id: id,
             isDeleted: false,
         });

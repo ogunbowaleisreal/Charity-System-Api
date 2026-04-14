@@ -2,7 +2,7 @@ import { Schema, model, Document } from "mongoose";
 
 export type CategoryStatus = "active" | "inactive" | "restricted";
 
-export interface BusinessCategoryDocument extends Document {
+export interface CampaignCategoryDocument extends Document {
     name: string;
     //slug?: string;
     image?: string;              // Cloudinary URL or CDN URL
@@ -11,7 +11,7 @@ export interface BusinessCategoryDocument extends Document {
     isDeleted: boolean;          // Soft delete
 }
 
-const BusinessCategorySchema = new Schema<BusinessCategoryDocument>(
+const CampaignCategorySchema = new Schema<CampaignCategoryDocument>(
     {
         name: {
             type: String,
@@ -58,7 +58,7 @@ const BusinessCategorySchema = new Schema<BusinessCategoryDocument>(
 //     next();
 // });
 
-export const BusinessCategory = model<BusinessCategoryDocument>(
-    "BusinessCategory",
-    BusinessCategorySchema
+export const CampaignCategory = model<CampaignCategoryDocument>(
+    "CampaignCategory",
+    CampaignCategorySchema
 );
