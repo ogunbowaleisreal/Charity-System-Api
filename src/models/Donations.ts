@@ -38,6 +38,8 @@ export interface IDonation extends Document {
     // =========================
     idempotencyKey: string; // NEW - prevents duplicate payments/webhooks
 
+    type: "user" | "guest",
+
     // =========================
     // 🔴 NEW: PAYMENT FLOW STATE MACHINE
     // =========================
@@ -120,6 +122,11 @@ const DonationSchema = new Schema<IDonation>(
         currency: {
             type: String,
             default: "NGN",
+        },
+        type: {
+            type: String,
+            enum: ["user", "guest"],
+            required: true,
         },
 
         // ===== PAYMENT =====
@@ -213,7 +220,7 @@ const DonationSchema = new Schema<IDonation>(
         // =========================
         paymentMethod: {
             type: String,
-            enum: ["card", "bank_transfer", "virtual_account"],
+            enum: ["card", "bank_transfer", "virtual_account", "google_pay"],
         },
 
         sourceBank: String,

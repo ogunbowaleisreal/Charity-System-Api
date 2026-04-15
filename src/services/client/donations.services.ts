@@ -1,0 +1,708 @@
+import { Types, startSession } from "mongoose";
+import Campaign from "../../models/Campaign";
+import { Donation } from "../../models/Donations";
+import { SaveHavenService } from "../../services/safeHaven.services";
+import crypto from "crypto";
+import { AppError } from "../../middleware/errorHandler";
+import { HTTP_STATUS } from "../../utils/constants";
+import { Wallet } from "../../models/Wallet";
+import { WalletTransaction } from "../../models/transaction";
+import { Account } from "../../models/Accounts";
+
+const safeHaven = new SaveHavenService();
+
+export type donationFilter = {
+    page: number,
+    limit: number
+}
+
+export class DonationService {
+    // =========================
+    // 🔹 INITIATE DONATION
+    // =========================
+    async initiateDonation(data: {
+        campaignId: string;
+        email: string;
+        firstname: string;
+        lastname: string;
+        amount: number;
+        paymentMethod: "card" | "bank_transfer";
+    }) {
+        const reference = `don_${Date.now()}`;
+        const idempotencyKey = crypto.randomUUID();
+
+        const user = await Account.findOne({ email: data.email });
+        if (!user) throw new Error("User not found");
+
+        // 1. Create donation FIRST (critical for idempotency)
+        const donation = await Donation.create({
+            campaign: data.campaignId,
+            amount: data.amount,
+            type: "user",
+            donor: user._id,
+            donorName: `${data.firstname} ${data.lastname}`,
+            currency: "NGN",
+            paymentProvider: "safe haven",
+            transactionRef: reference,
+            idempotencyKey,
+            paymentStatus: "pending",
+            paymentStatusExtended: "initialized",
+            settlementStatus: "unsettled",
+            allocationStatus: "unallocated",
+            paymentMethod: data.paymentMethod,
+            donorEmailSnapshot: data.email,
+        });
+
+        // 2. Initiate payment with SafeHaven
+        if (data.paymentMethod === "card") {
+            const res = await safeHaven.initiateCardPayment({
+                email: data.email,
+                firstname: data.firstname,
+                lastname: data.lastname,
+                amount: data.amount * 100, // convert to kobo
+                reference,
+            });
+
+            return {
+                donation,
+                checkoutUrl: res.checkoutUrl,
+                res
+            };
+        }
+
+        // bank transfer (virtual account)
+        const va = await safeHaven.createVirtualAccount({
+            email: data.email,
+            firstname: data.firstname,
+            lastname: data.lastname,
+            amount: data.amount,
+            reference,
+        });
+
+        return {
+            donation,
+            virtualAccount: va,
+        };
+    }
+
+
+    async initiateDonationForGuest(data: {
+        campaignId: string;
+        amount: number;
+        paymentMethod: "card" | "bank_transfer";
+        firstname: string;
+        lastname: string;
+        email: string;
+    }) {
+        const reference = `don_${Date.now()}`;
+        const idempotencyKey = crypto.randomUUID();
+
+        // 1. Create donation FIRST (critical for idempotency)
+        const donation = await Donation.create({
+            campaign: data.campaignId,
+            type: "guest",
+            //donor: null,
+            amount: data.amount,
+            donorName: `${data.firstname} ${data.lastname}`,
+            currency: "NGN",
+            paymentProvider: "safe haven",
+            transactionRef: reference,
+            idempotencyKey,
+            paymentStatus: "pending",
+            paymentStatusExtended: "initialized",
+            settlementStatus: "unsettled",
+            allocationStatus: "unallocated",
+            paymentMethod: data.paymentMethod,
+            donorEmailSnapshot: data.email,
+        });
+
+        if (data.paymentMethod === "card") {
+            const res = await safeHaven.initiateCardPayment({
+                email: data.email,
+                firstname: data.firstname,
+                lastname: data.lastname,
+                amount: data.amount * 100, // convert to kobo
+                reference,
+            });
+
+            return {
+                donation,
+                checkoutUrl: res.checkoutUrl,
+                res
+            };
+        }
+
+        // bank transfer (virtual account)
+        const va = await safeHaven.createVirtualAccount({
+            email: data.email,
+            firstname: data.firstname,
+            lastname: data.lastname,
+            amount: data.amount,
+            reference,
+        });
+
+        return {
+            donation,
+            virtualAccount: va,
+        };
+    }
+
+    async getUserDonations(userId: string, query: donationFilter) {
+        const { page, limit } = query
+        const donations = await Donation.find({ donor: userId, type: "user" }).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit)
+        const total = await Donation.countDocuments({ donor: userId, type: "user" });
+        const totalPages = Math.ceil(total / limit);
+        return {
+            donations, pagination: {
+                current_page: page,
+                total_pages: totalPages,
+                per_page: limit,
+                total_records: total,
+                has_next_page: page < totalPages,
+                has_prev_page: page > 1
+            }
+        };
+    }
+
+    //     // =========================================
+    //     // 🔹 VERIFY DONATION (MANUAL / FRONTEND)
+    //     // =========================================
+    async verifyDonation(transactionRef: string) {
+        const session = await startSession();
+        session.startTransaction();
+
+        try {
+            const donation = await Donation.findOne({
+                transactionRef,
+            }).session(session);
+
+            if (!donation) throw new Error("Donation not found");
+
+            // =============================
+            // IDEMPOTENCY CHECK
+            // =============================
+            if (donation.paymentStatus === "success") {
+                return donation;
+            }
+
+            // =============================
+            // 🔴 SIMULATE PROVIDER VERIFY
+            // =============================
+            const paymentSuccessful = true;
+
+            if (!paymentSuccessful) {
+                donation.paymentStatus = "failed";
+                donation.paymentStatusExtended = "failed";
+                await donation.save({ session });
+
+                await session.commitTransaction();
+                return donation;
+            }
+
+            // =============================
+            // UPDATE DONATION
+            // =============================
+            donation.paymentStatus = "success";
+            donation.paymentStatusExtended = "success";
+            donation.paidAt = new Date();
+
+            // =============================
+            // UPDATE CAMPAIGN LEDGER
+            // =============================
+            const campaign = await Campaign.findById(donation.campaign).session(session);
+
+            if (!campaign) throw new Error("Campaign not found");
+
+            campaign.totalRaised += donation.amount;
+            campaign.availableBalance += donation.amount;
+            campaign.donationCount += 1;
+
+            donation.allocationStatus = "allocated_to_campaign";
+            donation.allocatedAt = new Date();
+
+            await donation.save({ session });
+            await campaign.save({ session });
+
+            await session.commitTransaction();
+
+            return donation;
+        } catch (error) {
+            await session.abortTransaction();
+            throw error;
+        } finally {
+            session.endSession();
+        }
+    }
+
+    // =========================
+    // 🔹 WEBHOOK HANDLER (CRITICAL)
+    // =========================
+    async handleWebhook(payload: any, signature: string) {
+        // 1. VERIFY SIGNATURE
+        this.verifyWebhookSignature(payload, signature);
+
+        const reference = payload.referenceCode || payload.reference;
+        console.log(payload)
+
+        const { type, data } = payload;
+
+        const donation = await Donation.findOne({
+            transactionRef: reference,
+        });
+
+        if (!donation) return;
+
+        // 2. IDEMPOTENCY CHECK
+        if (donation.paymentStatus === "success") {
+            return donation;
+        }
+
+        // 3. VERIFY WITH SAFEHAVEN (VERY IMPORTANT)
+        const verification = await safeHaven.verifyPayment(reference);
+
+        if (verification.status !== "successful") {
+            donation.paymentStatus = "failed";
+            donation.paymentStatusExtended = "failed";
+            await donation.save();
+            return donation;
+        }
+
+        // 4. UPDATE DONATION
+        donation.paymentStatus = "success";
+        donation.paymentStatusExtended = "success";
+        donation.settlementStatus = "settled";
+        donation.paidAt = new Date();
+
+        await donation.save();
+
+        // 5. UPDATE CAMPAIGN LEDGER
+        await Campaign.findByIdAndUpdate(donation.campaign, {
+            $inc: {
+                totalRaised: donation.amount,
+                availableBalance: donation.amount,
+                donationCount: 1,
+            },
+        });
+
+        return donation;
+    }
+
+    // =========================
+    // 🔹 WITHDRAW FUNDS
+    // =========================
+    async withdrawFundsToWallet(
+        campaignId: string,
+        amount: number,
+        narration: string
+    ) {
+        const campaign = await Campaign.findById(campaignId);
+
+        if (!campaign) throw new AppError("Campaign not found", 404);
+        if (campaign.status == "ongoing" || campaign.status == "upcoming") throw new AppError("Campaign is still ongoing or has not started yet", 400);
+
+        const userWallet = await Wallet.findOne({
+            userId: campaign.owner,
+        });
+
+        if (!userWallet) throw new AppError("Wallet not found", 404);
+
+
+        if (campaign.availableBalance < amount) {
+            throw new AppError("Insufficient balance", 400);
+        }
+
+        // 1. LOCK FUNDS
+        campaign.availableBalance -= amount;
+        campaign.frozenBalance += amount;
+        await campaign.save();
+
+        // 2. UPDATE WALLET
+        userWallet.availableBalance += amount;
+        await userWallet.save();
+
+        // try {
+        //     // 2. INITIATE TRANSFER
+        //     const res = await safeHaven.initiateTransfer({
+        //         amount,
+        //         account_number: campaign.payoutAccount.accountNumber,
+        //         bank_code: campaign.payoutAccount.bankCode,
+        //         narration,
+        //         reference: `wd_${Date.now()}`,
+        //     });
+
+        //     // 3. FINALIZE
+        //     campaign.frozenBalance -= amount;
+        //     campaign.totalWithdrawn += amount;
+
+        //     await campaign.save();
+
+        //     return res;
+        // } catch (error) {
+        //     // 4. ROLLBACK
+        //     campaign.availableBalance += amount;
+        //     campaign.frozenBalance -= amount;
+
+        //     await campaign.save();
+        //     throw error;
+        // }
+    }
+
+    // =========================
+    // 🔹 WITHDRAW FUNDS
+    // =========================
+    async applyForWithdrawalToBank(
+        walletId: string,
+        amount: number,
+        accountName: string,
+        bankCode: string,
+        bank_name: string,
+        accountNumber: string,
+        narration: string
+    ) {
+        const wallet = await Wallet.findById(walletId);
+
+        if (!wallet) throw new AppError("Wallet not found", 404);
+
+        if (wallet.availableBalance < amount) {
+            throw new AppError("Insufficient balance", 400);
+        }
+
+        // 1. LOCK FUNDS
+        wallet.availableBalance -= amount;
+        // wallet.frozenBalance += amount;
+        await wallet.save();
+
+        const newTransaction = new WalletTransaction({
+            wallet: walletId,
+            amount,
+            type: "withdrawal",
+            status: "pending",
+            narration,
+            method: "bank_transfer",
+            bankDetails: {
+                bankName: bank_name,
+                accountNumber,
+                accountName: accountName,
+            },
+        });
+        await newTransaction.save();
+
+
+
+
+
+        // try {
+        //     // 2. INITIATE TRANSFER
+        //     const res = await safeHaven.initiateTransfer({
+        //         amount,
+        //         account_number: accountNumber,
+        //         bank_code: bankCode,
+        //         narration,
+        //         reference: `wd_${Date.now()}`,
+        //     });
+
+        //     // 3. FINALIZE
+        //     wallet.frozenBalance -= amount;
+        //     wallet.totalWithdrawn += amount;
+
+        //     await wallet.save();
+
+        //     return res;
+        // } catch (error) {
+        //     // 4. ROLLBACK
+        //     wallet.availableBalance += amount;
+        //     wallet.frozenBalance -= amount;
+
+        //     await wallet.save();
+        //     throw error;
+        // }
+    }
+
+    // =========================
+    // 🔹 SIGNATURE VERIFICATION
+    // =========================
+    private verifyWebhookSignature(payload: any, signature: string) {
+        const secret = process.env.SAFEHAVEN_WEBHOOK_SECRET!;
+
+        const hash = crypto
+            .createHmac("sha256", secret)
+            .update(JSON.stringify(payload))
+            .digest("hex");
+
+        if (hash !== signature) {
+            throw new AppError(
+                "Invalid webhook signature",
+                HTTP_STATUS.UNAUTHORIZED
+            );
+        }
+    }
+}
+// import { Types, startSession } from "mongoose";
+// import crypto from "crypto";
+// import { Donation } from "../../models/Donations";
+// import Campaign from "../../models/Campaign";
+// import logger from "../../logger";
+
+// export class DonationService {
+//     // =========================================
+//     // 🔹 CREATE DONATION (INIT PAYMENT)
+//     // =========================================
+//     async createDonation(data: any, userId?: Types.ObjectId | null) {
+//         const session = await startSession();
+//         session.startTransaction();
+
+//         try {
+//             const {
+//                 campaignId,
+//                 amount,
+//                 paymentMethod,
+//                 donorName,
+//                 isAnonymous,
+//             } = data;
+
+//             // =============================
+//             // VALIDATION
+//             // =============================
+//             const campaign = await Campaign.findById(campaignId).session(session);
+//             if (!campaign || campaign.isDeleted) {
+//                 throw new Error("Campaign not found");
+//             }
+
+//             if (!campaign.isActive) {
+//                 throw new Error("Campaign is not active");
+//             }
+
+//             // =============================
+//             // IDEMPOTENCY KEY
+//             // =============================
+//             const idempotencyKey = crypto
+//                 .createHash("sha256")
+//                 .update(`${userId || "anon"}-${campaignId}-${amount}-${Date.now()}`)
+//                 .digest("hex");
+
+//             // =============================
+//             // CREATE DONATION RECORD
+//             // =============================
+//             const donation = await Donation.create(
+//                 [
+//                     {
+//                         campaign: campaignId,
+//                         donor: userId || null,
+//                         donorName,
+//                         amount,
+//                         currency: "NGN",
+
+//                         paymentProvider: "safe haven",
+//                         transactionRef: `TX-${Date.now()}`,
+//                         paymentStatus: "pending",
+
+//                         isAnonymous: isAnonymous || false,
+
+//                         idempotencyKey,
+
+//                         paymentStatusExtended: "initialized",
+//                         settlementStatus: "unsettled",
+//                         allocationStatus: "unallocated",
+
+//                         paymentMethod,
+//                     },
+//                 ],
+//                 { session }
+//             );
+
+//             // =============================
+//             // 🔴 CALL PAYMENT PROVIDER
+//             // (MOCK / SAFEHAVEN INTEGRATION POINT)
+//             // =============================
+//             const paymentLink = `https://payment-link/${donation[0].transactionRef}`;
+
+//             await session.commitTransaction();
+
+//             return {
+//                 donation: donation[0],
+//                 paymentLink,
+//             };
+//         } catch (error) {
+//             await session.abortTransaction();
+//             throw error;
+//         } finally {
+//             session.endSession();
+//         }
+//     }
+
+//     // =========================================
+//     // 🔹 VERIFY DONATION (MANUAL / FRONTEND)
+//     // =========================================
+//     async verifyDonation(transactionRef: string) {
+//         const session = await startSession();
+//         session.startTransaction();
+
+//         try {
+//             const donation = await Donation.findOne({
+//                 transactionRef,
+//             }).session(session);
+
+//             if (!donation) throw new Error("Donation not found");
+
+//             // =============================
+//             // IDEMPOTENCY CHECK
+//             // =============================
+//             if (donation.paymentStatus === "success") {
+//                 return donation;
+//             }
+
+//             // =============================
+//             // 🔴 SIMULATE PROVIDER VERIFY
+//             // =============================
+//             const paymentSuccessful = true;
+
+//             if (!paymentSuccessful) {
+//                 donation.paymentStatus = "failed";
+//                 donation.paymentStatusExtended = "failed";
+//                 await donation.save({ session });
+
+//                 await session.commitTransaction();
+//                 return donation;
+//             }
+
+//             // =============================
+//             // UPDATE DONATION
+//             // =============================
+//             donation.paymentStatus = "success";
+//             donation.paymentStatusExtended = "success";
+//             donation.paidAt = new Date();
+
+//             // =============================
+//             // UPDATE CAMPAIGN LEDGER
+//             // =============================
+//             const campaign = await Campaign.findById(donation.campaign).session(session);
+
+//             if (!campaign) throw new Error("Campaign not found");
+
+//             campaign.totalRaised += donation.amount;
+//             campaign.availableBalance += donation.amount;
+//             campaign.donationCount += 1;
+
+//             donation.allocationStatus = "allocated_to_campaign";
+//             donation.allocatedAt = new Date();
+
+//             await donation.save({ session });
+//             await campaign.save({ session });
+
+//             await session.commitTransaction();
+
+//             return donation;
+//         } catch (error) {
+//             await session.abortTransaction();
+//             throw error;
+//         } finally {
+//             session.endSession();
+//         }
+//     }
+
+//     // =========================================
+//     // 🔹 GET SINGLE DONATION
+//     // =========================================
+//     async getDonationById(donationId: string) {
+//         const donation = await Donation.findById(donationId)
+//             .populate("campaign")
+//             .populate("donor");
+
+//         if (!donation) throw new Error("Donation not found");
+
+//         return donation;
+//     }
+
+//     // =========================================
+//     // 🔹 USER DONATIONS
+//     // =========================================
+//     async getUserDonations(userId: Types.ObjectId, query: any) {
+//         const { page = 1, limit = 10 } = query;
+
+//         const donations = await Donation.find({ donor: userId })
+//             .skip((page - 1) * limit)
+//             .limit(limit)
+//             .sort({ createdAt: -1 });
+
+//         return donations;
+//     }
+
+//     // =========================================
+//     // 🔹 CAMPAIGN DONATIONS
+//     // =========================================
+//     async getCampaignDonations(campaignId: string, query: any) {
+//         const { page = 1, limit = 10 } = query;
+
+//         const donations = await Donation.find({ campaign: campaignId })
+//             .skip((page - 1) * limit)
+//             .limit(limit)
+//             .sort({ createdAt: -1 });
+
+//         return donations;
+//     }
+
+//     // =========================================
+//     // 🔹 HANDLE WEBHOOK (CRITICAL)
+//     // =========================================
+//     async handleWebhook(payload: any) {
+//         const session = await startSession();
+//         session.startTransaction();
+
+//         try {
+//             const { transactionRef, status } = payload;
+
+//             const donation = await Donation.findOne({
+//                 transactionRef,
+//             }).session(session);
+
+//             if (!donation) throw new Error("Donation not found");
+
+//             // =============================
+//             // IDEMPOTENCY
+//             // =============================
+//             if (donation.paymentStatus === "success") {
+//                 await session.commitTransaction();
+//                 return donation;
+//             }
+
+//             if (status !== "success") {
+//                 donation.paymentStatus = "failed";
+//                 donation.paymentStatusExtended = "failed";
+//                 await donation.save({ session });
+
+//                 await session.commitTransaction();
+//                 return donation;
+//             }
+
+//             // =============================
+//             // SUCCESS FLOW
+//             // =============================
+//             donation.paymentStatus = "success";
+//             donation.paymentStatusExtended = "success";
+//             donation.paidAt = new Date();
+
+//             const campaign = await Campaign.findById(donation.campaign).session(session);
+
+//             if (!campaign) throw new Error("Campaign not found");
+
+//             campaign.totalRaised += donation.amount;
+//             campaign.availableBalance += donation.amount;
+//             campaign.donationCount += 1;
+
+//             donation.allocationStatus = "allocated_to_campaign";
+//             donation.allocatedAt = new Date();
+
+//             await donation.save({ session });
+//             await campaign.save({ session });
+
+//             await session.commitTransaction();
+
+//             return donation;
+//         } catch (error) {
+//             await session.abortTransaction();
+//             throw error;
+//         } finally {
+//             session.endSession();
+//         }
+//     }
+// }

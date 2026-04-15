@@ -5,6 +5,7 @@ import profileRoutes from "./profile.routes"
 //import subscriptionRoutes from "./subscription"
 import accountRoutes from "./accounts.route"
 import campaignRoutes from "./campaign.routes"
+import donationRoutes from "./donation.routes"
 import faqRoutes from './faq.routes'
 import contactRoutes from "./contact"
 import businessCategoryRoutes from "./campaignCategory"
@@ -24,6 +25,7 @@ router.use('/profile', profileRoutes)
 router.use('/account', accountRoutes)
 router.use('/faqs', faqRoutes)
 router.use('/campaign', campaignRoutes)
+router.use('/donation', donationRoutes)
 router.use('/tags', tagRoutes)
 router.use("/contact", contactRoutes)
 router.use("/campaign-category", businessCategoryRoutes)

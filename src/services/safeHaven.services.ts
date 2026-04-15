@@ -414,6 +414,7 @@ export class SaveHavenService {
             const response = await this.client.post("/virtual-accounts", {
                 validFor: 900,
                 amountControl: "Fixed",
+                amount: data.amount,
                 externalReference: data.reference,
                 email: data.email,
                 callbackUrl: `${process.env.BASE_URL}/api/webhooks/savehaven/payment`,
