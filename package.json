@@ -12,7 +12,8 @@
     "seed:plans": "ts-node src/scripts/seedPlans.ts",
     "clear:auths": "ts-node src/scripts/index.ts",
     "move:data": "ts-node src/scripts/stagingData.ts",
-    "test:push": "ts-node src/scripts/testPush.ts"
+    "test:push": "ts-node src/scripts/testPush.ts",
+    "generate:secret": "ts-node src/scripts/generateWebhookSecret.ts"
   },
   "keywords": [],
   "author": "",

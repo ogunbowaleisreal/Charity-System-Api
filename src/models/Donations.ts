@@ -12,7 +12,7 @@ export interface IDonation extends Document {
 
     // ===== PAYMENT =====
     paymentProvider: "safe haven" | "google pay" | "manual";
-    transactionRef: string; // unique (VERY IMPORTANT)
+    reference: string; // unique (VERY IMPORTANT)
     paymentStatus: "pending" | "success" | "failed";
 
     // ===== OPTIONS =====
@@ -136,7 +136,7 @@ const DonationSchema = new Schema<IDonation>(
             required: true,
         },
 
-        transactionRef: {
+        reference: {
             type: String,
             required: true,
             unique: true,

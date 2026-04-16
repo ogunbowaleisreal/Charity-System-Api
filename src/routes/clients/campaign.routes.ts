@@ -7,6 +7,22 @@ const router = Router();
 
 const campaignCtrl = new CampaignController();
 
+router.get("/", campaignCtrl.getAllCampaigns);
+
+router.get("/:campaignId", campaignCtrl.getCampaignById);
+
+router.get("/stats/:campaignId", campaignCtrl.getCampaignStats);
+
+router.get(
+    "/:campaignId/donations",
+    campaignCtrl.getCampaignDonations
+);
+router.get(
+    "/:campaignId/comments",
+    campaignCtrl.getCampaignComments
+);
+
+
 // =============================
 // 🔒 GLOBAL MIDDLEWARE
 // =============================
@@ -22,29 +38,25 @@ router.patch("/update/:campaignId", campaignCtrl.updateCampaign);
 
 router.delete("/delete/:campaignId", campaignCtrl.deleteCampaign);
 
+
 // =============================
 // 🔹 FETCH CAMPAIGNS
 // =============================
-router.get("/", campaignCtrl.getAllCampaigns);
 
-router.get("/:campaignId", campaignCtrl.getCampaignById);
 
 router.get("/user/all", campaignCtrl.getUserCampaigns);
 
 // =============================
 // 🔹 STATS
 // =============================
-router.get("/stats/:campaignId", campaignCtrl.getCampaignStats);
+
 
 router.get("/user/stats", campaignCtrl.getUserCampaignStats);
 
 // =============================
 // 🔹 DONATIONS
 // =============================
-router.get(
-    "/:campaignId/donations",
-    campaignCtrl.getCampaignDonations
-);
+
 
 // =============================
 // 🔹 COMMENTS
@@ -54,10 +66,7 @@ router.post(
     campaignCtrl.addComment
 );
 
-router.get(
-    "/:campaignId/comments",
-    campaignCtrl.getCampaignComments
-);
+
 
 router.delete(
     "/comment/:commentId",

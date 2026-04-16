@@ -4,232 +4,255 @@ import { Types } from "mongoose";
 
 export class KYCService {
 
-    async startKYC(userId: string) {
-        const existing = await KYC.findOne({ userId });
+    private async getOrCreateKYC(userId: string) {
+        let kyc = await KYC.findOne({ userId });
 
-        if (existing) {
-            return existing;
+        if (!kyc) {
+            kyc = await KYC.create({
+                userId,
+                status: "not_started",
+                level: 0,
+            });
         }
-
-        const account = await Account.findById(userId);
-        if (!account) throw new Error("Account not found");
-
-        const kyc = await KYC.create({
-            userId: new Types.ObjectId(userId),
-            type: account.role === "user" ? "user" : "organization",
-        });
 
         return kyc;
     }
 
-    async submitBVN(userId: string, bvn: string) {
-        const kyc = await KYC.findOne({ userId });
+    private updateStatus(kyc: any) {
+        const bvnOk = kyc.bvnVerification?.status === "verified";
+        const faceOk = kyc.faceVerification?.status === "verified";
 
-        if (!kyc) throw new Error("KYC not initialized");
-
-        // Optional: prevent resubmission after success
-        if (kyc.steps.bvn.verified) {
-            throw new Error("BVN already verified");
+        if (bvnOk && faceOk) {
+            kyc.level = 2;
+            kyc.status = "verified";
+            kyc.verifiedAt = new Date();
+            return;
         }
 
-        // 🔐 (encrypt in production)
-        kyc.bvn = bvn;
+        if (bvnOk) {
+            kyc.level = 1;
+            kyc.status = "in_progress";
+            return;
+        }
 
-        kyc.steps.bvn.completed = true;
+        kyc.level = 0;
+        kyc.status = "in_progress";
+    }
+
+
+    async submitBVN(userId: string, bvn: string) {
+        const kyc = await this.getOrCreateKYC(userId);
+
+        kyc.bvn = bvn;
+        kyc.steps.bvn.submitted = true;
         kyc.steps.bvn.submittedAt = new Date();
 
-        // 🔥 Call provider
+        kyc.status = "pending_verification";
+
+        // 🔥 provider call placeholder
         const result = await this.verifyBVN(bvn);
 
         if (result.status === "verified") {
-            kyc.steps.bvn.verified = true;
-        } else if (result.status === "failed") {
-            kyc.status = "rejected";
-            kyc.rejectionReason = "Invalid BVN";
+            kyc.bvnVerification = {
+                status: "verified",
+                provider: "mock",
+                matchedData: result.data,
+                verifiedAt: new Date(),
+            };
+
+            kyc.level = 1;
         } else {
-            // async verification case
-            kyc.status = "pending_verification";
+            kyc.bvnVerification = {
+                status: "failed",
+            };
+
+            kyc.status = "rejected";
+            kyc.rejectionReason = "BVN verification failed";
         }
 
-        await this.updateStatus(kyc);
-        await kyc.save();
+        this.updateStatus(kyc);
 
+        await kyc.save();
         return kyc;
     }
 
-    private async verifyBVN(bvn: string) {
-        // 🔥 Replace with real provider (Dojah, Smile Identity, etc.)
 
-        // Simulated response
-        if (bvn.length === 11) {
-            return {
-                status: "verified",
-                data: {
-                    firstName: "John",
-                    lastName: "Doe",
-                    dob: "1995-01-01"
-                }
-            };
-        }
-
-        return { status: "failed" };
-    }
-
-    // async submitBVN(userId: string, bvn: string) {
-    //     const kyc = await KYC.findOne({ userId });
-
-    //     if (!kyc) throw new Error("KYC not initialized");
-
-    //     // 🔐 (encrypt this in real app)
-    //     kyc.bvn = bvn;
-
-    //     kyc.steps.bvn.completed = true;
-    //     kyc.steps.bvn.submittedAt = new Date();
-
-    //     await this.updateStatus(kyc);
-
-    //     await kyc.save();
-
-    //     return kyc;
-    // }
 
     async submitFace(userId: string, fileUrl: string) {
-        const kyc = await KYC.findOne({ userId });
+        const kyc = await this.getOrCreateKYC(userId);
 
-        if (!kyc) throw new Error("KYC not initialized");
-
-        if (!kyc.steps.bvn.completed) {
-            throw new Error("BVN must be submitted first");
+        if (!kyc.bvnVerification || kyc.bvnVerification.status !== "verified") {
+            throw new Error("BVN must be verified first");
         }
 
         kyc.facialImage = fileUrl;
-
-        kyc.steps.face.completed = true;
+        kyc.steps.face.submitted = true;
         kyc.steps.face.submittedAt = new Date();
 
-        // 🔥 Call provider
+        kyc.status = "pending_verification";
+
         const result = await this.verifyFace(fileUrl, kyc.bvn);
 
         if (result.status === "verified") {
-            kyc.steps.face.verified = true;
-        } else if (result.status === "failed") {
+            kyc.faceVerification = {
+                status: "verified",
+                provider: "mock",
+                confidenceScore: 0.95,
+                verifiedAt: new Date(),
+            };
+
+            kyc.level = 2;
+        } else {
+            kyc.faceVerification = {
+                status: "failed",
+            };
+
             kyc.status = "rejected";
             kyc.rejectionReason = "Face mismatch";
-        } else {
-            // pending (async case)
-            kyc.status = "pending_verification";
         }
 
-        await this.updateStatus(kyc);
-        await kyc.save();
+        this.updateStatus(kyc);
 
+        await kyc.save();
         return kyc;
     }
 
-    // async submitFace(userId: string, fileUrl: string) {
-    //     const kyc = await KYC.findOne({ userId });
-
-    //     if (!kyc) throw new Error("KYC not initialized");
-
-    //     kyc.facialImage = fileUrl;
-
-    //     kyc.steps.face.completed = true;
-    //     kyc.steps.face.submittedAt = new Date();
-
-    //     await this.updateStatus(kyc);
-
-    //     await kyc.save();
-
-    //     return kyc;
-    // }
 
     async submitDocument(userId: string, fileUrl: string) {
         const kyc = await KYC.findOne({ userId });
 
         if (!kyc) throw new Error("KYC not initialized");
 
+        // ===== STORE DOCUMENT =====
         if (kyc.type === "organization") {
             kyc.cacDocument = fileUrl;
         } else {
             kyc.utilityBill = fileUrl;
         }
 
+        // ===== STEP TRACKING =====
         kyc.steps.document.completed = true;
         kyc.steps.document.submittedAt = new Date();
 
-        await this.updateStatus(kyc);
+        // ===== STATUS UPDATE =====
+        kyc.status = "pending_verification";
+
+        this.updateStatus(kyc);
 
         await kyc.save();
 
         return kyc;
     }
 
-    async getKYCStatus(userId: string) {
-        const kyc = await KYC.findOne({ userId });
+    // async submitDocument(userId: string, fileUrl: string) {
+    //     const kyc = await KYC.findOne({ userId });
 
-        if (!kyc) throw new Error("KYC not found");
+    //     if (!kyc) throw new Error("KYC not initialized");
 
-        return {
-            status: kyc.status,
-            steps: kyc.steps,
-        };
-    }
-
-    private async updateStatus(kyc: any) {
-        const { bvn, face, document } = kyc.steps;
-
-        let allVerified = false;
-
-        if (kyc.type === "personal") {
-            allVerified =
-                bvn.verified &&
-                face.verified &&
-                document.verified;
-        } else {
-            allVerified =
-                bvn.verified &&
-                document.verified;
-        }
-
-        if (allVerified) {
-            kyc.status = "verified";
-            kyc.verifiedAt = new Date();
-        }
-    }
-
-    // 🔥 CORE LOGIC
-    // private async updateStatus(kyc: any) {
-    //     const { bvn, face, document } = kyc.steps;
-
-    //     // 👇 dynamic logic based on type
-    //     let allCompleted = false;
-
-    //     if (kyc.type === "personal") {
-    //         allCompleted =
-    //             bvn.completed &&
-    //             face.completed &&
-    //             document.completed;
+    //     if (kyc.type === "organization") {
+    //         kyc.cacDocument = fileUrl;
     //     } else {
-    //         // orgs don’t need face (adjust if needed)
-    //         allCompleted =
-    //             bvn.completed &&
-    //             document.completed;
+    //         kyc.utilityBill = fileUrl;
     //     }
 
-    //     if (allCompleted) {
-    //         kyc.status = "pending_review";
-    //         kyc.submittedAt = new Date();
-    //     } else {
-    //         kyc.status = "in_progress";
-    //     }
+    //     kyc.steps.document.completed = true;
+    //     kyc.steps.document.submittedAt = new Date();
+
+    //     this.updateStatus(kyc);
+
+    //     await kyc.save();
+
+    //     return kyc;
     // }
 
-    private async verifyFace(imageUrl: string, bvn?: string) {
-        // simulate external API
-        // replace with Dojah / Smile Identity later
+
+    async getKYCStatus(userId: string) {
+        const kyc = await KYC.findOne({ userId }).select("+bvn");
+
+        if (!kyc) {
+            throw new Error("KYC not found");
+        }
+
+        const bvnStatus = kyc.bvnVerification?.status || "not_submitted";
+        const faceStatus = kyc.faceVerification?.status || "not_submitted";
+
+        const isBVNVerified = bvnStatus === "verified";
+        const isFaceVerified = faceStatus === "verified";
+
+        // ===== DOCUMENT STATE =====
+        const documentOk =
+            kyc.type === "organization"
+                ? !!kyc.cacDocument
+                : !!kyc.utilityBill;
+
+        const documentSubmitted = kyc.steps.document.completed;
+
+        // ===== PROGRESS CALCULATION =====
+        let completedSteps = 0;
+        let totalSteps = 3;
+
+        if (isBVNVerified) completedSteps++;
+        if (isFaceVerified) completedSteps++;
+        if (documentOk) completedSteps++;
+
+        const progress = Number(((completedSteps / totalSteps) * 100).toFixed(2));
+
+        // ===== NEXT ACTION LOGIC =====
+        let nextAction: string;
+
+        if (!isBVNVerified) {
+            nextAction = "Submit BVN for verification";
+        } else if (!isFaceVerified) {
+            nextAction = "Complete facial verification";
+        } else if (!documentOk) {
+            nextAction = "Upload required document";
+        } else {
+            nextAction = "Fully verified";
+        }
+
+        // ===== FLAGS =====
+        const flags = {
+            canTransact: isBVNVerified,
+            canWithdraw: isBVNVerified && isFaceVerified,
+            isFullyVerified: isBVNVerified && isFaceVerified && documentOk,
+        };
 
         return {
-            status: "verified", // or "failed" or "pending"
+            level: kyc.level,
+            status: kyc.status,
+
+            progress,
+
+            steps: {
+                bvn: {
+                    submitted: kyc.steps.bvn.submitted,
+                    status: bvnStatus,
+                    verified: isBVNVerified,
+                },
+                face: {
+                    submitted: kyc.steps.face.submitted,
+                    status: faceStatus,
+                    verified: isFaceVerified,
+                },
+                document: {
+                    submitted: documentSubmitted,
+                    uploaded: documentOk,
+                    type: kyc.type === "organization" ? "cacDocument" : "utilityBill",
+                },
+            },
+
+            documents: {
+                cacDocument: kyc.cacDocument || null,
+                utilityBill: kyc.utilityBill || null,
+            },
+
+            nextAction,
+            flags,
+
+            rejectionReason: kyc.rejectionReason || null,
+
+            updatedAt: kyc.updatedAt,
         };
     }
+
 }

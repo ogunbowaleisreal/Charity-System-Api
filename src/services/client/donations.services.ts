@@ -8,12 +8,23 @@ import { HTTP_STATUS } from "../../utils/constants";
 import { Wallet } from "../../models/Wallet";
 import { WalletTransaction } from "../../models/transaction";
 import { Account } from "../../models/Accounts";
+import { FlutterwaveService } from "../flutterwave.services";
+import logger from "../../logger";
 
 const safeHaven = new SaveHavenService();
+const flutterwave = new FlutterwaveService();
 
 export type donationFilter = {
     page: number,
     limit: number
+}
+export type googlePayDetails = {
+    amount: number;
+    currency: string;
+    email: string;
+    firstname: string;
+    lastname: string;
+    campaignId: string;
 }
 
 export class DonationService {
@@ -26,25 +37,130 @@ export class DonationService {
         firstname: string;
         lastname: string;
         amount: number;
-        paymentMethod: "card" | "bank_transfer";
+        // paymentMethod: "card" | "bank_transfer";
     }) {
-        const reference = `don_${Date.now()}`;
-        const idempotencyKey = crypto.randomUUID();
+        //const reference = `don_${Date.now()}`;
+        const reference = `DON_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`; //crypto.randomUUID();
 
-        const user = await Account.findOne({ email: data.email });
-        if (!user) throw new Error("User not found");
+        const user = await Account.findOne({ email: data.email }) as any
+        if (!user) logger.info("User not found, Creating donation for guest user", { email: data.email });
+
+        const campaign = await Campaign.findById(data.campaignId);
+        if (!campaign) throw new Error("Campaign not found");
+        if (campaign.status == "ongoing" || campaign.status == "upcoming") throw new AppError("Campaign is still ongoing or has not started yet", 400);
+
+        const transaction = await WalletTransaction.create({
+            //walletId: user.walletId,
+            category: "donation",
+            status: "pending",
+            amount: data.amount,
+            currency: "NGN",
+            campaign: campaign._id,
+            reference: reference,
+            idempotencyKey: reference,
+            fullName: `${data.firstname} ${data.lastname}`,
+            type: "user",
+            userId: user._id,
+            metadata: {
+                campaignId: campaign._id,
+            },
+        });
+
+        // 2. Initiate payment with SafeHaven
+        const res = await flutterwave.initiateCardPayment({
+            txRef: reference,
+            amount: data.amount * 100, // convert to kobo
+            currency: "NGN",
+            redirectUrl: `${process.env.BASE_URL}/donations`,
+            customerEmail: data.email,
+            customerName: `${data.firstname} ${data.lastname}`,
+            // customerPhone: data.phone,
+            //lastname: data.lastname,
+            //  reference,
+        });
+
+        return {
+            transaction,
+            checkoutUrl: res.paymentUrl,
+            expiresAt: res.expiresAt,
+            reference,
+            // transactionRef: res.reference,
+            //res
+        };
+
+    }
+
+    async retryDonation(data: {
+        donationId: string;
+        reference: string;
+    }) {
+        const donation = await Donation.findById(data.donationId);
+        if (!donation) throw new Error("Donation not found");
+        if (donation.paymentStatus !== "failed") throw new Error("Donation is not failed");
+
+    }
+
+
+    async verifyPayment(reference: string) {
+        const transaction = await WalletTransaction.findOne({ reference })
+        if (!transaction) {
+            throw new Error("Transaction not found")
+        }
+        if (transaction.status === "successful") {
+            logger.info("Transaction successful", { reference })
+            return { transaction, "status": "successful" } //transaction
+        }
+        if (transaction.status === "failed") {
+            logger.info("Transaction failed", { reference })
+            //throw new Error("Transaction failed")
+            return { transaction, "status": "failed" } //transaction
+        }
+
+        if (transaction.status === "expired") {
+            logger.info("Transaction expired", { reference })
+            //throw new Error("Transaction expired")
+            return { transaction, "status": "expired" }
+        }
+
+        const transactionId = transaction.providerTransactionId
+
+        const response = await flutterwave.verifyTransaction(transactionId);
+
+        if (response.status == "successful") {
+            transaction.status = "successful"
+            await transaction.save()
+            return { transaction, "status": "successful" }
+        }
+        return { transaction, "status": "pending" }
+
+    }
+
+
+    async initiateDonationForGuest(data: {
+        campaignId: string;
+        amount: number;
+        paymentMethod: "card" | "bank_transfer";
+        firstname: string;
+        lastname: string;
+        email: string;
+    }) {
+        //const reference = `don_${Date.now()}`;
+        const reference = crypto.randomUUID();
+        const campaign = await Campaign.findById(data.campaignId);
+        if (!campaign) throw new Error("Campaign not found");
+        if (campaign.status == "ongoing" || campaign.status == "upcoming") throw new AppError("Campaign is still ongoing or has not started yet", 400);
 
         // 1. Create donation FIRST (critical for idempotency)
         const donation = await Donation.create({
             campaign: data.campaignId,
+            type: "guest",
+            //donor: null,
             amount: data.amount,
-            type: "user",
-            donor: user._id,
             donorName: `${data.firstname} ${data.lastname}`,
             currency: "NGN",
             paymentProvider: "safe haven",
             transactionRef: reference,
-            idempotencyKey,
+            idempotencyKey: reference,
             paymentStatus: "pending",
             paymentStatusExtended: "initialized",
             settlementStatus: "unsettled",
@@ -53,20 +169,22 @@ export class DonationService {
             donorEmailSnapshot: data.email,
         });
 
-        // 2. Initiate payment with SafeHaven
         if (data.paymentMethod === "card") {
-            const res = await safeHaven.initiateCardPayment({
-                email: data.email,
-                firstname: data.firstname,
-                lastname: data.lastname,
+            const res = await flutterwave.initiateCardPayment({
+                txRef: reference,
                 amount: data.amount * 100, // convert to kobo
-                reference,
+                currency: "NGN",
+                redirectUrl: `${process.env.BASE_URL}/api/v1/webhooks/flutterwave/callback`,
+                customerEmail: data.email,
+                customerName: `${data.firstname} ${data.lastname}`,
             });
 
             return {
                 donation,
-                checkoutUrl: res.checkoutUrl,
-                res
+                checkoutUrl: res.paymentUrl,
+                expiresAt: res.expiresAt,
+                reference,
+                transactionRef: res.reference,
             };
         }
 
@@ -85,66 +203,35 @@ export class DonationService {
         };
     }
 
+    async googlePay(token: string, userId: string, paymentDetails: googlePayDetails) {
+        const campaign = await Campaign.findById(paymentDetails.campaignId);
+        if (!campaign) throw new Error("Campaign not found");
+        if (campaign.status == "ongoing" || campaign.status == "upcoming") throw new AppError("Campaign is still ongoing or has not started yet", 400);
+        //  if (!donation) throw new Error("Donation not found");
 
-    async initiateDonationForGuest(data: {
-        campaignId: string;
-        amount: number;
-        paymentMethod: "card" | "bank_transfer";
-        firstname: string;
-        lastname: string;
-        email: string;
-    }) {
+        const user = await Account.findById(userId);
+        if (!user) throw new Error("User not found");
+
         const reference = `don_${Date.now()}`;
         const idempotencyKey = crypto.randomUUID();
 
-        // 1. Create donation FIRST (critical for idempotency)
         const donation = await Donation.create({
-            campaign: data.campaignId,
-            type: "guest",
-            //donor: null,
-            amount: data.amount,
-            donorName: `${data.firstname} ${data.lastname}`,
+            campaign: paymentDetails.campaignId,
+            type: "user",
+            donor: user._id,
+            amount: paymentDetails.amount,
+            donorName: `${paymentDetails.firstname} ${paymentDetails.lastname}`,
             currency: "NGN",
-            paymentProvider: "safe haven",
+            paymentProvider: "flutterwave",
             transactionRef: reference,
-            idempotencyKey,
+            idempotencyKey: idempotencyKey,
             paymentStatus: "pending",
             paymentStatusExtended: "initialized",
             settlementStatus: "unsettled",
             allocationStatus: "unallocated",
-            paymentMethod: data.paymentMethod,
-            donorEmailSnapshot: data.email,
+            paymentMethod: "google pay",
+            //donorEmailSnapshot: paymentDetails.donorEmailSnapshot,
         });
-
-        if (data.paymentMethod === "card") {
-            const res = await safeHaven.initiateCardPayment({
-                email: data.email,
-                firstname: data.firstname,
-                lastname: data.lastname,
-                amount: data.amount * 100, // convert to kobo
-                reference,
-            });
-
-            return {
-                donation,
-                checkoutUrl: res.checkoutUrl,
-                res
-            };
-        }
-
-        // bank transfer (virtual account)
-        const va = await safeHaven.createVirtualAccount({
-            email: data.email,
-            firstname: data.firstname,
-            lastname: data.lastname,
-            amount: data.amount,
-            reference,
-        });
-
-        return {
-            donation,
-            virtualAccount: va,
-        };
     }
 
     async getUserDonations(userId: string, query: donationFilter) {

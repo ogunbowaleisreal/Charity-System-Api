@@ -27,7 +27,7 @@ router.post(
 // =============================
 // 🔒 AUTH REQUIRED
 // =============================
-router.use(verifyClientToken);
+//router.use(verifyClientToken);
 
 // =============================
 // 🔹 DONATION FLOW
@@ -42,7 +42,7 @@ router.post("/initiate", donationCtrl.initiateDonation);
 // 🔹 VERIFY (fallback)
 // =============================
 router.get("/verify/:reference", donationCtrl.verifyPayment);
-router.post("/google-pay/", donationCtrl.GooglePay);
+router.post("/google-pay/", donationCtrl.googlePay);
 
 // =============================
 // 🔹 FETCH

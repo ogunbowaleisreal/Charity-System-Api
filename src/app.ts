@@ -6,11 +6,12 @@ import path from 'path';
 import dotenv from 'dotenv';
 import allRoutes from './routes/index.routes';
 import { errorHandler } from './middleware/errorHandler';
+import { WebhookController } from './controllers/client/webhooks.controller';
 //import webhookRoutes from "./routes/clients/index.route"
 //import { subscriptionController } from './controllers/client/subscriptionController';
 import bodyParser from "body-parser"
 
-//const subController = new subscriptionController()
+const webhookController = new WebhookController()
 
 const app = express()
 
@@ -30,11 +31,11 @@ app.use((req, res, next) => {
 });
 
 
-// app.post(
-//     "/api/v1/subscription/webhook",
-//     bodyParser.raw({ type: "application/json" }),
-//     (req, res, next) => subController.handle(req, res, next)
-// );
+app.post(
+    "/api/donation/webhook",
+    bodyParser.raw({ type: "application/json" }),
+    (req, res, next) => webhookController.handleFlutterWaveWebhook(req, res, next)
+);
 
 
 app.use(helmet())

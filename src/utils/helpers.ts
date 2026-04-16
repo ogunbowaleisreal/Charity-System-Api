@@ -37,6 +37,20 @@ export const sendSuccessResponse = <T>(
     return res.status(statusCode).json(response);
 };
 
+export const formatPhoneNumber = (phone: string): string => {
+    let cleaned = phone.replace(/\D/g, "");
+
+    if (cleaned.startsWith("234")) {
+        return cleaned;
+    }
+
+    if (cleaned.startsWith("0")) {
+        cleaned = cleaned.substring(1);
+    }
+
+    return "234" + cleaned;
+};
+
 export const sendErrorResponse = (
     res: Response,
     message: string,

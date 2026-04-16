@@ -1,4 +1,6 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
+import { number } from "zod";
+import { required } from "zod/mini";
 
 //import { Document, Types } from "mongoose";
 
@@ -9,18 +11,23 @@ export interface IWalletTransaction extends Document {
 
     category: "donation" | "withdrawal" | "refund" | "adjustment" | "bonus";
 
-    status: "pending" | "processing" | "successful" | "failed";
+    status: "pending" | "processing" | "successful" | "failed" | "expired";
 
     amount: number;
+    userId: Types.ObjectId
 
     currency: string;
+    campaignId?: Types.ObjectId
 
     grossAmount: number;
+
+    fullName: string;
 
     serviceCharge: number;
 
     vat: number;
 
+    provider: "flutterwave" | "googlepay" | "safehaven";
     netAmount: number;
 
     method: "card" | "bank_transfer" | "wallet";
@@ -28,6 +35,7 @@ export interface IWalletTransaction extends Document {
     reference: string; // internal idempotency key
 
     providerReference?: string; // Safe Haven reference
+    providerTransactionId: number;
 
     bankDetails?: {
         bankName: string;
@@ -55,7 +63,7 @@ const WalletTransactionSchema = new Schema<IWalletTransaction>(
         walletId: {
             type: Schema.Types.ObjectId,
             ref: "Wallet",
-            required: true,
+            required: false,
             index: true,
         },
 
@@ -72,11 +80,27 @@ const WalletTransactionSchema = new Schema<IWalletTransaction>(
             index: true,
         },
 
+        userId: {
+            type: Schema.Types.ObjectId,
+            ref: "User",
+            //required: true,
+        },
+        campaignId: {
+            type: Schema.Types.ObjectId,
+            ref: "Campaign",
+            required: false,
+            index: true,
+        },
+
         status: {
             type: String,
-            enum: ["pending", "processing", "successful", "failed"],
+            enum: ["pending", "processing", "successful", "failed", "expired"],
             default: "pending",
             index: true,
+        },
+        fullName: {
+            type: String,
+            required: true,
         },
 
         amount: {
@@ -116,6 +140,12 @@ const WalletTransactionSchema = new Schema<IWalletTransaction>(
             required: true,
         },
 
+        provider: {
+            type: String,
+            enum: ["flutterwave", "googlepay"],
+            required: true
+        },
+
         reference: {
             type: String,
             required: true,
@@ -126,6 +156,12 @@ const WalletTransactionSchema = new Schema<IWalletTransaction>(
         providerReference: {
             type: String,
             index: true,
+        },
+
+        providerTransactionId: {
+            type: Number,
+            index: true,
+            default: null
         },
 
         bankDetails: {

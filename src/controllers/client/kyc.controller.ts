@@ -9,17 +9,17 @@ const kycService = new KYCService();
 
 export class KYCController {
 
-    async startKYC(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
-        try {
-            const userId = req.user.user_id;
+    // async startKYC(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
+    //     try {
+    //         const userId = req.user.user_id;
 
-            const result = await kycService.startKYC(userId);
+    //         const result = await kycService.startKYC(userId);
 
-            sendSuccessResponse(res, result, "KYC initialized");
-        } catch (error: any) {
-            next(error);
-        }
-    }
+    //         sendSuccessResponse(res, result, "KYC initialized");
+    //     } catch (error: any) {
+    //         next(error);
+    //     }
+    // }
 
     async submitBVN(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
         try {

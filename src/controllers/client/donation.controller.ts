@@ -18,6 +18,15 @@ export type initiateDonation = {
     paymentMethod: "card" | "bank_transfer";
 }
 
+export type googlePayDetails = {
+    amount: number;
+    currency: string;
+    email: string;
+    firstname: string;
+    lastname: string;
+    campaignId: string;
+}
+
 export class DonationController {
     // =============================
     // 🔹 INITIATE DONATION
@@ -81,11 +90,14 @@ export class DonationController {
         next: NextFunction
     ) {
         try {
-            const { donationId } = req.body;
+            const userId = req.user?._id;
+            const { token, paymentDetails } = req.body;
+            const donationId = req.params.donationId;
 
             const payment = await donationService.googlePay(
-                donationId,
-                req.user
+                token,
+                userId,
+                paymentDetails as googlePayDetails
             );
 
             return sendSuccessResponse(res, payment);
@@ -152,7 +164,7 @@ export class DonationController {
         try {
             const { reference } = req.params;
 
-            const result = await donationService.verifyDonation(reference);
+            const result = await donationService.verifyPayment(reference);
 
             return sendSuccessResponse(res, result);
         } catch (error: any) {
