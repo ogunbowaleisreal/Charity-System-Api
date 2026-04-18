@@ -51,18 +51,18 @@ export class KYCController {
         }
     }
 
-    async submitDocument(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
-        try {
-            const userId = req.user.user_id;
-            const fileUrl = req.body.fileUrl;
+    // async submitDocument(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
+    //     try {
+    //         const userId = req.user.user_id;
+    //         const fileUrl = req.body.fileUrl;
 
-            const result = await kycService.submitDocument(userId, fileUrl);
+    //         const result = await kycService.submitDocument(userId, fileUrl);
 
-            sendSuccessResponse(res, result, "Document submitted");
-        } catch (error: any) {
-            next(error);
-        }
-    }
+    //         sendSuccessResponse(res, result, "Document submitted");
+    //     } catch (error: any) {
+    //         next(error);
+    //     }
+    // }
 
     async getKYCStatus(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
         try {

@@ -20,7 +20,7 @@ const NotificationSchema = new Schema<INotification>(
 
         type: {
             type: String,
-            enum: ["JOB_CREATED", "GENERAL"],
+            enum: ["DONATION", "WITHDRAWAL", "GENERAL"],
             default: "GENERAL",
         },
 

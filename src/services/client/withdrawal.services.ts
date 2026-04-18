@@ -3,6 +3,7 @@ import { WalletTransaction } from "../../models/transaction";
 import Campaign from "../../models/Campaign";
 import { AppError } from "../../middleware/errorHandler";
 import { startSession } from "mongoose";
+import crypto from "crypto";
 
 export class WithdrawalService {
     async withdrawFundsToWallet(
@@ -10,6 +11,9 @@ export class WithdrawalService {
         amount: number,
         narration: string
     ) {
+
+        const reference = `WIT_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`; //crypto.randomUUID();
+
 
         const campaign = await Campaign.findById(campaignId);
 
@@ -41,37 +45,15 @@ export class WithdrawalService {
         const transaction = await WalletTransaction.create({
             wallet: userWallet._id,
             amount,
-            type: "donation",
+            type: "user",
             status: "success",
+            category: "wallet_credit",
             narration,
-
+            reference: reference,
         })
 
-        // try {
-        //     // 2. INITIATE TRANSFER
-        //     const res = await safeHaven.initiateTransfer({
-        //         amount,
-        //         account_number: campaign.payoutAccount.accountNumber,
-        //         bank_code: campaign.payoutAccount.bankCode,
-        //         narration,
-        //         reference: `wd_${Date.now()}`,
-        //     });
+        return transaction
 
-        //     // 3. FINALIZE
-        //     campaign.frozenBalance -= amount;
-        //     campaign.totalWithdrawn += amount;
-
-        //     await campaign.save();
-
-        //     return res;
-        // } catch (error) {
-        //     // 4. ROLLBACK
-        //     campaign.availableBalance += amount;
-        //     campaign.frozenBalance -= amount;
-
-        //     await campaign.save();
-        //     throw error;
-        // }
     }
 
     // =========================

@@ -1,31 +1,31 @@
-import transaction from "../../models/transaction";
+import { WalletTransaction } from "../../models/transaction";
 
-export class transactionServices {
+export class WalletTransactionServices {
 
-    async createTransaction(transactionData: any) {
+    async createWalletTransaction(WalletTransactionData: any) {
         try {
-            const transactionInfo = await transaction.create(transactionData);
-            return transaction;
+            const WalletTransactionInfo = await WalletTransaction.create(WalletTransactionData);
+            return WalletTransactionInfo;
         } catch (error: any) {
-            throw new Error(`Failed to create transaction: ${error.message}`);
+            throw new Error(`Failed to create WalletTransaction: ${error.message}`);
         }
     }
 
-    async getTransaction(transactionId: string) {
+    async getWalletTransaction(WalletTransactionId: string) {
         try {
-            const transactionInfo = await transaction.findById(transactionId);
-            return transactionInfo;
+            const WalletTransactionInfo = await WalletTransaction.findById(WalletTransactionId);
+            return WalletTransactionInfo;
         } catch (error: any) {
-            throw new Error(`Failed to get transaction: ${error.message}`);
+            throw new Error(`Failed to get WalletTransaction: ${error.message}`);
         }
     }
 
-    async getTransactionHistory(clientId: string) {
+    async getWalletTransactionHistory(clientId: string) {
         try {
-            const transactionInfo = await transaction.find({ user: clientId });
-            return transactionInfo;
+            const WalletTransactionInfo = await WalletTransaction.find({ user: clientId });
+            return WalletTransactionInfo;
         } catch (error: any) {
-            throw new Error(`Failed to get transaction history: ${error.message}`);
+            throw new Error(`Failed to get WalletTransaction history: ${error.message}`);
         }
     }
 }

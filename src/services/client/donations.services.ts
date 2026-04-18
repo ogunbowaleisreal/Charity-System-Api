@@ -51,7 +51,8 @@ export class DonationService {
 
         const transaction = await WalletTransaction.create({
             //walletId: user.walletId,
-            category: "donation",
+            category: "campaign_credit",
+            //type: "donation",
             status: "pending",
             amount: data.amount,
             currency: "NGN",
@@ -59,7 +60,7 @@ export class DonationService {
             reference: reference,
             idempotencyKey: reference,
             fullName: `${data.firstname} ${data.lastname}`,
-            type: "user",
+            type: user ? "user" : "guest",
             userId: user._id,
             metadata: {
                 campaignId: campaign._id,

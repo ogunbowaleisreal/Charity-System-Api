@@ -9,8 +9,10 @@ import { Account } from "../../models/Accounts";
 import jwtUtil from "../../utils/jwt";
 import { OTPService } from "../otp.services";
 import { IAccount } from "../../models/Accounts";
+import { IKYC } from "../../models/KYC";
 import { LoginRequest, AuthResponse } from "../../types/auth";
 import { HTTP_STATUS } from "../../utils/constants";
+import { KYC } from "../../models/KYC";
 //import OTPService from "../otp.services";
 import logger from "../../logger";
 import { clientJwtPayload } from "../../types/clientAuth";
@@ -49,7 +51,8 @@ export class authService {
             accessToken: string;
             refreshToken: string;
             expiresIn: number;
-        }
+        },
+        kyc?: IKYC
     ): Promise<AuthResponse> => {
         if (user.role === "user") {
             return {
@@ -71,6 +74,7 @@ export class authService {
                     dateOfBirth: user.dateOfBirth,
                     gender: user.gender,
                     profilePicture: user.profilePicture,
+                    kyc: kyc,
                     // businessName: user.businessName,
                     //companyName: user.companyName,
                     // businessCategory: user.businessCategory,
@@ -165,6 +169,13 @@ export class authService {
             };
         }
 
+        if (client.isVerified === false) {
+            throw {
+                message: "Account has not been verified",
+                statusCode: HTTP_STATUS.FORBIDDEN,
+            };
+        }
+
         // // Check if account is locked
         // if (user.checkAccountLock()) {
         //   throw { message: "Account is locked", statusCode: HTTP_STATUS.LOCKED };
@@ -222,7 +233,12 @@ export class authService {
             userAgent
         );
 
-        return this.formatLoginResponse(client, tokens);
+        const kyc = await KYC.findOne({ userId: client._id }).select("-_id -__v  -bvn -utilityBill -cacDocument -facialImage");
+        if (!kyc) {
+            return this.formatLoginResponse(client, tokens);
+        }
+
+        return this.formatLoginResponse(client, tokens, kyc);
     }
 
     async verify2FA(email: string, otp: string) {

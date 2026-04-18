@@ -1,6 +1,10 @@
 import { KYC } from "../../models/KYC";
 import { Account } from "../../models/Accounts";
 import { Types } from "mongoose";
+import { DojahService } from "../DojahServices";
+import { dojahConfig } from "../../config/dojah.config";
+
+const dojahService = new DojahService(dojahConfig);
 
 export class KYCService {
 
@@ -39,131 +43,186 @@ export class KYCService {
         kyc.status = "in_progress";
     }
 
-
-    async submitBVN(userId: string, bvn: string) {
+    async submitBVN(userId: string, payload: {
+        bvn: string;
+        firstName?: string;
+        lastName?: string;
+        dob?: string;
+    }) {
         const kyc = await this.getOrCreateKYC(userId);
 
-        kyc.bvn = bvn;
+        kyc.bvn = payload.bvn;
         kyc.steps.bvn.submitted = true;
         kyc.steps.bvn.submittedAt = new Date();
-
         kyc.status = "pending_verification";
 
-        // 🔥 provider call placeholder
-        const result = await this.verifyBVN(bvn);
+        let result;
+
+        // 🔥 SUPPORT BOTH METHODS
+        if (payload.firstName && payload.lastName && payload.dob) {
+            result = await dojahService.validateBVN({
+                bvn: payload.bvn,
+                firstName: payload.firstName,
+                lastName: payload.lastName,
+                dob: payload.dob,
+            });
+        } else {
+            result = await dojahService.verifyBVN(payload.bvn);
+        }
 
         if (result.status === "verified") {
             kyc.bvnVerification = {
                 status: "verified",
-                provider: "mock",
+                provider: "dojah",
                 matchedData: result.data,
                 verifiedAt: new Date(),
             };
-
-            kyc.level = 1;
         } else {
-            kyc.bvnVerification = {
-                status: "failed",
-            };
-
+            kyc.bvnVerification = { status: "failed" };
             kyc.status = "rejected";
             kyc.rejectionReason = "BVN verification failed";
         }
 
         this.updateStatus(kyc);
-
         await kyc.save();
+
         return kyc;
     }
 
 
-
-    async submitFace(userId: string, fileUrl: string) {
+    async submitFace(userId: string, base64Image: string) {
         const kyc = await this.getOrCreateKYC(userId);
 
-        if (!kyc.bvnVerification || kyc.bvnVerification.status !== "verified") {
+        if (kyc.bvnVerification?.status !== "verified") {
             throw new Error("BVN must be verified first");
         }
 
-        kyc.facialImage = fileUrl;
         kyc.steps.face.submitted = true;
         kyc.steps.face.submittedAt = new Date();
-
         kyc.status = "pending_verification";
 
-        const result = await this.verifyFace(fileUrl, kyc.bvn);
+        // 🔥 STEP 1: LIVENESS
+        const live = await dojahService.verifyLiveness(base64Image);
 
-        if (result.status === "verified") {
+        if (live.status !== "verified") {
+            kyc.livenessVerification = { status: "failed" };
+            kyc.status = "rejected";
+            kyc.rejectionReason = "Liveness check failed";
+            await kyc.save();
+            return kyc;
+        }
+
+        kyc.livenessVerification = {
+            status: "verified",
+            confidenceScore: live.confidence! / 100,
+            verifiedAt: new Date(),
+        };
+
+        // 🔥 STEP 2: FACE MATCH
+        const face = await dojahService.verifyFaceWithBVN({
+            bvn: kyc.bvn!,
+            selfieBase64: base64Image,
+        });
+
+        if (face.status === "verified") {
             kyc.faceVerification = {
                 status: "verified",
-                provider: "mock",
-                confidenceScore: 0.95,
+                provider: "dojah",
+                confidenceScore: face.confidence! / 100,
                 verifiedAt: new Date(),
             };
-
-            kyc.level = 2;
         } else {
-            kyc.faceVerification = {
-                status: "failed",
-            };
-
+            kyc.faceVerification = { status: "failed" };
             kyc.status = "rejected";
             kyc.rejectionReason = "Face mismatch";
         }
 
         this.updateStatus(kyc);
-
         await kyc.save();
+
         return kyc;
     }
 
+    async submitUtilityBill(userId: string, base64: string) {
+        const kyc = await this.getOrCreateKYC(userId);
 
-    async submitDocument(userId: string, fileUrl: string) {
-        const kyc = await KYC.findOne({ userId });
-
-        if (!kyc) throw new Error("KYC not initialized");
-
-        // ===== STORE DOCUMENT =====
-        if (kyc.type === "organization") {
-            kyc.cacDocument = fileUrl;
-        } else {
-            kyc.utilityBill = fileUrl;
-        }
-
-        // ===== STEP TRACKING =====
-        kyc.steps.document.completed = true;
-        kyc.steps.document.submittedAt = new Date();
-
-        // ===== STATUS UPDATE =====
+        kyc.steps.document.utility.submitted = true;
+        kyc.steps.document.utility.submittedAt = new Date();
         kyc.status = "pending_verification";
 
-        this.updateStatus(kyc);
+        const result = await dojahService.verifyUtilityBill(base64);
+
+        if (result.status === "verified") {
+            kyc.documentVerification = {
+                ...kyc.documentVerification,
+                utility: {
+                    status: "verified",
+                    provider: "dojah",
+                    extractedData: result.data,
+                    verifiedAt: new Date(),
+                },
+            };
+
+            kyc.steps.document.utility.verified = true;
+
+            // kyc.steps.document.verified = true;
+        } else {
+            kyc.documentVerification = {
+                ...kyc.documentVerification,
+                utility: {
+                    status: "verified",
+                    provider: "dojah",
+                },
+            };
+
+            kyc.status = "rejected";
+            kyc.rejectionReason = "Utility bill verification failed";
+        }
 
         await kyc.save();
-
         return kyc;
     }
 
-    // async submitDocument(userId: string, fileUrl: string) {
-    //     const kyc = await KYC.findOne({ userId });
+    async submitCAC(userId: string, rcNumber: string) {
+        const kyc = await this.getOrCreateKYC(userId);
 
-    //     if (!kyc) throw new Error("KYC not initialized");
+        if (kyc.type !== "organization") {
+            throw new Error("CAC is only for organizations");
+        }
 
-    //     if (kyc.type === "organization") {
-    //         kyc.cacDocument = fileUrl;
-    //     } else {
-    //         kyc.utilityBill = fileUrl;
-    //     }
+        kyc.status = "pending_verification";
 
-    //     kyc.steps.document.completed = true;
-    //     kyc.steps.document.submittedAt = new Date();
+        const result = await dojahService.verifyCAC(rcNumber);
 
-    //     this.updateStatus(kyc);
+        if (result.status === "verified") {
+            kyc.documentVerification = {
+                ...kyc.documentVerification,
+                cac: {
+                    status: "verified",
+                    provider: "dojah",
+                    extractedData: result.data,
+                    verifiedAt: new Date(),
+                },
+            };
 
-    //     await kyc.save();
+            kyc.steps.document.cac.verified = true;
+        } else {
+            kyc.documentVerification = {
+                ...kyc.documentVerification,
+                cac: {
+                    status: "failed",
+                    provider: "dojah",
+                },
+            };
 
-    //     return kyc;
-    // }
+            //   kyc.steps.document.cac.verified = true;
+            kyc.status = "rejected";
+            kyc.rejectionReason = "CAC verification failed";
+        }
+
+        await kyc.save();
+        return kyc;
+    }
 
 
     async getKYCStatus(userId: string) {
@@ -173,39 +232,57 @@ export class KYCService {
             throw new Error("KYC not found");
         }
 
+        // ===== STATES =====
         const bvnStatus = kyc.bvnVerification?.status || "not_submitted";
+        const livenessStatus = kyc.livenessVerification?.status || "not_submitted";
         const faceStatus = kyc.faceVerification?.status || "not_submitted";
 
+        const cacStatus = kyc.documentVerification?.cac?.status || "not_submitted";
+        const utilityStatus = kyc.documentVerification?.utility?.status || "not_submitted";
+
         const isBVNVerified = bvnStatus === "verified";
+        const isLivenessVerified = livenessStatus === "verified";
         const isFaceVerified = faceStatus === "verified";
 
-        // ===== DOCUMENT STATE =====
-        const documentOk =
+        const isCACVerified = cacStatus === "verified";
+        const isUtilityVerified = utilityStatus === "verified";
+
+        // ===== DOCUMENT LOGIC (BASED ON TYPE) =====
+        const isDocumentVerified =
+            kyc.type === "organization" ? isCACVerified : isUtilityVerified;
+
+        const documentSubmitted =
             kyc.type === "organization"
-                ? !!kyc.cacDocument
-                : !!kyc.utilityBill;
+                ? kyc.steps.document?.cac?.submitted || false
+                : kyc.steps.document?.utility?.submitted || false;
 
-        const documentSubmitted = kyc.steps.document.completed;
-
-        // ===== PROGRESS CALCULATION =====
+        // ===== PROGRESS =====
         let completedSteps = 0;
-        let totalSteps = 3;
+        let totalSteps = 4;
 
         if (isBVNVerified) completedSteps++;
+        if (isLivenessVerified) completedSteps++;
         if (isFaceVerified) completedSteps++;
-        if (documentOk) completedSteps++;
+        if (isDocumentVerified) completedSteps++;
 
         const progress = Number(((completedSteps / totalSteps) * 100).toFixed(2));
 
-        // ===== NEXT ACTION LOGIC =====
+        // ===== NEXT ACTION =====
         let nextAction: string;
 
         if (!isBVNVerified) {
             nextAction = "Submit BVN for verification";
+        } else if (!isLivenessVerified) {
+            nextAction = "Complete liveness check";
         } else if (!isFaceVerified) {
             nextAction = "Complete facial verification";
-        } else if (!documentOk) {
-            nextAction = "Upload required document";
+        } else if (!documentSubmitted) {
+            nextAction =
+                kyc.type === "organization"
+                    ? "Provide RC number for CAC verification"
+                    : "Upload utility bill";
+        } else if (!isDocumentVerified) {
+            nextAction = "Document under review";
         } else {
             nextAction = "Fully verified";
         }
@@ -213,8 +290,12 @@ export class KYCService {
         // ===== FLAGS =====
         const flags = {
             canTransact: isBVNVerified,
-            canWithdraw: isBVNVerified && isFaceVerified,
-            isFullyVerified: isBVNVerified && isFaceVerified && documentOk,
+            canWithdraw: isBVNVerified && isLivenessVerified && isFaceVerified,
+            isFullyVerified:
+                isBVNVerified &&
+                isLivenessVerified &&
+                isFaceVerified &&
+                isDocumentVerified,
         };
 
         return {
@@ -229,21 +310,34 @@ export class KYCService {
                     status: bvnStatus,
                     verified: isBVNVerified,
                 },
+                liveness: {
+                    status: livenessStatus,
+                    verified: isLivenessVerified,
+                },
                 face: {
                     submitted: kyc.steps.face.submitted,
                     status: faceStatus,
                     verified: isFaceVerified,
                 },
                 document: {
-                    submitted: documentSubmitted,
-                    uploaded: documentOk,
-                    type: kyc.type === "organization" ? "cacDocument" : "utilityBill",
+                    cac: {
+                        submitted: kyc.steps.document?.cac?.submitted || false,
+                        status: cacStatus,
+                        verified: isCACVerified,
+                    },
+                    utility: {
+                        submitted: kyc.steps.document?.utility?.submitted || false,
+                        status: utilityStatus,
+                        verified: isUtilityVerified,
+                    },
                 },
             },
 
             documents: {
-                cacDocument: kyc.cacDocument || null,
-                utilityBill: kyc.utilityBill || null,
+                cac:
+                    kyc.documentVerification?.cac?.extractedData || null,
+                utility:
+                    kyc.documentVerification?.utility?.extractedData || null,
             },
 
             nextAction,
@@ -254,5 +348,6 @@ export class KYCService {
             updatedAt: kyc.updatedAt,
         };
     }
+
 
 }

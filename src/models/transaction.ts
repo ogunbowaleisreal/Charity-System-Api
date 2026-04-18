@@ -69,13 +69,13 @@ const WalletTransactionSchema = new Schema<IWalletTransaction>(
 
         type: {
             type: String,
-            enum: ["credit", "debit"],
+            enum: ["user", "guest"],
             required: true,
         },
 
         category: {
             type: String,
-            enum: ["donation", "withdrawal", "refund", "adjustment", "bonus"],
+            enum: ["donation", "withdrawal", "refund", "adjustment", "bonus", "wallet_credit", "wallet_debit", "campaign_credit"],
             required: true,
             index: true,
         },
@@ -194,6 +194,11 @@ const WalletTransactionSchema = new Schema<IWalletTransaction>(
 // Indexes for performance + safety
 WalletTransactionSchema.index({ walletId: 1, createdAt: -1 });
 WalletTransactionSchema.index({ category: 1, status: 1 });
+WalletTransactionSchema.index({
+    status: 1,
+    providerTransactionId: 1,
+    createdAt: 1,
+});
 
 export const WalletTransaction = mongoose.model<IWalletTransaction>(
     "WalletTransaction",

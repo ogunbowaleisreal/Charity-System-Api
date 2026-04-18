@@ -1,18 +1,18 @@
 import { AuthenticatedRequest } from "../../middleware/verifyClients";
 import { NextFunction, Request, Response } from "express";
-import { transactionServices } from "../../services/client/transactionServices";
+import { WalletTransactionServices } from "../../services/client/transactionServices";
 import { sendSuccessResponse, sendErrorResponse } from "../../utils/helpers";
 import logger from "../../logger";
 import { AuthenticatedClientRequest } from "../../middleware/auth";
 
 
-const transactionService = new transactionServices()
+const transactionService = new WalletTransactionServices()
 
 export class TransactionController {
     async getTransactionById(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
         try {
             const clientId = req.params.clientId
-            const transactions = await transactionService.getTransaction(clientId)
+            const transactions = await transactionService.getWalletTransaction(clientId)
             sendSuccessResponse(res, transactions, "transactions fetched successfully", 200)
         } catch (error: any) {
             logger.error("transaction fetch failed", error.message)
@@ -26,7 +26,7 @@ export class TransactionController {
         try {
             // console.log(req.user)
             const clientId = req.user.userId
-            const transactions = await transactionService.getTransactionHistory(clientId)
+            const transactions = await transactionService.getWalletTransactionHistory(clientId)
             sendSuccessResponse(res, transactions, "transactions fetched successfully", 200)
         } catch (error: any) {
             logger.error("transaction fetch failed", error.message)

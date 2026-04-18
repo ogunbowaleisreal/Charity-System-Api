@@ -13,6 +13,7 @@ import enquiryRoutes from "./enquiries.route"
 import transactionRoutes from "./transactions.route"
 import tagRoutes from "./tags.route"
 import planRoutes from "./plan.routes"
+import kycRoutes from "./Kyc.routes"
 // import dashBoardRoutes from "./dashboard"
 import notificationRoutes from "./notification.routes"
 
@@ -26,6 +27,8 @@ router.use('/account', accountRoutes)
 router.use('/faqs', faqRoutes)
 router.use('/campaign', campaignRoutes)
 router.use('/donation', donationRoutes)
+router.use("/faq", faqRoutes)
+router.use("/kyc", kycRoutes)
 router.use('/tags', tagRoutes)
 router.use("/contact", contactRoutes)
 router.use("/campaign-category", businessCategoryRoutes)

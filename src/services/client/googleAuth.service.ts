@@ -27,7 +27,7 @@ export class GoogleAuthService {
             .auth()
             .verifyIdToken(idToken);
 
-        const { email, uid } = decodedToken;
+        const { email, uid, email_verified } = decodedToken;
 
         console.log(decodedToken)
 
@@ -35,6 +35,22 @@ export class GoogleAuthService {
             throw {
                 message: "Invalid Google token",
                 statusCode: HTTP_STATUS.UNAUTHORIZED,
+            };
+        }
+
+        if (!email_verified) {
+            throw {
+                message: "Email not verified with Google.",
+                statusCode: HTTP_STATUS.UNAUTHORIZED,
+            };
+        }
+
+        const existingGoogleUser = await Account.findOne({ googleId: uid });
+
+        if (existingGoogleUser && existingGoogleUser.email !== email) {
+            throw {
+                message: "Google account already linked to another user.",
+                statusCode: HTTP_STATUS.FORBIDDEN,
             };
         }
 
@@ -48,6 +64,17 @@ export class GoogleAuthService {
             throw {
                 message: "Account not found. Please register first.",
                 statusCode: HTTP_STATUS.NOT_FOUND,
+            };
+        }
+
+        if (!user.googleId) {
+            user.googleId = uid;
+            await user.save();
+        }
+        else if (user.googleId !== uid) {
+            throw {
+                message: "Google account mismatch detected.",
+                statusCode: HTTP_STATUS.FORBIDDEN,
             };
         }
 

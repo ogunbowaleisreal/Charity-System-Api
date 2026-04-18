@@ -8,9 +8,12 @@ import logger from "../../logger";
 import axios from "axios";
 import { sendSuccessResponse, sendErrorResponse } from "../../utils/helpers";
 import { HTTP_STATUS } from "../../utils/constants";
+import { KYCService } from "../../services/client/Kyc.services";
+import { KYC } from "../../models/KYC";
 
 const otpService = new OTPService();
 const Authservice = new authService()
+const kycService = new KYCService()
 export class authController {
 
     async register(req: Request, res: Response, next: NextFunction) {
@@ -88,6 +91,8 @@ export class authController {
             }
             registeredUser.isVerified = true
             await registeredUser.save()
+
+            const kyc = await KYC.create({ userId: registeredUser._id, status: "not_started", level: 0 })
             return res.status(200).json({ "message": "otp verification and registration completed" })
         } catch (err: any) {
             logger.error("verificaion failed", err)

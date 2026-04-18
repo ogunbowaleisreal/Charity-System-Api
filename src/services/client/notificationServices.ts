@@ -5,7 +5,7 @@ export class NotificationService {
     static async createNotification(data: {
         title: string;
         message: string;
-        type: "JOB_CREATED" | "GENERAL";
+        type: "DONATION" | "WITHDRAWAL" | "GENERAL";
         recipients: Types.ObjectId[];
     }) {
         return await Notification.create(data);

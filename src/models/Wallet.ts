@@ -14,7 +14,7 @@ export interface IWallet extends Document {
 const WalletSchema = new Schema<IWallet>(
     {
         userId: { type: Schema.Types.ObjectId, ref: "Account", required: true, unique: true },
-        campaignId: { type: Schema.Types.ObjectId, ref: "Campaign", required: true },
+        campaignId: { type: Schema.Types.ObjectId, ref: "Campaign" },
         currency: { type: String, default: "NGN" },
         availableBalance: { type: Number, default: 0 },
         pendingBalance: { type: Number, default: 0 },

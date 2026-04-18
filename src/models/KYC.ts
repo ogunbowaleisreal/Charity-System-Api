@@ -34,13 +34,43 @@ export interface IKYC extends Document {
             submittedAt?: Date;
         };
         document: {
-            completed: boolean;
-            verified: boolean;
-            submittedAt?: Date;
-        };
+            cac: {
+                submitted: boolean;
+                verified: boolean;
+                submittedAt?: Date;
+            };
+            utility: {
+                submitted: boolean;
+                verified: boolean;
+                submittedAt?: Date;
+            };
+        }
     };
     cacDocument?: string;
     utilityBill?: string;
+
+    documentVerification?: {
+        cac?: {
+            status: "pending" | "verified" | "failed";
+            provider?: string;
+            extractedData?: any;
+            verifiedAt?: Date;
+        };
+
+        utility?: {
+            status: "pending" | "verified" | "failed";
+            provider?: string;
+            extractedData?: any;
+            verifiedAt?: Date;
+        };
+    };
+
+    livenessVerification?: {
+        status: "pending" | "verified" | "failed";
+        provider?: string;
+        confidenceScore?: number;
+        verifiedAt?: Date;
+    };
 
     // ===== KYC LEVEL (DERIVED BUT STORED FOR FAST ACCESS) =====
     level: 0 | 1 | 2;
@@ -110,6 +140,33 @@ const KYCSchema = new Schema<IKYC>(
             verifiedAt: Date,
         },
 
+        // ADD THIS INSIDE YOUR SCHEMA
+
+        documentVerification: {
+            status: {
+                type: String,
+                enum: ["pending", "verified", "failed"],
+                default: "pending",
+            },
+            provider: String,
+            type: {
+                type: String,
+                enum: ["cac", "utility"],
+            },
+            extractedData: Schema.Types.Mixed,
+            verifiedAt: Date,
+        },
+
+        livenessVerification: {
+            status: {
+                type: String,
+                enum: ["pending", "verified", "failed"],
+                default: "pending",
+            },
+            confidenceScore: Number,
+            verifiedAt: Date,
+        },
+
         steps: {
             bvn: {
                 submitted: { type: Boolean, default: false },
@@ -117,6 +174,11 @@ const KYCSchema = new Schema<IKYC>(
             },
             face: {
                 submitted: { type: Boolean, default: false },
+                submittedAt: Date,
+            },
+            document: {
+                completed: { type: Boolean, default: false },
+                verified: { type: Boolean, default: false },
                 submittedAt: Date,
             },
         },

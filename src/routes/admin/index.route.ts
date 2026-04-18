@@ -14,7 +14,7 @@ import contactRoutes from "./contact"
 import mediaRoute from "./medis"
 import enquiryRoutes from "./enquiries.routes"
 //import reportRoutes from "./reports.route"
-import subscriptionManagementRoutes from "./subscriptionManagement"
+//import subscriptionManagementRoutes from "./subscriptionManagement"
 import planRoutes from "./adminPlanManagement"
 // import adminDashboardRoutes from "./adminDashboard"
 
@@ -31,7 +31,7 @@ router.use('/faqs', faqRoutes)
 //router.use("/bid", bidRoutes)
 //router.use("/assignments", assignmentRoutes)
 router.use("/business-category", businessCategoryRoutes)
-router.use("/subscription", subscriptionManagementRoutes)
+//router.use("/subscription", subscriptionManagementRoutes)
 router.use("/profile", profileRoutes)
 router.use("/contact", contactRoutes)
 router.use("/media", mediaRoute)
