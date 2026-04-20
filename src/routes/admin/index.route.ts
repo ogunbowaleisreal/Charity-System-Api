@@ -13,6 +13,8 @@ import businessCategoryRoutes from "./businessCategoryManagement"
 import contactRoutes from "./contact"
 import mediaRoute from "./medis"
 import enquiryRoutes from "./enquiries.routes"
+import tagRoutes from "./tags.route"
+import campaignRoutes from "./campaignManagement"
 //import reportRoutes from "./reports.route"
 //import subscriptionManagementRoutes from "./subscriptionManagement"
 import planRoutes from "./adminPlanManagement"
@@ -31,6 +33,8 @@ router.use('/faqs', faqRoutes)
 //router.use("/bid", bidRoutes)
 //router.use("/assignments", assignmentRoutes)
 router.use("/business-category", businessCategoryRoutes)
+router.use("/tags", tagRoutes)
+router.use("/campaign", campaignRoutes)
 //router.use("/subscription", subscriptionManagementRoutes)
 router.use("/profile", profileRoutes)
 router.use("/contact", contactRoutes)

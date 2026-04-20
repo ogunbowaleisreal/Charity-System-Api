@@ -47,6 +47,7 @@ export class DonationService {
 
         const campaign = await Campaign.findById(data.campaignId);
         if (!campaign) throw new Error("Campaign not found");
+        if (campaign.isActive == false) throw new AppError("Campaign is not active or has been suspended by admin, ", 400);
         if (campaign.status == "ongoing" || campaign.status == "upcoming") throw new AppError("Campaign is still ongoing or has not started yet", 400);
 
         const transaction = await WalletTransaction.create({

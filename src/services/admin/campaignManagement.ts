@@ -217,6 +217,36 @@ export class CampaignAdminService {
         return formatPagination(donations, total, page, limit);
     }
 
+    async getCampaignStats(campaignId: string) {
+        const campaign = await Campaign.findById(campaignId);
+
+        if (!campaign) throw new Error("Campaign not found");
+
+        return {
+            target: campaign.targetAmount,
+            totalRaised: campaign.totalRaised,
+            donationCount: campaign.donationCount,
+            progress:
+                (campaign.totalRaised / campaign.targetAmount) * 100 || 0,
+        };
+    }
+
+    async suspendCampaign(campaignId: string) {
+        return await Campaign.findByIdAndUpdate(
+            campaignId,
+            { isActive: false },
+            { new: true }
+        );
+    }
+
+    async unsuspendCampaign(campaignId: string) {
+        return await Campaign.findByIdAndUpdate(
+            campaignId,
+            { isActive: true },
+            { new: true }
+        );
+    }
+
     // =========================
     // 💬 GET CAMPAIGN COMMENTS
     // =========================

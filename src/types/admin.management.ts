@@ -178,7 +178,8 @@ export const ADMIN_PERMISSIONS = {
         VIEW: "campaign.view",
         CREATE: "campaign.create",
         UPDATE: "campaign.update",
-        DELETE: "campaign.delete"
+        DELETE: "campaign.delete",
+        SUSPEND: "campaign.suspend",
     },
 
     // BIDS: {
@@ -231,12 +232,12 @@ export const ADMIN_PERMISSIONS = {
     },
 
     // Financial permissions
-    // TRANSACTIONS: {
-    //   VIEW_TRANSACTIONS: "transactions.view_transactions",
-    //   MANAGE_PAYMENTS: "transactions.manage_payments",
-    //   REFUNDS: "transactions.refunds",
-    //   ANALYTICS: "transactions.analytics",
-    // },
+    TRANSACTIONS: {
+        VIEW: "transactions.view_transactions",
+        MANAGE_PAYMENTS: "transactions.manage_payments",
+        REFUNDS: "transactions.refunds",
+        ANALYTICS: "transactions.analytics",
+    },
 
     // Artile management permissions
     // ARTICLE: {
@@ -296,13 +297,13 @@ export const ADMIN_PERMISSIONS = {
         CREATE: "plan.create",
         MIGRATE: "plan.migrate",
     },
-    REQUESTS: {
-        VIEW: "request.view",
-        CREATE: "request.create",
-        UPDATE: "request.update",
-        DELETE: "request.delete",
-        ASSIGN: "request.assign",
-    },
+    // REQUESTS: {
+    //     VIEW: "request.view",
+    //     CREATE: "request.create",
+    //     UPDATE: "request.update",
+    //     DELETE: "request.delete",
+    //     ASSIGN: "request.assign",
+    // },
 
     // Wedding management permissions
     // EVENTS: {

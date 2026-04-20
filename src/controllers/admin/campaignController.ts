@@ -34,6 +34,42 @@ export class CampaignAdminController {
         }
     }
 
+    async getCampaignStats(req: AdminAuthenticatedRequest, res: Response, next: NextFunction) {
+        try {
+            const adminId = req.admin?.adminId;
+            const { campaignId } = req.params;
+            const stats = await campaignAdminService.getCampaignStats(campaignId);
+            return sendSuccessResponse(res, stats);
+        } catch (err: any) {
+            logger.error(err.message);
+            next(err);
+        }
+    }
+
+    async suspendCampaign(req: AdminAuthenticatedRequest, res: Response, next: NextFunction) {
+        try {
+            const adminId = req.admin?.adminId;
+            const { campaignId } = req.params;
+            const stats = await campaignAdminService.suspendCampaign(campaignId);
+            return sendSuccessResponse(res, stats);
+        } catch (err: any) {
+            logger.error(err.message);
+            next(err);
+        }
+    }
+
+    async unsuspendCampaign(req: AdminAuthenticatedRequest, res: Response, next: NextFunction) {
+        try {
+            const adminId = req.admin?.adminId;
+            const { campaignId } = req.params;
+            const stats = await campaignAdminService.unsuspendCampaign(campaignId);
+            return sendSuccessResponse(res, stats);
+        } catch (err: any) {
+            logger.error(err.message);
+            next(err);
+        }
+    }
+
     // =========================
     // 🎯 GET CAMPAIGN BY ID
     // =========================

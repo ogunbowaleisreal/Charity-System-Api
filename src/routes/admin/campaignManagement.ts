@@ -27,7 +27,7 @@ router.get(
 // 🎯 GET CAMPAIGN DETAILS
 // =========================
 router.get(
-    "/details/:campaign_id",
+    "/details/:campaignId",
     authorize([ADMIN_PERMISSIONS.CAMPAIGNS.VIEW]) as any,
     campaignCtrl.getCampaignById
 );
@@ -36,16 +36,34 @@ router.get(
 // 💬 GET CAMPAIGN COMMENTS
 // =========================
 router.get(
-    "/comments/:campaign_id",
+    "/comments/:campaignId",
     authorize([ADMIN_PERMISSIONS.CAMPAIGNS.VIEW]) as any,
     campaignCtrl.getCampaignComments
 );
+
+router.get(
+    "/stats/:campaignId",
+    authorize([ADMIN_PERMISSIONS.CAMPAIGNS.VIEW]) as any,
+    campaignCtrl.getCampaignStats
+);
+
+router.get(
+    "suspend/:campaignId",
+    authorize([ADMIN_PERMISSIONS.CAMPAIGNS.SUSPEND]) as any,
+    campaignCtrl.suspendCampaign
+)
+
+router.get(
+    "unsuspend/:campaignId",
+    authorize([ADMIN_PERMISSIONS.CAMPAIGNS.SUSPEND]) as any,
+    campaignCtrl.unsuspendCampaign
+)
 
 // =========================
 // 💰 GET CAMPAIGN DONATIONS
 // =========================
 router.get(
-    "/donations/:campaign_id",
+    "/donations/:campaignId",
     authorize([ADMIN_PERMISSIONS.CAMPAIGNS.VIEW]) as any,
     campaignCtrl.getCampaignDonations
 );

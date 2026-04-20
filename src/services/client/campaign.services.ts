@@ -202,6 +202,7 @@ export class CampaignService {
     // =============================
 
     async getCampaignStats(campaignId: string) {
+        console.log(campaignId)
         const campaign = await Campaign.findById(campaignId);
 
         if (!campaign) throw new Error("Campaign not found");
