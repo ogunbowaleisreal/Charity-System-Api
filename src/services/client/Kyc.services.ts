@@ -96,6 +96,7 @@ export class KYCService {
         if (kyc.bvnVerification?.status !== "verified") {
             throw new Error("BVN must be verified first");
         }
+        kyc.facialImage = base64Image
 
         kyc.steps.face.submitted = true;
         kyc.steps.face.submittedAt = new Date();
@@ -147,6 +148,7 @@ export class KYCService {
         const kyc = await this.getOrCreateKYC(userId);
 
         kyc.steps.document.utility.submitted = true;
+        kyc.utilityBill = base64
         kyc.steps.document.utility.submittedAt = new Date();
         kyc.status = "pending_verification";
 
@@ -183,7 +185,7 @@ export class KYCService {
         return kyc;
     }
 
-    async submitCAC(userId: string, rcNumber: string) {
+    async submitCAC(userId: string, cacDocument: string, companyType: string, rcNumber: string) {
         const kyc = await this.getOrCreateKYC(userId);
 
         if (kyc.type !== "organization") {
@@ -191,8 +193,11 @@ export class KYCService {
         }
 
         kyc.status = "pending_verification";
+        kyc.cacDocument = cacDocument
+        kyc.steps.document.cac.submitted = true;
+        kyc.steps.document.cac.submittedAt = new Date();
 
-        const result = await dojahService.verifyCAC(rcNumber);
+        const result = await dojahService.verifyCAC(rcNumber, companyType);
 
         if (result.status === "verified") {
             kyc.documentVerification = {

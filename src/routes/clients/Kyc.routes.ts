@@ -24,6 +24,16 @@ router.post(
     kycCtrl.submitFace
 );
 
+router.post(
+    "/cac/verify",
+    kycCtrl.verifyCac
+);
+
+router.post(
+    "/utility-bill/submit",
+    kycCtrl.submitUtilityBill
+)
+
 // Submit document (utility bill / CAC etc.)
 // router.post(
 //     "/document",

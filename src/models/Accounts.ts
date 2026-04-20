@@ -101,6 +101,7 @@ const AccountSchema = new Schema<IAccount>(
                 return this.provider === "local";
             },
         },
+        // dateOfBirth: Date,
 
         role: {
             type: String,

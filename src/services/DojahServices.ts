@@ -73,6 +73,7 @@ export class DojahService {
             if (!response.data?.entity?.bvn) {
                 return { status: "failed" };
             }
+            console.log(response)
 
             return {
                 status: "verified",
@@ -97,7 +98,9 @@ export class DojahService {
         data?: any;
     }> {
         try {
-            const clean = this.stripBase64(data.selfieBase64);
+            const base64 = await this.imageUrlToBase64(data.selfieBase64);
+
+            const clean = this.stripBase64(base64);
 
             const response = await this.client.post(
                 "/api/v1/kyc/bvn/verify",
@@ -130,7 +133,8 @@ export class DojahService {
         data?: any;
     }> {
         try {
-            const clean = this.stripBase64(selfieBase64);
+            const base64 = await this.imageUrlToBase64(selfieBase64);
+            const clean = this.stripBase64(base64);
 
             const response = await this.client.post(
                 "/api/v1/kyc/liveness",
@@ -151,16 +155,18 @@ export class DojahService {
         }
     }
 
+
     // =========================
     // 🔹 CAC (RC NUMBER LOOKUP)
     // =========================
-    async verifyCAC(rcNumber: string): Promise<{
+    async verifyCAC(rcNumber: string, companyType?: string): Promise<{
         status: VerificationStatus;
+        companyType?: string;
         data?: any;
     }> {
         try {
-            const response = await this.client.get("/api/v1/kyc/cac/basuc", {
-                params: { rc_number: rcNumber, },
+            const response = await this.client.get("/api/v1/kyc/cac/basic", {
+                params: { rc_number: rcNumber, companyType: "organization" },
             });
 
             if (!response.data?.entity) {
@@ -184,13 +190,13 @@ export class DojahService {
         data?: any;
     }> {
         try {
-            const clean = this.stripBase64(base64);
+            //const clean = this.stripBase64(base64);
 
             const response = await this.client.post(
-                "/api/v1/kyc/document",
+                "/api/v1/document/",
                 {
-                    document_type: "utility_bill",
-                    document: clean,
+                    input_type: "utility_bill",
+                    input_value: base64,
                 }
             );
 
@@ -203,6 +209,16 @@ export class DojahService {
         } catch {
             return { status: "failed" };
         }
+    }
+
+    async imageUrlToBase64(url: string): Promise<string> {
+        const response = await axios.get(url, {
+            responseType: "arraybuffer",
+        });
+
+        const base64 = Buffer.from(response.data, "binary").toString("base64");
+
+        return base64;
     }
 
     // =========================

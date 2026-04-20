@@ -174,11 +174,18 @@ export const ADMIN_PERMISSIONS = {
         DECLINE: "accounts.decline",
     },
 
-    BIDS: {
-        VIEW: "bids.view",
-        APPROVE: "bids.approve",
-        REJECT: "bids.reject",
+    CAMPAIGNS: {
+        VIEW: "campaign.view",
+        CREATE: "campaign.create",
+        UPDATE: "campaign.update",
+        DELETE: "campaign.delete"
     },
+
+    // BIDS: {
+    //     VIEW: "bids.view",
+    //     APPROVE: "bids.approve",
+    //     REJECT: "bids.reject",
+    // },
 
     CONTENT: {
         VIEW: "content.view",
@@ -266,10 +273,10 @@ export const ADMIN_PERMISSIONS = {
         UPDATE_FAQS_CATEGORIES: "faqs.update_categories",
     },
 
-    SUBSCRIPTIONPLAN: {
-        VIEW: "subscription.view",
-        UPDATE: "subscription.update",
-    },
+    // SUBSCRIPTIONPLAN: {
+    //     VIEW: "subscription.view",
+    //     UPDATE: "subscription.update",
+    // },
     // ANNOUNCEMENT: {
     //   VIEW: "announcement.view",
     //   CREATE: "announcement.create",

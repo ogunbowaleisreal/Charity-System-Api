@@ -1,939 +1,598 @@
-// import { Account } from "../../models/Accounts";
-// import transaction from "../../models/transaction";
-// import ConsultantProfile from "../../models/ConsultantProfile";
-// import clientProfile from "../../models/clientProfile";
-// import consultantClientAssignemnt from "../../models/consultantClientAssignemnt";
-// import EmailService from "../Email.services";
-// import Bids from "../../models/Bids";
-// import Requests from "../../models/Requests";
-// import mongoose from "mongoose";
-// import logger from "../../logger";
-// import { PipelineStage } from "mongoose";
-// import { UpdateClientProfile } from "../../models/clientProfile";
-// import { updateConsultantProfile } from "../../models/ConsultantProfile";
-// import { updateClientProfile } from "../../types/clientprofile";
-// import { cert } from "firebase-admin/app";
-// export type AccountFilter = {
-//     role?: string,
-//     status?: string,
-//     // assignedConsultant?: string
-//     search?: string
-//     experienceLevel?: string
-//     page?: number
-//     limit?: number
+import { FilterQuery, Types } from "mongoose";
+import { Account, IAccount } from "../../models/Accounts";
+import Campaign from "../../models/Campaign";
+import Comment from "../../models/Comment";
+import { Donation } from "../../models/Donations";
+import { WalletTransaction } from "../../models/transaction";
 
-// }
-// const emailService = new EmailService()
-// export class AccountManagementServices {
+import {
+    PaginationQuery,
+    buildPagination,
+    formatPagination
+} from "../../utils/admin/paginationUtills";
+
+// =========================
+// 🔍 BASE FILTERS
+// =========================
+export interface BaseFilter extends PaginationQuery {
+    page?: number;
+    limit?: number;
+
+    startDate?: Date;
+    endDate?: Date;
+}
+
+// =========================
+// 👤 ACCOUNT FILTERS
+// =========================
+export interface AccountFilters extends BaseFilter {
+    search?: string;
+    role?: "user" | "organization";
+    status?: "active" | "suspended" | "deleted";
+    isVerified?: boolean;
+    kycStatus?: "pending" | "verified";
+}
+
+// =========================
+// 🎯 CAMPAIGN FILTERS
+// =========================
+export interface CampaignFilters extends BaseFilter {
+    status?: "upcoming" | "ongoing" | "completed";
+    isActive?: boolean;
+    isDeleted?: boolean;
+    riskLevel?: "low" | "medium" | "high";
+    isFlagged?: boolean;
+}
+
+// =========================
+// 💰 DONATION FILTERS
+// =========================
+export interface DonationFilters extends BaseFilter {
+    paymentStatus?: "pending" | "success" | "failed";
+    paymentStatusExtended?:
+    | "initialized"
+    | "pending"
+    | "processing"
+    | "success"
+    | "failed"
+    | "reversed";
+
+    paymentMethod?: "card" | "bank_transfer" | "virtual_account";
+    isAnonymous?: boolean;
+    minAmount?: number;
+    maxAmount?: number;
+}
+
+// =========================
+// 💬 COMMENT FILTERS
+// =========================
+export interface CommentFilters extends BaseFilter {
+    isDeleted?: boolean;
+}
+
+// =========================
+// 🧾 TRANSACTION FILTERS
+// =========================
+export interface TransactionFilters extends BaseFilter {
+    status?: "pending" | "processing" | "successful" | "failed" | "expired";
+    category?:
+    | "donation"
+    | "withdrawal"
+    | "refund"
+    | "adjustment"
+    | "bonus"
+    | "wallet_credit"
+    | "wallet_debit"
+    | "campaign_credit";
+
+    provider?: "flutterwave" | "googlepay" | "safehaven";
+}
+export class AccountAdminService {
+    // =========================
+    // 🔍 GET ALL ACCOUNTS
+    // =========================
+    async getAllAccounts(filters: AccountFilters) {
+        const {
+            search,
+            role,
+            status,
+            isVerified,
+            kycStatus,
+            startDate,
+            endDate,
+            page = 1,
+            limit = 10
+        } = filters;
+
+        const { skip } = buildPagination(page, limit);
+
+        const query: FilterQuery<IAccount> = {};
+
+        // 🔍 search
+        if (search) {
+            const regex = new RegExp(search, "i");
+            query.$or = [
+                { firstName: regex },
+                { lastName: regex },
+                { email: regex },
+                { companyName: regex }
+            ];
+        }
+
+        // 🎯 structured filters
+        if (role) query.role = role;
+        if (status) query.status = status;
+        if (typeof isVerified === "boolean") query.isVerified = isVerified;
+        if (kycStatus) query.kycStatus = kycStatus;
+
+        // 📅 date range
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = startDate;
+            if (endDate) query.createdAt.$lte = endDate;
+        }
+
+        const [accounts, total] = await Promise.all([
+            Account.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+
+            Account.countDocuments(query)
+        ]);
+
+        return formatPagination(accounts, total, page, limit);
+    }
+
+    // =========================
+    // 👤 GET ACCOUNT BY ID
+    // =========================
+    async getAccountById(accountId: string) {
+        return Account.findById(accountId);
+    }
+
+    // =========================
+    // 🚫 SUSPEND ACCOUNT
+    // =========================
+    async suspendAccount(accountId: string, reason?: string) {
+        const account = await Account.findById(accountId);
+
+        if (!account) {
+            throw new Error("Account not found");
+        }
+
+        if (account.status === "suspended") {
+            throw new Error("Account already suspended");
+        }
+
+        account.status = "suspended";
+
+        // Optional: attach metadata later (audit logs)
+        // account.suspensionReason = reason;
+
+        await account.save();
+
+        return account;
+    }
+
+    // =========================
+    // ✅ UNSUSPEND ACCOUNT
+    // =========================
+    async unsuspendAccount(accountId: string) {
+        const account = await Account.findById(accountId);
+
+        if (!account) {
+            throw new Error("Account not found");
+        }
+
+        if (account.status !== "suspended") {
+            throw new Error("Account is not suspended");
+        }
+
+        account.status = "active";
+        await account.save();
+
+        return account;
+    }
+
+    // =========================
+    // 🎯 USER CAMPAIGNS
+    // =========================
+    async getUserCampaigns(
+        userId: string,
+        filters: CampaignFilters
+    ) {
+        const {
+            status,
+            isActive,
+            isDeleted,
+            riskLevel,
+            isFlagged,
+            startDate,
+            endDate,
+            page = 1,
+            limit = 10
+        } = filters;
+
+        const { skip } = buildPagination(page, limit);
+
+        const query: any = {
+            owner: new Types.ObjectId(userId)
+        };
+
+        if (status) query.status = status;
+        if (typeof isActive === "boolean") query.isActive = isActive;
+        if (typeof isDeleted === "boolean") query.isDeleted = isDeleted;
+        if (riskLevel) query.riskLevel = riskLevel;
+        if (typeof isFlagged === "boolean") query.isFlagged = isFlagged;
+
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = startDate;
+            if (endDate) query.createdAt.$lte = endDate;
+        }
+
+        const [campaigns, total] = await Promise.all([
+            Campaign.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+
+            Campaign.countDocuments(query)
+        ]);
+
+        return formatPagination(campaigns, total, page, limit);
+    }
+
+    // =========================
+    // 💰 CAMPAIGN DONATIONS
+    // =========================
+    async getCampaignDonations(
+        campaignId: string,
+        filters: DonationFilters
+    ) {
+        const {
+            paymentStatus,
+            paymentStatusExtended,
+            paymentMethod,
+            minAmount,
+            maxAmount,
+            startDate,
+            endDate,
+            page = 1,
+            limit = 10
+        } = filters;
+
+        const { skip } = buildPagination(page, limit);
+
+        const query: any = {
+            campaign: new Types.ObjectId(campaignId)
+        };
+
+        if (paymentStatus) query.paymentStatus = paymentStatus;
+        if (paymentStatusExtended)
+            query.paymentStatusExtended = paymentStatusExtended;
+        if (paymentMethod) query.paymentMethod = paymentMethod;
+
+        if (minAmount || maxAmount) {
+            query.amount = {};
+            if (minAmount) query.amount.$gte = minAmount;
+            if (maxAmount) query.amount.$lte = maxAmount;
+        }
+
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = startDate;
+            if (endDate) query.createdAt.$lte = endDate;
+        }
+
+        const [donations, total] = await Promise.all([
+            Donation.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+
+            Donation.countDocuments(query)
+        ]);
+
+        return formatPagination(donations, total, page, limit);
+    }
+
+    // =========================
+    // 💬 CAMPAIGN COMMENTS
+    // =========================
+    async getCampaignComments(
+        campaignId: string,
+        filters: CommentFilters
+    ) {
+        const {
+            isDeleted,
+            startDate,
+            endDate,
+            page = 1,
+            limit = 10
+        } = filters;
+
+        const { skip } = buildPagination(page, limit);
+
+        const query: any = {
+            campaign: new Types.ObjectId(campaignId)
+        };
+
+        if (typeof isDeleted === "boolean") {
+            query.isDeleted = isDeleted;
+        }
+
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = startDate;
+            if (endDate) query.createdAt.$lte = endDate;
+        }
+
+        const [comments, total] = await Promise.all([
+            Comment.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+
+            Comment.countDocuments(query)
+        ]);
+
+        return formatPagination(comments, total, page, limit);
+    }
+
+    // =========================
+    // 💳 USER DONATIONS
+    // =========================
+    async getUserDonations(
+        userId: string,
+        filters: DonationFilters
+    ) {
+        const { skip } = buildPagination(filters.page, filters.limit);
+
+        const query: any = {
+            donor: new Types.ObjectId(userId)
+        };
+
+        const [donations, total] = await Promise.all([
+            Donation.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(filters.limit as number),
+
+            Donation.countDocuments(query)
+        ]);
+
+        return formatPagination(
+            donations,
+            total,
+            filters.page || 1,
+            filters.limit || 10
+        );
+    }
+
+    // =========================
+    // 🧾 USER TRANSACTIONS
+    // =========================
+    async getUserTransactions(
+        userId: string,
+        filters: TransactionFilters
+    ) {
+        const {
+            status,
+            category,
+            provider,
+            startDate,
+            endDate,
+            page = 1,
+            limit = 10
+        } = filters;
+
+        const { skip } = buildPagination(page, limit);
+
+        const query: any = {
+            userId: new Types.ObjectId(userId)
+        };
+
+        if (status) query.status = status;
+        if (category) query.category = category;
+        if (provider) query.provider = provider;
+
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = startDate;
+            if (endDate) query.createdAt.$lte = endDate;
+        }
+
+        const [transactions, total] = await Promise.all([
+            WalletTransaction.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+
+            WalletTransaction.countDocuments(query)
+        ]);
+
+        return formatPagination(transactions, total, page, limit);
+    }
+}
 
 
-//     async getAllAccounts(filter: AccountFilter = {}) {
-//         const page = Number(filter.page) || 1;
-//         const limit = Number(filter.limit) || 10;
-//         const skip = (page - 1) * limit;
 
-//         const { page: _p, limit: _l, search, ...queryObj } = filter;
-//         const matchStage: any = { ...queryObj };
+
+// export class AccountAdminService {
+//     // =========================
+//     // 🔍 GET ALL ACCOUNTS (SEARCH + PAGINATION)
+//     // =========================
+//     async getAllAccounts(
+//         query: {
+//             search?: string;
+//         } & PaginationQuery
+//     ) {
+//         const { search, page = 1, limit = 10 } = query;
+
+//         const { skip } = buildPagination(page, limit);
+
+//         const filter: FilterQuery<IAccount> = {};
 
 //         if (search) {
-//             const term = search.trim();
-//             matchStage.$or = [
-//                 { firstName: { $regex: term, $options: "i" } },
-//                 { lastName: { $regex: term, $options: "i" } },
-//                 { email: { $regex: term, $options: "i" } },
-//                 { companyName: { $regex: term, $options: "i" } },
-//                 { contactPerson: { $regex: term, $options: "i" } },
-//                 { phone: { $regex: term, $options: "i" } }
+//             const regex = new RegExp(search, "i");
+
+//             filter.$or = [
+//                 { firstName: regex },
+//                 { lastName: regex },
+//                 { email: regex },
+//                 { companyName: regex }
 //             ];
 //         }
-
-//         const pipeline: PipelineStage[] = [
-//             { $match: matchStage },
-
-//             {
-//                 $lookup: {
-//                     from: "consultantprofiles",
-//                     localField: "_id",
-//                     foreignField: "account",
-//                     as: "consultantProfile"
-//                 }
-//             },
-//             {
-//                 $lookup: {
-//                     from: "clientprofiles",
-//                     localField: "_id",
-//                     foreignField: "account",
-//                     as: "clientProfile"
-//                 }
-//             },
-
-//             // Consultant assignments
-//             {
-//                 $lookup: {
-//                     from: "consultantclientassignments",
-//                     let: { consultantId: "$_id" },
-//                     pipeline: [
-//                         {
-//                             $match: {
-//                                 $expr: {
-//                                     $and: [
-//                                         { $eq: ["$consultant", "$$consultantId"] },
-//                                         { $eq: ["$status", "active"] }
-//                                     ]
-//                                 }
-//                             }
-//                         },
-//                         { $count: "count" }
-//                     ],
-//                     as: "activeAssignments"
-//                 }
-//             },
-
-//             // Client assignments
-//             {
-//                 $lookup: {
-//                     from: "consultantclientassignments",
-//                     let: { clientId: "$_id" },
-//                     pipeline: [
-//                         {
-//                             $match: {
-//                                 $expr: {
-//                                     $and: [
-//                                         { $eq: ["$client", "$$clientId"] },
-//                                         { $eq: ["$status", "active"] }
-//                                     ]
-//                                 }
-//                             }
-//                         },
-//                         { $count: "count" }
-//                     ],
-//                     as: "activeConsultantAssignments"
-//                 }
-//             },
-
-//             {
-//                 $addFields: {
-//                     experienceLevel: {
-//                         $cond: [
-//                             { $eq: ["$role", "consultant"] },
-//                             { $arrayElemAt: ["$consultantProfile.experience", 0] },
-//                             null
-//                         ]
-//                     },
-
-//                     noOfClients: {
-//                         $ifNull: [
-//                             { $arrayElemAt: ["$activeAssignments.count", 0] },
-//                             0
-//                         ]
-//                     },
-
-//                     noOfConsultants: {
-//                         $ifNull: [
-//                             { $arrayElemAt: ["$activeConsultantAssignments.count", 0] },
-//                             0
-//                         ]
-//                     },
-
-//                     profile: {
-//                         $cond: [
-//                             { $eq: ["$role", "consultant"] },
-//                             { $arrayElemAt: ["$consultantProfile", 0] },
-//                             { $arrayElemAt: ["$clientProfile", 0] }
-//                         ]
-//                     }
-//                 }
-//             },
-
-//             {
-//                 $addFields: {
-//                     profileCompletionRate: {
-//                         $cond: [
-//                             { $ifNull: ["$profile", false] },
-//                             {
-//                                 $let: {
-//                                     vars: {
-//                                         totalFields: {
-//                                             $size: { $objectToArray: "$profile" }
-//                                         },
-//                                         filledFields: {
-//                                             $size: {
-//                                                 $filter: {
-//                                                     input: { $objectToArray: "$profile" },
-//                                                     as: "field",
-//                                                     cond: {
-//                                                         $and: [
-//                                                             { $ne: ["$$field.v", null] },
-//                                                             { $ne: ["$$field.v", ""] }
-//                                                         ]
-//                                                     }
-//                                                 }
-//                                             }
-//                                         }
-//                                     },
-//                                     in: {
-//                                         $round: [
-//                                             {
-//                                                 $multiply: [
-//                                                     {
-//                                                         $divide: [
-//                                                             "$$filledFields",
-//                                                             {
-//                                                                 $cond: [
-//                                                                     { $eq: ["$$totalFields", 0] },
-//                                                                     1,
-//                                                                     "$$totalFields"
-//                                                                 ]
-//                                                             }
-//                                                         ]
-//                                                     },
-//                                                     100
-//                                                 ]
-//                                             },
-//                                             0
-//                                         ]
-//                                     }
-//                                 }
-//                             },
-//                             0
-//                         ]
-//                     }
-//                 }
-//             },
-
-//             // ✅ FINAL CLEAN PROJECTION
-//             {
-//                 $project: {
-//                     _id: 1,
-//                     firstName: 1,
-//                     lastName: 1,
-//                     email: 1,
-//                     role: 1,
-//                     status: 1,
-//                     phone: 1,
-//                     gender: 1,
-//                     companyName: 1,
-//                     contactPerson: 1,
-//                     businessCategory: 1,
-//                     kycStatus: 1,
-//                     provider: 1,
-//                     verified: 1,
-//                     createdAt: 1,
-//                     updatedAt: 1,
-//                     subscriptionStatus: 1,
-//                     subscriptionPlan: 1,
-//                     subscriptionStartDate: 1,
-//                     subscriptionEndDate: 1,
-//                     experienceLevel: 1,
-//                     profile: 1,
-//                     profileCompletionRate: 1,
-
-//                     noOfClients: {
-//                         $cond: [
-//                             { $eq: ["$role", "consultant"] },
-//                             "$noOfClients",
-//                             "$$REMOVE"
-//                         ]
-//                     },
-
-//                     noOfConsultants: {
-//                         $cond: [
-//                             { $eq: ["$role", "client"] },
-//                             "$noOfConsultants",
-//                             "$$REMOVE"
-//                         ]
-//                     }
-//                 }
-//             }
-//             ,
-
-//             { $sort: { createdAt: -1 as 1 | -1 } },
-//             { $skip: skip },
-//             { $limit: limit }
-//         ];
 
 //         const [accounts, total] = await Promise.all([
-//             Account.aggregate(pipeline),
-//             Account.countDocuments(matchStage)
+//             Account.find(filter)
+//                 .sort({ createdAt: -1 })
+//                 .skip(skip)
+//                 .limit(limit),
+
+//             Account.countDocuments(filter)
 //         ]);
 
-//         return {
-//             data: accounts,
-//             pagination: {
-//                 page,
-//                 limit,
-//                 total,
-//                 totalPages: Math.ceil(total / limit),
-//                 hasNext: page * limit < total,
-//                 hasPrev: page > 1
-//             }
-//         };
+//         return formatPagination(accounts, total, page, limit);
 //     }
 
-
-
-//     // async getAccountById(accountId: string) {
-//     //     const account = await Account.findById(accountId);
-//     //     if (!account) throw new Error("account not found")
-//     //     if (account?.role == "client") {
-//     //         return await clientProfile.findOne({ account: accountId }).populate("account");
-//     //     }
-//     //     return await ConsultantProfile.findOne({ account: accountId }).populate("account");
-//     // }
-
-
+//     // =========================
+//     // 👤 GET SINGLE ACCOUNT (ADMIN VIEW)
+//     // =========================
 //     async getAccountById(accountId: string) {
-//         if (!mongoose.Types.ObjectId.isValid(accountId)) {
-//             throw new Error("Invalid account id");
-//         }
-
-//         const pipeline: PipelineStage[] = [
-//             {
-//                 $match: {
-//                     _id: new mongoose.Types.ObjectId(accountId)
-//                 }
-//             },
-
-//             {
-//                 $lookup: {
-//                     from: "consultantprofiles",
-//                     localField: "_id",
-//                     foreignField: "account",
-//                     as: "consultantProfile"
-//                 }
-//             },
-//             {
-//                 $lookup: {
-//                     from: "clientprofiles",
-//                     localField: "_id",
-//                     foreignField: "account",
-//                     as: "clientProfile"
-//                 }
-//             },
-
-//             // Consultant assignments count
-//             {
-//                 $lookup: {
-//                     from: "consultantclientassignments",
-//                     let: { consultantId: "$_id" },
-//                     pipeline: [
-//                         {
-//                             $match: {
-//                                 $expr: {
-//                                     $and: [
-//                                         { $eq: ["$consultant", "$$consultantId"] },
-//                                         { $eq: ["$status", "active"] }
-//                                     ]
-//                                 }
-//                             }
-//                         },
-//                         { $count: "count" }
-//                     ],
-//                     as: "activeAssignments"
-//                 }
-//             },
-
-//             // Client assignments count
-//             {
-//                 $lookup: {
-//                     from: "consultantclientassignments",
-//                     let: { clientId: "$_id" },
-//                     pipeline: [
-//                         {
-//                             $match: {
-//                                 $expr: {
-//                                     $and: [
-//                                         { $eq: ["$client", "$$clientId"] },
-//                                         { $eq: ["$status", "active"] }
-//                                     ]
-//                                 }
-//                             }
-//                         },
-//                         { $count: "count" }
-//                     ],
-//                     as: "activeConsultantAssignments"
-//                 }
-//             },
-
-//             {
-//                 $addFields: {
-//                     profile: {
-//                         $cond: [
-//                             { $eq: ["$role", "consultant"] },
-//                             { $arrayElemAt: ["$consultantProfile", 0] },
-//                             { $arrayElemAt: ["$clientProfile", 0] }
-//                         ]
-//                     },
-
-//                     noOfClients: {
-//                         $ifNull: [
-//                             { $arrayElemAt: ["$activeAssignments.count", 0] },
-//                             0
-//                         ]
-//                     },
-
-//                     noOfConsultants: {
-//                         $ifNull: [
-//                             { $arrayElemAt: ["$activeConsultantAssignments.count", 0] },
-//                             0
-//                         ]
-//                     }
-//                 }
-//             },
-
-//             // ✅ Profile Completion Rate
-//             {
-//                 $addFields: {
-//                     profileCompletionRate: {
-//                         $cond: [
-//                             { $ifNull: ["$profile", false] },
-//                             {
-//                                 $let: {
-//                                     vars: {
-//                                         totalFields: {
-//                                             $size: { $objectToArray: "$profile" }
-//                                         },
-//                                         filledFields: {
-//                                             $size: {
-//                                                 $filter: {
-//                                                     input: { $objectToArray: "$profile" },
-//                                                     as: "field",
-//                                                     cond: {
-//                                                         $and: [
-//                                                             { $ne: ["$$field.v", null] },
-//                                                             { $ne: ["$$field.v", ""] }
-//                                                         ]
-//                                                     }
-//                                                 }
-//                                             }
-//                                         }
-//                                     },
-//                                     in: {
-//                                         $round: [
-//                                             {
-//                                                 $multiply: [
-//                                                     {
-//                                                         $divide: [
-//                                                             "$$filledFields",
-//                                                             {
-//                                                                 $cond: [
-//                                                                     { $eq: ["$$totalFields", 0] },
-//                                                                     1,
-//                                                                     "$$totalFields"
-//                                                                 ]
-//                                                             }
-//                                                         ]
-//                                                     },
-//                                                     100
-//                                                 ]
-//                                             },
-//                                             0
-//                                         ]
-//                                     }
-//                                 }
-//                             },
-//                             0
-//                         ]
-//                     }
-//                 }
-//             },
-
-//             {
-//                 $project: {
-//                     consultantProfile: 0,
-//                     clientProfile: 0,
-//                     activeAssignments: 0,
-//                     activeConsultantAssignments: 0,
-//                     password: 0
-//                 }
-//             }
-//         ];
-
-//         const result = await Account.aggregate(pipeline);
-
-//         if (!result.length) {
-//             throw new Error("account not found");
-//         }
-
-//         return result[0];
+//         return Account.findById(accountId);
 //     }
 
-//     async deleteAccount(accountId: string) {
-//         return await Account.findByIdAndDelete(accountId);
+//     // =========================
+//     // 🧾 GET USER CAMPAIGNS (ALL STATES)
+//     // =========================
+//     async getUserCampaigns(
+//         userId: string,
+//         query: PaginationQuery
+//     ) {
+//         const { page = 1, limit = 10 } = query;
+//         const { skip } = buildPagination(page, limit);
+
+//         const filter = {
+//             owner: new Types.ObjectId(userId)
+//             // 🔥 no isDeleted filter (admin sees everything)
+//         };
+
+//         const [campaigns, total] = await Promise.all([
+//             Campaign.find(filter)
+//                 .sort({ createdAt: -1 })
+//                 .skip(skip)
+//                 .limit(limit),
+
+//             Campaign.countDocuments(filter)
+//         ]);
+
+//         return formatPagination(campaigns, total, page, limit);
 //     }
 
-//     async updateAccount(accountId: string, data: any) {
-//         return await Account.findByIdAndUpdate(accountId, data, { new: true });
+//     // =========================
+//     // 💰 GET CAMPAIGN DONATIONS
+//     // =========================
+//     async getCampaignDonations(
+//         campaignId: string,
+//         query: PaginationQuery
+//     ) {
+//         const { page = 1, limit = 10 } = query;
+//         const { skip } = buildPagination(page, limit);
+
+//         const filter = {
+//             campaign: new Types.ObjectId(campaignId)
+//         };
+
+//         const [donations, total] = await Promise.all([
+//             Donation.find(filter)
+//                 .sort({ createdAt: -1 })
+//                 .skip(skip)
+//                 .limit(limit),
+
+//             Donation.countDocuments(filter)
+//         ]);
+
+//         return formatPagination(donations, total, page, limit);
 //     }
 
-//     async getClientPaymentHistory(accountId: string) {
-//         return await transaction.find({ user: accountId });
+//     // =========================
+//     // 💬 GET CAMPAIGN COMMENTS
+//     // =========================
+//     async getCampaignComments(
+//         campaignId: string,
+//         query: PaginationQuery
+//     ) {
+//         const { page = 1, limit = 10 } = query;
+//         const { skip } = buildPagination(page, limit);
+
+//         const filter = {
+//             campaign: new Types.ObjectId(campaignId)
+//         };
+
+//         const [comments, total] = await Promise.all([
+//             Comment.find(filter)
+//                 .sort({ createdAt: -1 })
+//                 .skip(skip)
+//                 .limit(limit),
+
+//             Comment.countDocuments(filter)
+//         ]);
+
+//         return formatPagination(comments, total, page, limit);
 //     }
 
-//     async approveOrDeclineConsultant(consultant_id: string, data: any) {
-//         const consultant = await Account.findById(consultant_id)
-//         const consultantProfile = await ConsultantProfile.findOne({ account: consultant_id })
-//         if (!consultantProfile) throw new Error("consultant profile not found ")
-//         if (consultant?.role !== "consultant") throw new Error("this is not a consultant account")
-//         if (data.response == "approve") {
-//             consultant.status = 'active'
-//             await consultant.save()
-//             consultantProfile.experience = data.experienceLevel
-//             consultantProfile.remark = data.remark
-//             consultantProfile.status = "active"
-//             await consultantProfile.save()
+//     // =========================
+//     // 💳 GET USER DONATIONS
+//     // =========================
+//     async getUserDonations(
+//         userId: string,
+//         query: PaginationQuery
+//     ) {
+//         const { page = 1, limit = 10 } = query;
+//         const { skip } = buildPagination(page, limit);
 
-//             //console.log(consultantProfile)
-//             await emailService.sendConsultantApprovedEmail(consultantProfile)
-//             return clientProfile;
-//         }
-//         if (data.response == "decline") {
-//             consultant.status = 'pending'
-//             consultantProfile.experience = null
-//             await consultant.save()
-//             return await Account.findByIdAndUpdate(consultant_id, { status: "declined" }, { new: true });
-//         }
+//         const filter = {
+//             donor: new Types.ObjectId(userId)
+//         };
+
+//         const [donations, total] = await Promise.all([
+//             Donation.find(filter)
+//                 .sort({ createdAt: -1 })
+//                 .skip(skip)
+//                 .limit(limit),
+
+//             Donation.countDocuments(filter)
+//         ]);
+
+//         return formatPagination(donations, total, page, limit);
 //     }
 
-//     async updateProfile(accountId: string, fields: any, role: string) {
-//         if (role == "client") {
-//             const allowedFields: (keyof UpdateClientProfile)[] = [
-//                 "businessAddress",
-//                 "operatingCity",
-//                 "operatingCountry",
-//                 "operatingState",
-//                 "positionInCompany",
-//                 "companyName",
-//                 "workEmail",
-//                 "workPhone",
-//                 "workType",
-//                 "phoneCountryCode",
-//                 "workPhoneCountryCode",
-//                 "about",
-//                 "coreNeeds",
-//                 "employeeCapacity",
-//                 "businessCategory",
-//                 "instagram",
-//                 "linkedin",
-//                 "website",
-//                 "youtube",
-//                 "registrationNumber",
-//                 "facebook",
-//                 "x",
-//                 "other",
-//                 "firstName",
-//                 "lastName",
-//                 "profilePicture",
-//                 "email",
-//                 "phoneNumber",
-//             ];
+//     // =========================
+//     // 🧾 GET USER TRANSACTIONS
+//     // =========================
+//     async getUserTransactions(
+//         userId: string,
+//         query: PaginationQuery
+//     ) {
+//         const { page = 1, limit = 10 } = query;
+//         const { skip } = buildPagination(page, limit);
 
-//             let updateAccount = {} as any;
+//         const filter = {
+//             userId: new Types.ObjectId(userId)
+//         };
 
-//             if (fields.firstName !== undefined) updateAccount.firstName = fields.firstName;
-//             if (fields.lastName !== undefined) updateAccount.lastName = fields.lastName;
-//             if (fields.email !== undefined) updateAccount.email = fields.email;
-//             if (fields.phoneNumber !== undefined) updateAccount.phone = fields.phoneNumber;
-//             if (fields.workPhoneCountryCode !== undefined)
-//                 updateAccount.workPhoneCountryCode = fields.workPhoneCountryCode;
-//             if (fields.workPhone !== undefined) updateAccount.workPhone = fields.workPhone;
-//             if (fields.profilePicture !== undefined)
-//                 updateAccount.picture = fields.profilePicture;
+//         const [transactions, total] = await Promise.all([
+//             WalletTransaction.find(filter)
+//                 .sort({ createdAt: -1 })
+//                 .skip(skip)
+//                 .limit(limit),
 
-//             const updateData: Record<string, any> = {};
+//             WalletTransaction.countDocuments(filter)
+//         ]);
 
-//             for (const field of allowedFields) {
-//                 if (fields[field] !== undefined) {
-//                     updateData[field] = fields[field];
-//                 }
-//             }
-
-//             const updatedData = await clientProfile.findOneAndUpdate(
-//                 { account: accountId },
-//                 { $set: updateData },
-//                 { new: true }
-//             );
-
-//             console.log(updatedData);
-
-//             const updatedAccount = await Account.findOneAndUpdate(
-//                 { _id: accountId },
-//                 { $set: updateAccount },
-//                 { new: true }
-//             );
-
-//             /* =======================
-//                KYC COMPLETION CHECK
-//                ======================= */
-
-//             if (updatedData) {
-//                 const REQUIRED_KYC_FIELDS: (keyof typeof updatedData)[] = [
-//                     "firstName",
-//                     "lastName",
-//                     "email",
-//                     "phoneNumber",
-//                     "businessAddress",
-//                     "operatingCity",
-//                     "operatingCountry",
-//                     "operatingState",
-//                     "positionInCompany",
-//                     "workEmail",
-//                     "workPhone",
-//                     "businessCategory",
-//                     "employeeCapacity",
-//                     "registrationNumber",
-//                 ];
-
-//                 const isKycComplete = REQUIRED_KYC_FIELDS.every((field) => {
-//                     const value = updatedData[field];
-//                     return value !== undefined && value !== null && value !== "";
-//                 });
-
-//                 if (isKycComplete && updatedData.kycStatus !== "completed") {
-//                     await clientProfile.updateOne(
-//                         { _id: updatedData._id },
-//                         { $set: { kycStatus: "completed" } }
-//                     );
-//                     await Account.updateOne(
-//                         { _id: accountId },
-//                         { $set: { kycStatus: "completed" } }
-//                     )
-//                 }
-
-//                 return updatedData;
-//             }
-//         }
-//         const allowedFields: (keyof updateConsultantProfile)[] = [
-//             "professionalImage",
-//             "about",
-//             "firstName",
-//             "lastName",
-//             "phoneNumber",
-//             "gender",
-//             "identification",
-//             "homeAddress",
-//             "cityOfResidence",
-//             "stateOfResidence",
-//             "countryOfResidence",
-//             "stateOfOrigin",
-//             "countryOfOrigin",
-//             "phoneCountryCode",
-//             "workPhoneCountryCode",
-//             "certificates",
-//             "Bio",
-//             "company",
-//             "position",
-//             "startDate",
-//             "endDate",
-//             "responsibilities",
-//             "school",
-//             "courseStudied",
-//             "certification",
-//             "workType",
-//             "monthYear",
-//             "skills",
-//             "languages",
-//             "workType",
-//             "education",
-//             "facebook",
-//             "cvUrl",
-//             "linkedin",
-//             "x",
-//             "instagram",
-//             "youtube",
-//             "other",
-//         ];
-
-//         const updateData: Record<string, any> = {};
-
-//         for (const field of allowedFields) {
-//             if (fields[field] !== undefined) {
-//                 updateData[field] = fields[field];
-//             }
-//         }
-
-//         const updatedData = await ConsultantProfile.findOneAndUpdate(
-//             { account: accountId },
-//             { $set: updateData },
-//             { new: true }
-//         );
-
-//         console.log(updatedData);
-
-//         /* =======================
-//            KYC COMPLETION CHECK
-//            ======================= */
-
-//         if (updatedData) {
-//             const REQUIRED_KYC_FIELDS: (keyof typeof updatedData)[] = [
-//                 "firstName",
-//                 "lastName",
-//                 "phoneNumber",
-//                 "gender",
-//                 "homeAddress",
-//                 "cityOfResidence",
-//                 "stateOfResidence",
-//                 "countryOfResidence",
-//                 "countryOfOrigin",
-//                 "professionalImage",
-//                 "skills",
-//                 "languages",
-//                 "workType",
-//             ];
-
-//             const isKycComplete = REQUIRED_KYC_FIELDS.every((field) => {
-//                 const value = updatedData[field];
-//                 return value !== undefined && value !== null && value !== "";
-//             });
-
-//             if (isKycComplete && updatedData.kycStatus !== "completed") {
-//                 await ConsultantProfile.updateOne(
-//                     { _id: updatedData._id },
-//                     { $set: { kycStatus: "completed" } }
-//                 );
-//                 await Account.updateOne(
-//                     { _id: accountId },
-//                     { $set: { kycStatus: "completed" } }
-//                 );
-//             }
-
-//             return updatedData;
-//         }
-
-//         throw new Error("update failed");
+//         return formatPagination(transactions, total, page, limit);
 //     }
-
-
-
-//     async assignConsultant(clientId: string, consultantId: string, requestId: string, type: "direct" | "bidRelated") {
-//         const session = await mongoose.startSession();
-//         session.startTransaction();
-
-//         try {
-//             const doubleAssignment = await consultantClientAssignemnt.findOne({ client: clientId, consultant: consultantId, status: "active" }).session(session)
-//             if (doubleAssignment) throw new Error("This consultant is already assigned to the client, no further action required")
-//             const consultant = await Account.findById(consultantId).session(session);
-//             const client = await Account.findById(clientId).session(session);
-//             if (!consultant || !client) throw new Error("Invalid account");
-
-//             const ClientProfile = await clientProfile.findOne({ account: clientId }).session(session);
-//             const consultantProfile = await ConsultantProfile.findOne({ account: consultantId }).session(session);
-//             if (!ClientProfile) throw new Error("client profile not found")
-//             if (!consultantProfile) throw new Error("consultant profile not found")
-
-//             // const relatedRequest = await Requests.findById(requestId).session(session);
-//             // if (!relatedRequest) throw new Error("Request not found");
-
-//             // if (relatedRequest.assignedHRCount == relatedRequest.requiredHrCount) throw new Error("HR threshold reached")
-//             // relatedRequest.assignedHRCount += 1
-//             // await relatedRequest.save()
-
-//             // const updatedRequest = await Requests.findOneAndUpdate(
-//             //     {
-//             //         _id: relatedRequest._id,
-//             //         $expr: { $lt: ["$assignedHRCount", "$requiredHrCount"] }
-//             //     },
-//             //     {
-//             //         $inc: { assignedHRCount: 1 },
-//             //         status: "partially completed"
-//             //     },
-//             //     { new: true, session }
-//             // );
-//             // const updatedRequest = await Requests.findOneAndUpdate(
-//             //     {
-//             //         _id: relatedRequest._id,
-//             //         $expr: { $lt: ["$assignedHRCount", "$requiredHrCount"] }
-//             //     },
-//             //     [
-//             //         {
-//             //             $set: {
-//             //                 assignedHRCount: { $add: ["$assignedHRCount", 1] },
-//             //                 status: {
-//             //                     $switch: {
-//             //                         branches: [
-//             //                             {
-//             //                                 case: {
-//             //                                     $eq: [
-//             //                                         { $add: ["$assignedHRCount", 1] },
-//             //                                         "$requiredHrCount"
-//             //                                     ]
-//             //                                 },
-//             //                                 then: "completed"
-//             //                             },
-//             //                             {
-//             //                                 case: {
-//             //                                     $gt: [
-//             //                                         { $add: ["$assignedHRCount", 1] },
-//             //                                         0
-//             //                                     ]
-//             //                                 },
-//             //                                 then: "partially completed"
-//             //                             }
-//             //                         ],
-//             //                         default: "pending"
-//             //                     }
-//             //                 }
-//             //             }
-//             //         }
-//             //     ],
-//             //     { new: true, session }
-//             // );
-
-//             // //     },
-//             // //     { new: true }
-//             // // );
-
-//             // if (!updatedRequest) {
-//             //     throw new Error("HR threshold reached");
-//             // }
-
-
-//             // const request = await Requests.findOneAndUpdate(
-//             //     {
-//             //         _id: requestId,
-//             //         assignedHrCount: { $lt: baseRequest.requiredHrCount }
-//             //     },
-//             //     { $inc: { assignedHrCount: 1 } },
-//             //     { new: true, session }
-//             // );
-//             // if (!request) throw new Error("HR threshold reached");
-//             // const startDate = new Date();
-
-//             // const endDate = new Date(startDate);
-//             // switch (relatedRequest.jobDuration.unit) {
-//             //     case "days":
-//             //         endDate.setDate(endDate.getDate() + relatedRequest.jobDuration.value);
-//             //         break;
-//             //     case "weeks":
-//             //         endDate.setDate(endDate.getDate() + relatedRequest.jobDuration.value * 7);
-//             //         break;
-//             //     case "months":
-//             //         endDate.setMonth(endDate.getMonth() + relatedRequest.jobDuration.value);
-//             //         break;
-//             // }
-
-
-//             // const assignment = await consultantClientAssignemnt.create(
-//             //     [{
-//             //         client: clientId,
-//             //         consultant: consultantId,
-//             //         request: requestId,
-//             //         clientProfile: ClientProfile._id,
-//             //         consultantProfile: consultantProfile._id,
-//             //         type,
-//             //         startDate,
-//             //         endDate
-//             //     }],
-//             //     { session }
-//             // );
-
-//             // if (type !== "direct") {
-//             //     const bid = await Bids.findOneAndUpdate(
-//             //         { requestId, consultantId, status: "accepted" },
-//             //         { status: "assigned" },
-//             //         { new: true, session }
-//             //     );
-//             //     if (!bid) throw new Error("Bid not found/not approved yet");
-//             //     const assignment = await consultantClientAssignemnt.create(
-//             //         [{
-//             //             client: clientId,
-//             //             consultant: consultantId,
-//             //             //request: requestId,
-//             //             clientProfile: ClientProfile._id,
-//             //             consultantProfile: consultantProfile._id,
-//             //            // type,
-//             //             bidId: bid._id,
-//             //             startDate,
-//             //             endDate
-//             //         }],
-//             //         { session }
-//             //     );
-//             //     await session.commitTransaction();
-//             //     session.endSession();
-
-//             //     await emailService.sendAssignmentEmail(client, consultant);
-//             //     return { assignment, /*updatedRequest*/ bid };
-//             // }
-//             const assignment = await consultantClientAssignemnt.create(
-//                 [{
-//                     client: clientId,
-//                     consultant: consultantId,
-//                     //request: requestId,
-//                     clientProfile: ClientProfile._id,
-//                     consultantProfile: consultantProfile._id,
-//                     //type,
-//                     // startDate,
-//                     // endDate
-//                 }],
-//                 { session }
-//             );
-
-//             await session.commitTransaction();
-//             session.endSession();
-
-//             await emailService.sendAssignmentEmail(client, consultant);
-//             return { assignment, /*updatedRequest*/ };
-
-//         } catch (err) {
-//             await session.abortTransaction();
-//             session.endSession();
-//             throw err;
-//         }
-//     }
-
-
-//     // async assignConsultant(clientId: string, consultantId: string, requestId: string, type: string) {
-//     //     //console.log("got here")
-//     //     const doubleAssignment = await consultantClientAssignemnt.findOne({ client: clientId, consultant: consultantId })
-//     //     if (doubleAssignment) throw new Error("client already assigned to this consultant")
-//     //     const consultant = await Account.findOne({ _id: consultantId,/* status: "active" */ })
-//     //     const client = await Account.findOne({ _id: clientId, /*subscriptionStatus: "active"*/ })
-//     //     if (!consultant) throw new Error("consultant not found or account not active yet")
-//     //     if (!client) throw new Error("client not found or subscribtion not active")
-//     //     const ClientProfile = await clientProfile.findOne({ account: clientId })
-//     //     const consultantProfile = await ConsultantProfile.findOne({ account: consultantId })
-//     //     if (!ClientProfile) throw new Error("client profile not found")
-//     //     if (!consultantProfile) throw new Error("consultant profile not found")
-//     //     const relatedRequest = await Requests.findById(requestId)
-//     //     if (!relatedRequest) throw new Error("Request not found")
-//     //     if (relatedRequest.approvedHrCount == relatedRequest.requiredHrCount) throw new Error("HR threshold reached")
-//     //     relatedRequest.approvedHrCount += 1
-//     //     await relatedRequest.save()
-
-//     //     //console.log(client)
-//     //     //return await Account.findByIdAndUpdate(accountId, { assignedConsultant: consultantId }, { new: true });
-//     //     const newAssignment = await (await consultantClientAssignemnt.create({ client: clientId, consultant: consultantId, clientProfile: ClientProfile._id, consultantProfile: consultantProfile._id, request: requestId })).populate("client")
-//     //     if (!newAssignment) throw new Error("Assignment not created")
-
-//     //     if (type == "direct") {
-//     //         await emailService.sendAssignmentEmail(client, consultant)
-//     //         return { newAssignment, relatedRequest }
-//     //     }
-
-//     //     const relatedBid = await Bids.findOne({ requestId: relatedRequest._id, consultantId: consultantId })
-//     //     if (!relatedBid) throw new Error("Bid not found, client did not bid for this request")
-//     //     relatedBid.status = "assigned"
-//     //     await relatedBid.save()
-//     //     await emailService.sendAssignmentEmail(client, consultant)
-//     //     return { newAssignment, relatedRequest, relatedBid }
-//     // }
-
-//     // async unassignConsultant(accountId: string) {
-//     //     return await Account.findByIdAndUpdate(accountId, { assignedConsultant: null }, { new: true });
-//     // }
-
-//     async suspendAccount(accountId: string) {
-//         return await Account.findByIdAndUpdate(accountId, { status: "restricted" }, { new: true });
-//     }
-
-//     async unSuspendAccount(accountId: string) {
-//         const account = await Account.findByIdAndUpdate(accountId, { status: "active" }, { new: true });
-//         if (!account) throw new Error("account not found")
-
-//         await emailService.sendAccountUnsuspendedEmail(account)
-
-//         return
-//     }
-
-
 // }

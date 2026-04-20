@@ -1,0 +1,263 @@
+import { FilterQuery, Types } from "mongoose";
+import Campaign, { ICampaign } from "../../models/Campaign";
+import Comment from "../../models/Comment";
+import { Donation } from "../../models/Donations";
+
+import {
+    buildPagination,
+    formatPagination,
+    PaginationQuery
+} from "../../utils/admin/paginationUtills";
+
+// import {
+//     CampaignFilters,
+//     CampaignDonationFilters,
+//     CampaignCommentFilters
+// } from "../interfaces/campaign.admin.filters";
+
+// import { Types } from "mongoose";
+// import { PaginationQuery } from "../utils/pagination";
+
+// =========================
+// BASE
+// =========================
+export interface BaseFilter extends PaginationQuery {
+    page?: number;
+    limit?: number;
+
+    startDate?: Date;
+    endDate?: Date;
+}
+
+// =========================
+// CAMPAIGN FILTERS
+// =========================
+export interface CampaignFilters extends BaseFilter {
+    status?: "upcoming" | "ongoing" | "completed";
+    isActive?: boolean;
+    isDeleted?: boolean;
+    riskLevel?: "low" | "medium" | "high";
+    isFlagged?: boolean;
+
+    ownerId?: string;
+    ownerType?: "user" | "organization";
+
+    minTargetAmount?: number;
+    maxTargetAmount?: number;
+
+    minRaised?: number;
+    maxRaised?: number;
+}
+
+// =========================
+// DONATION FILTERS
+// =========================
+export interface CampaignDonationFilters extends BaseFilter {
+    paymentStatus?: "pending" | "success" | "failed";
+
+    paymentStatusExtended?:
+    | "initialized"
+    | "pending"
+    | "processing"
+    | "success"
+    | "failed"
+    | "reversed";
+
+    paymentMethod?: "card" | "bank_transfer" | "virtual_account";
+    isAnonymous?: boolean;
+
+    minAmount?: number;
+    maxAmount?: number;
+}
+
+// =========================
+// COMMENT FILTERS
+// =========================
+export interface CampaignCommentFilters extends BaseFilter {
+    isDeleted?: boolean;
+}
+
+export class CampaignAdminService {
+    // =========================
+    // 📊 GET ALL CAMPAIGNS
+    // =========================
+    async getAllCampaigns(filters: CampaignFilters) {
+        const {
+            status,
+            isActive,
+            isDeleted,
+            riskLevel,
+            isFlagged,
+            ownerId,
+            ownerType,
+            minTargetAmount,
+            maxTargetAmount,
+            minRaised,
+            maxRaised,
+            startDate,
+            endDate,
+            page = 1,
+            limit = 10
+        } = filters;
+
+        const { skip } = buildPagination(page, limit);
+
+        const query: FilterQuery<ICampaign> = {};
+
+        // 🎯 basic filters
+        if (status) query.status = status;
+        if (typeof isActive === "boolean") query.isActive = isActive;
+        if (typeof isDeleted === "boolean") query.isDeleted = isDeleted;
+        if (riskLevel) query.riskLevel = riskLevel;
+        if (typeof isFlagged === "boolean") query.isFlagged = isFlagged;
+
+        // 👤 ownership
+        if (ownerId) query.owner = new Types.ObjectId(ownerId);
+        if (ownerType) query.ownerType = ownerType;
+
+        // 💰 financial filters
+        if (minTargetAmount || maxTargetAmount) {
+            query.targetAmount = {};
+            if (minTargetAmount) query.targetAmount.$gte = minTargetAmount;
+            if (maxTargetAmount) query.targetAmount.$lte = maxTargetAmount;
+        }
+
+        if (minRaised || maxRaised) {
+            query.totalRaised = {};
+            if (minRaised) query.totalRaised.$gte = minRaised;
+            if (maxRaised) query.totalRaised.$lte = maxRaised;
+        }
+
+        // 📅 date range
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = startDate;
+            if (endDate) query.createdAt.$lte = endDate;
+        }
+
+        const [campaigns, total] = await Promise.all([
+            Campaign.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+
+            Campaign.countDocuments(query)
+        ]);
+
+        return formatPagination(campaigns, total, page, limit);
+    }
+
+    // =========================
+    // 🎯 GET CAMPAIGN BY ID
+    // =========================
+    async getCampaignById(campaignId: string) {
+        return Campaign.findById(campaignId)
+            .populate("owner", "email fullName")
+            .populate("authors", "email fullName")
+            .populate("category", "name")
+            .populate("tags", "name");
+    }
+
+    // =========================
+    // 💰 GET CAMPAIGN DONATIONS
+    // =========================
+    async getCampaignDonations(
+        campaignId: string,
+        filters: CampaignDonationFilters
+    ) {
+        const {
+            paymentStatus,
+            paymentStatusExtended,
+            paymentMethod,
+            isAnonymous,
+            minAmount,
+            maxAmount,
+            startDate,
+            endDate,
+            page = 1,
+            limit = 10
+        } = filters;
+
+        const { skip } = buildPagination(page, limit);
+
+        const query: any = {
+            campaign: new Types.ObjectId(campaignId)
+        };
+
+        if (paymentStatus) query.paymentStatus = paymentStatus;
+        if (paymentStatusExtended)
+            query.paymentStatusExtended = paymentStatusExtended;
+
+        if (paymentMethod) query.paymentMethod = paymentMethod;
+        if (typeof isAnonymous === "boolean")
+            query.isAnonymous = isAnonymous;
+
+        if (minAmount || maxAmount) {
+            query.amount = {};
+            if (minAmount) query.amount.$gte = minAmount;
+            if (maxAmount) query.amount.$lte = maxAmount;
+        }
+
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = startDate;
+            if (endDate) query.createdAt.$lte = endDate;
+        }
+
+        const [donations, total] = await Promise.all([
+            Donation.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .populate("donor", "email fullName"),
+
+            Donation.countDocuments(query)
+        ]);
+
+        return formatPagination(donations, total, page, limit);
+    }
+
+    // =========================
+    // 💬 GET CAMPAIGN COMMENTS
+    // =========================
+    async getCampaignComments(
+        campaignId: string,
+        filters: CampaignCommentFilters
+    ) {
+        const {
+            isDeleted,
+            startDate,
+            endDate,
+            page = 1,
+            limit = 10
+        } = filters;
+
+        const { skip } = buildPagination(page, limit);
+
+        const query: any = {
+            campaign: new Types.ObjectId(campaignId)
+        };
+
+        if (typeof isDeleted === "boolean") {
+            query.isDeleted = isDeleted;
+        }
+
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = startDate;
+            if (endDate) query.createdAt.$lte = endDate;
+        }
+
+        const [comments, total] = await Promise.all([
+            Comment.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .populate("user", "email fullName"),
+
+            Comment.countDocuments(query)
+        ]);
+
+        return formatPagination(comments, total, page, limit);
+    }
+}

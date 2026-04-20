@@ -28,7 +28,7 @@ export class KYCController {
 
             const result = await kycService.submitBVN(userId, bvn);
 
-            sendSuccessResponse(res, result, "BVN submitted");
+            sendSuccessResponse(res, result, `BVN submitted: verifiation status: ${result.bvnVerification?.status}`);
         } catch (error: any) {
             sendErrorResponse(
                 res,
@@ -45,7 +45,7 @@ export class KYCController {
 
             const result = await kycService.submitFace(userId, fileUrl);
 
-            sendSuccessResponse(res, result, "Facial verification submitted");
+            sendSuccessResponse(res, result, `Facial verification submitted:verification status is : ${result.faceVerification?.status}`);
         } catch (error: any) {
             next(error);
         }
@@ -63,6 +63,32 @@ export class KYCController {
     //         next(error);
     //     }
     // }
+
+    async verifyCac(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
+        try {
+            const userId = req.user.user_id;
+            const { rcNumber, companyType, cacDocument } = req.body;
+
+            const result = await kycService.submitCAC(userId, cacDocument, companyType, rcNumber);
+
+            sendSuccessResponse(res, result, `CAC submitted successfully: verification status is: ${result.documentVerification?.cac?.status}`);
+        } catch (error: any) {
+            next(error);
+        }
+    }
+
+    async submitUtilityBill(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
+        try {
+            const userId = req.user.user_id;
+            const { utilityBill } = req.body;
+
+            const result = await kycService.submitUtilityBill(userId, utilityBill);
+
+            sendSuccessResponse(res, result, `Utility bill submitted: verification status is: ${result.documentVerification?.utility?.status}`);
+        } catch (error: any) {
+            next(error);
+        }
+    }
 
     async getKYCStatus(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
         try {

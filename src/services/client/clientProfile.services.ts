@@ -24,6 +24,7 @@ export class clientProfileServices {
             "youtube",
             "facebook",
             "x",
+            "dateOfBirth",
             "firstName",
             "lastName",
             "profilePicture",
