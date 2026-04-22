@@ -5,7 +5,7 @@ export interface IWallet extends Document {
     campaignId?: Types.ObjectId;
     currency: string;
     availableBalance: number;
-    pendingBalance: number;
+    lockedBalance: number;
     isLocked: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -17,7 +17,7 @@ const WalletSchema = new Schema<IWallet>(
         campaignId: { type: Schema.Types.ObjectId, ref: "Campaign" },
         currency: { type: String, default: "NGN" },
         availableBalance: { type: Number, default: 0 },
-        pendingBalance: { type: Number, default: 0 },
+        lockedBalance: { type: Number, default: 0 },
         isLocked: { type: Boolean, default: false },
     },
     { timestamps: true }

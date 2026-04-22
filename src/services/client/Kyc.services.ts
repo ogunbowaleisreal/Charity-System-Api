@@ -3,8 +3,12 @@ import { Account } from "../../models/Accounts";
 import { Types } from "mongoose";
 import { DojahService } from "../DojahServices";
 import { dojahConfig } from "../../config/dojah.config";
+import logger from "../../logger";
+import { ZeehKycService } from "../zeehAfrica.services";
+import { ZeehConfig } from "../../config/zeehAfrica.config";
 
 const dojahService = new DojahService(dojahConfig);
+const zeehService = new ZeehKycService(ZeehConfig.apiKey, ZeehConfig.baseUrl, ZeehConfig.webhookSecret);
 
 export class KYCService {
 
@@ -43,12 +47,13 @@ export class KYCService {
         kyc.status = "in_progress";
     }
 
-    async submitBVN(userId: string, payload: {
-        bvn: string;
-        firstName?: string;
-        lastName?: string;
-        dob?: string;
-    }) {
+    async submitBVN(
+        userId: string,
+        payload: {
+            bvn: string;
+            dob: string;
+        }
+    ) {
         const kyc = await this.getOrCreateKYC(userId);
 
         kyc.bvn = payload.bvn;
@@ -56,32 +61,53 @@ export class KYCService {
         kyc.steps.bvn.submittedAt = new Date();
         kyc.status = "pending_verification";
 
-        let result;
+        // =========================
+        // ZEEH BVN VERIFICATION ONLY
+        // =========================
 
-        // 🔥 SUPPORT BOTH METHODS
-        if (payload.firstName && payload.lastName && payload.dob) {
-            result = await dojahService.validateBVN({
-                bvn: payload.bvn,
-                firstName: payload.firstName,
-                lastName: payload.lastName,
-                dob: payload.dob,
-            });
-        } else {
-            result = await dojahService.verifyBVN(payload.bvn);
-        }
+        const result = await zeehService.verifyBVN(payload.bvn);
 
-        if (result.status === "verified") {
+        const isVerified =
+            result?.success === true &&
+            result?.data &&
+            result?.data?.firstName;
+
+        // =========================
+        // SUCCESS
+        // =========================
+
+        if (isVerified && result?.data.dateOfBirth == payload.dob) {
             kyc.bvnVerification = {
                 status: "verified",
-                provider: "dojah",
-                matchedData: result.data,
+                provider: "zeeh",
+                matchedData: {
+                    firstName: result.data.firstName,
+                    middleName: result.data.middleName,
+                    lastName: result.data.lastName,
+                    dateOfBirth: result.data.dateOfBirth,
+                    phoneNumber: result.data.phoneNumber,
+                },
                 verifiedAt: new Date(),
             };
-        } else {
-            kyc.bvnVerification = { status: "failed" };
+        }
+
+        // =========================
+        // FAILURE
+        // =========================
+
+        else {
+            kyc.bvnVerification = {
+                status: "failed",
+                provider: "zeeh",
+            };
+
             kyc.status = "rejected";
             kyc.rejectionReason = "BVN verification failed";
         }
+
+        // =========================
+        // STATE UPDATE
+        // =========================
 
         this.updateStatus(kyc);
         await kyc.save();
@@ -89,53 +115,59 @@ export class KYCService {
         return kyc;
     }
 
-
-    async submitFace(userId: string, base64Image: string) {
+    async submitFace(userId: string, imageUrl: string) {
         const kyc = await this.getOrCreateKYC(userId);
 
         if (kyc.bvnVerification?.status !== "verified") {
             throw new Error("BVN must be verified first");
         }
-        kyc.facialImage = base64Image
+
+        kyc.facialImage = imageUrl;
 
         kyc.steps.face.submitted = true;
         kyc.steps.face.submittedAt = new Date();
         kyc.status = "pending_verification";
 
-        // 🔥 STEP 1: LIVENESS
-        const live = await dojahService.verifyLiveness(base64Image);
+        // =========================
+        // ZEEH FACE VERIFICATION
+        // =========================
 
-        if (live.status !== "verified") {
-            kyc.livenessVerification = { status: "failed" };
-            kyc.status = "rejected";
-            kyc.rejectionReason = "Liveness check failed";
-            await kyc.save();
-            return kyc;
-        }
+        const result = await zeehService.verifyFace(
+            kyc.bvn as any,
+            imageUrl,
+        );
 
-        kyc.livenessVerification = {
-            status: "verified",
-            confidenceScore: live.confidence! / 100,
-            verifiedAt: new Date(),
-        };
+        const isVerified =
+            result?.success === true &&
+            result?.data?.face_data.confidence >= 85;
 
-        // 🔥 STEP 2: FACE MATCH
-        const face = await dojahService.verifyFaceWithBVN({
-            bvn: kyc.bvn!,
-            selfieBase64: base64Image,
-        });
+        // =========================
+        // SUCCESS
+        // =========================
 
-        if (face.status === "verified") {
+        if (isVerified) {
             kyc.faceVerification = {
                 status: "verified",
-                provider: "dojah",
-                confidenceScore: face.confidence! / 100,
+                provider: "zeeh",
+                confidenceScore: result.data.face_data.confidence || 0,
                 verifiedAt: new Date(),
             };
-        } else {
-            kyc.faceVerification = { status: "failed" };
+
+            kyc.status = "in_progress";
+        }
+
+        // =========================
+        // FAILURE
+        // =========================
+
+        else {
+            kyc.faceVerification = {
+                status: "failed",
+                provider: "zeeh",
+            };
+
             kyc.status = "rejected";
-            kyc.rejectionReason = "Face mismatch";
+            kyc.rejectionReason = "Face verification failed";
         }
 
         this.updateStatus(kyc);
@@ -143,6 +175,8 @@ export class KYCService {
 
         return kyc;
     }
+
+
 
     async submitUtilityBill(userId: string, base64: string) {
         const kyc = await this.getOrCreateKYC(userId);
@@ -230,6 +264,73 @@ export class KYCService {
     }
 
 
+    async uploadCACDocument(userId: string, cacDocumentUrl: string) {
+        const kyc = await this.getOrCreateKYC(userId);
+
+        if (kyc.type !== "organization") {
+            throw new Error("CAC upload only allowed for organization accounts");
+        }
+
+        // ===== STORE FILE =====
+        kyc.cacDocument = cacDocumentUrl;
+
+        // ===== STEP TRACKING =====
+        kyc.steps.document.cac.submitted = true;
+        kyc.steps.document.cac.submittedAt = new Date();
+
+        // ===== MANUAL STATUS =====
+        kyc.documentVerification = {
+            ...kyc.documentVerification,
+            cac: {
+                status: "pending", // waiting manual/admin review
+                provider: "manual",
+                extractedData: {
+                    source: "upload",
+                    url: cacDocumentUrl,
+                },
+            },
+        };
+
+        kyc.status = "pending_verification";
+
+        await kyc.save();
+        return kyc;
+    }
+
+    async uploadUtilityBill(userId: string, utilityBillUrl: string) {
+        const kyc = await this.getOrCreateKYC(userId);
+
+        if (kyc.type !== "personal") {
+            throw new Error("Utility bill upload only allowed for personal accounts");
+        }
+
+        // ===== STORE FILE =====
+        kyc.utilityBill = utilityBillUrl;
+
+        // ===== STEP TRACKING =====
+        kyc.steps.document.utility.submitted = true;
+        kyc.steps.document.utility.submittedAt = new Date();
+
+        // ===== MANUAL STATUS =====
+        kyc.documentVerification = {
+            ...kyc.documentVerification,
+            utility: {
+                status: "pending",
+                provider: "manual",
+                extractedData: {
+                    source: "upload",
+                    url: utilityBillUrl,
+                },
+            },
+        };
+
+        kyc.status = "pending_verification";
+
+        await kyc.save();
+        return kyc;
+    }
+
+
     async getKYCStatus(userId: string) {
         const kyc = await KYC.findOne({ userId }).select("+bvn");
 
@@ -266,7 +367,7 @@ export class KYCService {
         let totalSteps = 4;
 
         if (isBVNVerified) completedSteps++;
-        if (isLivenessVerified) completedSteps++;
+        // if (isLivenessVerified) completedSteps++;
         if (isFaceVerified) completedSteps++;
         if (isDocumentVerified) completedSteps++;
 
@@ -277,8 +378,8 @@ export class KYCService {
 
         if (!isBVNVerified) {
             nextAction = "Submit BVN for verification";
-        } else if (!isLivenessVerified) {
-            nextAction = "Complete liveness check";
+            // } else if (!isLivenessVerified) {
+            //     nextAction = "Complete liveness check";
         } else if (!isFaceVerified) {
             nextAction = "Complete facial verification";
         } else if (!documentSubmitted) {
@@ -294,11 +395,11 @@ export class KYCService {
 
         // ===== FLAGS =====
         const flags = {
-            canTransact: isBVNVerified,
-            canWithdraw: isBVNVerified && isLivenessVerified && isFaceVerified,
+            //canTransact: isBVNVerified,
+            canWithdraw: isBVNVerified /*&& isLivenessVerified*/ && isFaceVerified,
             isFullyVerified:
                 isBVNVerified &&
-                isLivenessVerified &&
+                // isLivenessVerified &&
                 isFaceVerified &&
                 isDocumentVerified,
         };
@@ -315,10 +416,10 @@ export class KYCService {
                     status: bvnStatus,
                     verified: isBVNVerified,
                 },
-                liveness: {
-                    status: livenessStatus,
-                    verified: isLivenessVerified,
-                },
+                // liveness: {
+                //     status: livenessStatus,
+                //     verified: isLivenessVerified,
+                // },
                 face: {
                     submitted: kyc.steps.face.submitted,
                     status: faceStatus,

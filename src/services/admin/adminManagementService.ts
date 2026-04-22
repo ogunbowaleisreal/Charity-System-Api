@@ -6,9 +6,10 @@ import logger from "../../logger";
 import { IAdmin } from "../../types/admin.management";
 import { CreateAdminRequest, UpdateAdminRequest } from "../../types/admin.management";
 import { generatePasswordCrypto } from "../../utils/helpers";
+import { ResendEmailService } from "../ResesndServices";
 
 export class AdminManagementService {
-    private emailService = new EmailService();
+    private emailService = new ResendEmailService();
 
     async createAdmin(
         data: CreateAdminRequest,
@@ -201,7 +202,7 @@ export class AdminManagementService {
         // admin.suspendedBy = suspendedBy;
         await admin.save();
 
-        await this.emailService.sendAccountUnsuspendedNotification(admin.email, reason)
+        await this.emailService.sendAccountUnsuspendedNotification(admin.email)
 
         logger.info("Admin account unsuspended", {
             adminId,

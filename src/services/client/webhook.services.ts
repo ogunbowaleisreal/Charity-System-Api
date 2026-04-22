@@ -10,6 +10,8 @@ import { PROVIDERS } from "../../config/providers";
 import { AppError } from "../../middleware/errorHandler";
 import { ERROR_CODES } from "../../utils/constants";
 import { FlutterwaveService } from "../flutterwave.services";
+import { WithdrawalRequest } from "../../models/WithdrawalRequest";
+import { Wallet } from "../../models/Wallet";
 
 const flutterwave = new FlutterwaveService();
 
@@ -107,6 +109,44 @@ export interface SafeHavenWebhookPayload {
     };
 }
 
+export interface IFlutterwaveTransferCompletedWebhook {
+    event: "transfer.completed";
+    "event.type": "Transfer";
+
+    data: {
+        id: number;
+
+        account_number: string;
+        bank_name: string;
+        bank_code: string;
+
+        fullname: string;
+
+        created_at: string; // ISO date string
+
+        currency: string;
+        debit_currency: string;
+
+        amount: number;
+        fee: number;
+
+        status: "SUCCESSFUL" | "FAILED" | "PENDING";
+
+        reference: string;
+
+        meta: any | null;
+
+        narration: string;
+
+        approver: string | null;
+
+        complete_message: string;
+
+        requires_approval: number; // 0 | 1
+        is_approved: number;       // 0 | 1
+    };
+}
+
 export interface FlutterwaveWebhookPayload {
     event: string;
     data: {
@@ -171,87 +211,355 @@ export class webhookServices {
         }
     }
 
+    // async handleFlutterwaveWebhook(payload: Buffer) {
+    //     try {
+
+    //         const parsedPayload = JSON.parse(payload.toString()) as FlutterwaveWebhookPayload;
+    //         const eventType = parsedPayload["event.type"];
+    //         const event = parsedPayload.event;
+    //         const data = parsedPayload.data;
+    //         const status = parsedPayload.data.status
+
+    //         console.log(parsedPayload);
+    //         if (event == "charge.completed") {
+
+    //             switch (status) {
+    //                 case "successful": {
+    //                     console.log("this is undefined event type... treating as successful payment")
+    //                     logger.info("this is undefined event type... treating as successful payment")
+    //                     logger.info("Attempting to verify again from flutterwave...");
+    //                     const transaction = await WalletTransaction.findOne({ reference: data.tx_ref });
+    //                     if (!transaction) throw new Error("Transaction not found")
+    //                     const response = await flutterwave.verifyTransaction(transaction.providerTransactionId);
+
+    //                     if (response.status == "successful") {
+    //                         transaction.status = "successful"
+    //                         transaction.providerReference = data.flw_ref
+    //                         transaction.providerTransactionId = data.id
+    //                         await transaction.save()
+    //                         logger.info("Transaction successful, not trying to update campaign and create donation", { reference: data.tx_ref })
+    //                         //return { transaction, "status": "successful" }
+
+    //                         const donation = await Donation.create({
+    //                             campaign: transaction.campaignId,
+    //                             amount: data.amount,
+    //                             type: "user",
+    //                             donor: transaction.userId,
+    //                             donorName: transaction.fullName,
+    //                             currency: "NGN",
+    //                             paymentProvider: "flutterwave",
+    //                             reference: transaction.reference,
+    //                             // idempotencyKey: transaction.idempotencyKey,
+    //                             paymentStatus: "successful",
+    //                             paymentStatusExtended: "initialized",
+    //                             settlementStatus: "settled",
+    //                             allocationStatus: "allocated",
+    //                             paymentMethod: transaction.method,
+    //                             // donorEmailSnapshot: data.email,
+    //                         });
+
+    //                         const campaign = await Campaign.findById(transaction.campaignId);
+    //                         if (!campaign) throw new Error("Campaign not found");
+    //                         if (campaign.isActive == false) throw new Error("Campaign is not active");
+    //                         if (campaign.status == "ongoing" || campaign.status == "upcoming") throw new AppError("Campaign is still ongoing or has not started yet", 400);
+    //                         campaign.availableBalance += data.amount;
+    //                         campaign.donationCount += 1;
+    //                         campaign.totalRaised += data.amount;
+    //                         // campaign.
+    //                         await campaign.save();
+
+    //                         break;
+    //                         // return transaction;
+    //                     }
+    //                 }
+
+
+    //                 case "failed": {
+    //                     logger.info("Card transaction ... treating as failed payment");
+    //                     const transaction = await WalletTransaction.findOne({ reference: data.tx_ref });
+    //                     if (!transaction) throw new Error("Transaction not found")
+    //                     transaction.status = "failed"
+    //                     transaction.providerReference = data.flw_ref
+    //                     transaction.providerTransactionId = data.id
+    //                     await transaction.save()
+    //                     return { transaction, "status": "failed" }
+    //                 }
+
+    //                 default:
+    //                     return null;
+    //             }
+    //         }
+
+    //         if (eventType == "transfer.completed") {
+    //             console.log(parsedPayload);
+    //             switch (status) {
+    //                 case "successful": {
+    //                     logger.info("Transfer successful");
+    //                     const transaction = await WalletTransaction.findOne({ reference: data.reference });
+    //                     if (!transaction) throw new Error("Transaction not found")
+    //                     transaction.status = "successful"
+    //                     transaction.providerReference = data.reference
+    //                     transaction.providerTransactionId = data.id
+    //                     await transaction.save()
+
+    //                     const userWallet= await Wallet.findOne({userId: transaction.userId})
+    //                     if(!userWallet) throw new Error("Wallet not found")
+    //                     userWallet.availableBalance -= data.amount
+    //                     await userWallet.save()
+
+    //                     const request = await WithdrawalRequest.findOne({ reference: data.reference });
+    //                     if (!request) throw new Error("Withdrawal request not found")
+    //                     request.status = "completed"
+    //                     request.providerReference = data.reference
+    //                     request.providerTransactionId = data.id.toString()
+    //                     await request.save()
+    //                     return { transaction, "status": "successful" }
+    //                 }
+    //                 case "failed": {
+    //                     logger.info("Transfer failed");
+    //                     const transaction = await WalletTransaction.findOne({ reference: data.tx_ref });
+    //                     if (!transaction) throw new Error("Transaction not found")
+    //                     transaction.status = "failed"
+    //                     transaction.providerReference = data.flw_ref
+    //                     transaction.providerTransactionId = data.id
+    //                     await transaction.save()
+    //                     return { transaction, "status": "failed" }
+    //                 }
+    //             }
+
+    //             // const transaction = await WalletTransaction.findOne({ reference: data. });
+    //             // if (!transaction) throw new Error("Transaction not found")
+    //             // transaction.status = "successful"
+    //             // transaction.providerReference = data.flw_ref
+    //             // transaction.providerTransactionId = data.id
+    //             // await transaction.save()
+    //             // return { transaction, "status": "successful" }
+    //         }
+
+
+
+
+
+    //     } catch (error) {
+    //         console.log(error)
+    //     }
+
+    // }
+
     async handleFlutterwaveWebhook(payload: Buffer) {
         try {
+            const raw = payload.toString();
+            const parsedPayload = JSON.parse(raw)
 
-            const parsedPayload = JSON.parse(payload.toString()) as FlutterwaveWebhookPayload;
-            const eventType = parsedPayload["event.type"];
             const event = parsedPayload.event;
-            const data = parsedPayload.data;
+            const eventType = parsedPayload["event.type"];
 
-            console.log(parsedPayload);
-            if (event == "charge.completed") {
+            // 🔀 Route events cleanly
+            if (event === "charge.completed") {
+                return this.handleChargeCompleted(
+                    parsedPayload as FlutterwaveWebhookPayload
+                );
+            }
 
-                switch (eventType) {
-                    case undefined: {
-                        console.log("this is undefined event type... treating as successful payment")
-                        logger.info("this is undefined event type... treating as successful payment")
-                        logger.info("Attempting to verify again from flutterwave...");
-                        const transaction = await WalletTransaction.findOne({ reference: data.tx_ref });
-                        if (!transaction) throw new Error("Transaction not found")
-                        const response = await flutterwave.verifyTransaction(transaction.providerTransactionId);
+            if (eventType === "transfer.completed") {
+                return this.handleTransferCompleted(
+                    parsedPayload as IFlutterwaveTransferCompletedWebhook
+                );
+            }
 
-                        if (response.status == "successful") {
-                            transaction.status = "successful"
-                            transaction.providerReference = data.flw_ref
-                            transaction.providerTransactionId = data.id
-                            await transaction.save()
-                            logger.info("Transaction successful, not trying to update campaign and create donation", { reference: data.tx_ref })
-                            //return { transaction, "status": "successful" }
+            return null;
 
-                            const donation = await Donation.create({
-                                campaign: transaction.campaignId,
-                                amount: data.amount,
-                                type: "user",
-                                donor: transaction.userId,
-                                donorName: transaction.fullName,
-                                currency: "NGN",
-                                paymentProvider: "flutterwave",
-                                reference: transaction.reference,
-                                // idempotencyKey: transaction.idempotencyKey,
-                                paymentStatus: "successful",
-                                paymentStatusExtended: "initialized",
-                                settlementStatus: "settled",
-                                allocationStatus: "allocated",
-                                paymentMethod: transaction.method,
-                                // donorEmailSnapshot: data.email,
-                            });
+        } catch (error) {
+            console.log(error);
+        }
+    }
 
-                            const campaign = await Campaign.findById(transaction.campaignId);
-                            if (!campaign) throw new Error("Campaign not found");
-                            if (campaign.isActive == false) throw new Error("Campaign is not active");
-                            if (campaign.status == "ongoing" || campaign.status == "upcoming") throw new AppError("Campaign is still ongoing or has not started yet", 400);
-                            campaign.availableBalance += data.amount;
-                            campaign.donationCount += 1;
-                            campaign.totalRaised += data.amount;
-                            // campaign.
-                            await campaign.save();
+    private async handleTransferCompleted(
+        payload: IFlutterwaveTransferCompletedWebhook
+    ) {
+        const data = payload.data;
+        const status = data.status;
 
-                            break;
-                            // return transaction;
+        console.log(payload);
+
+        switch (status) {
+            case "SUCCESSFUL": {
+                logger.info("Transfer successful");
+
+                const transaction = await WalletTransaction.findOne({ reference: data.reference });
+                if (!transaction) throw new Error("Transaction not found");
+                if (transaction.status === "successful") { logger.info("Transaction already successful", { reference: data.reference }); return }
+                if (transaction.status === "failed") { logger.info("Transaction already failed", { reference: data.reference }); return }
+
+                transaction.status = "successful";
+                transaction.providerReference = data.reference;
+                transaction.providerTransactionId = data.id;
+
+                await transaction.save();
+
+                await Wallet.updateOne(
+                    { userId: transaction.userId },
+                    { $inc: { lockedBalance: -data.amount } }
+                );
+
+                // const userWallet = await Wallet.findOne({ userId: transaction.userId });
+                // if (!userWallet) throw new Error("Wallet not found");
+
+                // userWallet.lockedBalance -= data.amount;
+                // await userWallet.save();
+
+                const request = await WithdrawalRequest.findOne({ reference: data.reference });
+                if (!request) throw new Error("Withdrawal request not found");
+
+                request.status = "completed";
+                request.providerReference = data.reference;
+                request.providerTransactionId = data.id.toString();
+
+                await request.save();
+
+                logger.info("Transfer successful", { reference: data.reference });
+
+                return { transaction, status: "successful" };
+            }
+
+            case "FAILED": {
+                logger.info("Transfer failed");
+
+                const transaction = await WalletTransaction.findOne({ reference: data.reference });
+                if (!transaction) throw new Error("Transaction not found");
+
+                if (transaction.status === "successful") { logger.info("Transaction already successful", { reference: data.reference }); return }
+                if (transaction.status === "failed") { logger.info("Transaction already failed", { reference: data.reference }); return }
+
+                transaction.status = "failed";
+                transaction.providerReference = data.reference;
+                transaction.providerTransactionId = data.id;
+
+                await transaction.save();
+
+                await Wallet.updateOne(
+                    { userId: transaction.userId },
+                    {
+                        $inc: {
+                            availableBalance: data.amount,
+                            lockedBalance: -data.amount
                         }
                     }
+                );
+
+                // const userWallet = await Wallet.findOne({ userId: transaction.userId });
+                // if (!userWallet) throw new Error("Wallet not found");
+
+                // userWallet.availableBalance += data.amount;
+                // userWallet.lockedBalance -= data.amount;
+                // await userWallet.save();
+
+                return { transaction, status: "failed" };
+            }
+            default: {
+                logger.warn("Unhandled charge status", { status });
+                return null;
+            }
+        }
+    }
+
+    private async handleChargeCompleted(
+        payload: FlutterwaveWebhookPayload
+    ) {
+        const data = payload.data;
+        const status = data.status;
+
+        if (payload.event === "charge.completed") {
+            switch (status) {
+                case "successful": {
+                    console.log("this is undefined event type... treating as successful payment");
+                    logger.info("this is undefined event type... treating as successful payment");
+                    logger.info("Attempting to verify again from flutterwave...");
+
+                    const transaction = await WalletTransaction.findOne({ reference: data.tx_ref });
+                    if (!transaction) throw new Error("Transaction not found");
+
+                    if (transaction.status === "successful") { logger.info("Transaction already successful", { reference: data.tx_ref }); return }
+                    if (transaction.status === "failed") { logger.info("Transaction already failed", { reference: data.tx_ref }); return }
+
+                    const response = await flutterwave.verifyTransaction(transaction.providerTransactionId);
+
+                    if (response.status == "successful") {
+                        transaction.status = "successful";
+                        transaction.providerReference = data.flw_ref;
+                        transaction.providerTransactionId = data.id;
+                        await transaction.save();
+
+                        logger.info("Transaction successful, not trying to update campaign and create donation", { reference: data.tx_ref });
+
+                        const donation = await Donation.create({
+                            campaign: transaction.campaignId,
+                            amount: data.amount,
+                            type: "user",
+                            donor: transaction.userId,
+                            donorName: transaction.fullName,
+                            currency: "NGN",
+                            paymentProvider: "flutterwave",
+                            reference: transaction.reference,
+                            paymentStatus: "successful",
+                            paymentStatusExtended: "initialized",
+                            settlementStatus: "settled",
+                            allocationStatus: "allocated",
+                            paymentMethod: transaction.method,
+                        });
+
+                        const campaign = await Campaign.findById(transaction.campaignId);
+                        if (!campaign) throw new Error("Campaign not found");
+                        if (campaign.isActive == false) throw new Error("Campaign is not active");
+                        if (campaign.status == "ongoing" || campaign.status == "upcoming")
+                            throw new AppError("Campaign is still ongoing or has not started yet", 400);
 
 
-                    case "CARD_TRANSACTION": {
-                        logger.info("Card transaction ... treating as failed payment");
-                        const transaction = await WalletTransaction.findOne({ reference: data.tx_ref });
-                        if (!transaction) throw new Error("Transaction not found")
-                        transaction.status = "failed"
-                        transaction.providerReference = data.flw_ref
-                        transaction.providerTransactionId = data.id
-                        await transaction.save()
-                        return { transaction, "status": "failed" }
+                        await Campaign.updateOne(
+                            { _id: transaction.campaignId },
+                            {
+                                $inc: {
+                                    availableBalance: data.amount,
+                                    donationCount: 1,
+                                    totalRaised: data.amount
+                                }
+                            }
+                        );
+
+                        // campaign.availableBalance += data.amount;
+                        // campaign.donationCount += 1;
+                        // campaign.totalRaised += data.amount;
+
+                        // await campaign.save();
                     }
+                    logger.info("Transaction successful", { reference: data.tx_ref });
+                    break;
+                }
 
-                    default:
-                        return null;
+                case "failed": {
+                    logger.info("Card transaction ... treating as failed payment");
+
+                    const transaction = await WalletTransaction.findOne({ reference: data.tx_ref });
+                    if (!transaction) throw new Error("Transaction not found");
+
+                    if (transaction.status === "successful") { logger.info("Transaction already successful", { reference: data.tx_ref }); return }
+                    if (transaction.status === "failed") { logger.info("Transaction already failed", { reference: data.tx_ref }); return }
+
+                    transaction.status = "failed";
+                    transaction.providerReference = data.flw_ref;
+                    transaction.providerTransactionId = data.id;
+
+                    await transaction.save();
+
+                    return { transaction, status: "failed" };
+                }
+
+                default: {
+                    logger.warn("Unhandled charge status", { status });
+                    return null;
                 }
             }
-        } catch (error) {
-            console.log(error)
         }
-
     }
 
 

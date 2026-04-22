@@ -9,6 +9,7 @@ import faqRoutes from "./faq"
 //import bidRoutes from "./bid"
 //import assignmentRoutes from "./assignment.routes"
 import profileRoutes from "./profile.routes"
+import withdrawalManagementRoutes from "./withdrawal.routes"
 import businessCategoryRoutes from "./businessCategoryManagement"
 import contactRoutes from "./contact"
 import mediaRoute from "./medis"
@@ -28,6 +29,7 @@ router.use('/management', managementRoutes);
 router.use('/roles', roleRoutes)
 router.use('/category', categoryRoutes)
 router.use('/faqs', faqRoutes)
+router.use("/withdrawal", withdrawalManagementRoutes)
 //router.use("/accounts", accountRoutes)
 //router.use("/requests", requestRoutes)
 //router.use("/bid", bidRoutes)

@@ -52,7 +52,7 @@ export class DonationService {
 
         const transaction = await WalletTransaction.create({
             //walletId: user.walletId,
-            category: "campaign_credit",
+            category: "donation",
             //type: "donation",
             status: "pending",
             amount: data.amount,
@@ -68,7 +68,7 @@ export class DonationService {
             },
         });
 
-        // 2. Initiate payment with SafeHaven
+        // 2. Initiate payment with Flutterwave
         const res = await flutterwave.initiateCardPayment({
             txRef: reference,
             amount: data.amount * 100, // convert to kobo

@@ -143,9 +143,9 @@ export class authController {
             user.lastLoginLocation = location.data
             await user.save()
             return res.status(200).json({ message: "Login successful", response });
-        } catch (err) {
-            // return res.status(500).json({ message: "Internal Server Error", error: err })
-            //sendErrorResponse(res, "auth failed")
+        } catch (err: any) {
+            //  return res.status(500).json({ message: "Internal Server Error", error: err })
+            sendErrorResponse(res, err.message, err.statusCode, err.errorCode, err.details)
             return next(err)
         }
     }

@@ -26,7 +26,7 @@ export class KYCController {
             const userId = req.user.user_id;
             const { bvn } = req.body;
 
-            const result = await kycService.submitBVN(userId, bvn);
+            const result = await kycService.submitBVN(userId, { bvn: bvn, dob: req.body.dob });
 
             sendSuccessResponse(res, result, `BVN submitted: verifiation status: ${result.bvnVerification?.status}`);
         } catch (error: any) {
@@ -69,7 +69,7 @@ export class KYCController {
             const userId = req.user.user_id;
             const { rcNumber, companyType, cacDocument } = req.body;
 
-            const result = await kycService.submitCAC(userId, cacDocument, companyType, rcNumber);
+            const result = await kycService.uploadCACDocument(userId, cacDocument);
 
             sendSuccessResponse(res, result, `CAC submitted successfully: verification status is: ${result.documentVerification?.cac?.status}`);
         } catch (error: any) {
@@ -82,7 +82,7 @@ export class KYCController {
             const userId = req.user.user_id;
             const { utilityBill } = req.body;
 
-            const result = await kycService.submitUtilityBill(userId, utilityBill);
+            const result = await kycService.uploadUtilityBill(userId, utilityBill);
 
             sendSuccessResponse(res, result, `Utility bill submitted: verification status is: ${result.documentVerification?.utility?.status}`);
         } catch (error: any) {

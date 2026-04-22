@@ -9,5 +9,7 @@ const withdrawalCtrl = new WithdrawalController();
 router.use(rateLimiter.general);
 router.use(verifyClientToken);
 
-router.get("/wallet", withdrawalCtrl.withdrawFundsToWwallet);
-router.post("/bank", withdrawalCtrl.applyForWithdrawalToBank);
+router.get("/wallet/campaignId", withdrawalCtrl.withdrawFundsToWwallet);
+router.post("/bank/walletId", withdrawalCtrl.applyForWithdrawalToBank);
+
+export default router;

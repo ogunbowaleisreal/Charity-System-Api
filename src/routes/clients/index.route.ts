@@ -16,6 +16,7 @@ import planRoutes from "./plan.routes"
 import kycRoutes from "./Kyc.routes"
 // import dashBoardRoutes from "./dashboard"
 import notificationRoutes from "./notification.routes"
+import withdrawalRoutes from "./withdrawal.routes"
 
 const router = Router();
 
@@ -35,6 +36,7 @@ router.use("/campaign-category", businessCategoryRoutes)
 router.use("/transactions", transactionRoutes)
 router.use("/enquiries", enquiryRoutes)
 router.use("/plans", planRoutes)
+router.use("/withdrawal", withdrawalRoutes)
 // router.use("/dashboard", dashBoardRoutes)
 router.use("/notifications", notificationRoutes)
 

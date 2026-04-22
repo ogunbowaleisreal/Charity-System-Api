@@ -3,6 +3,7 @@ import EmailService from "./Email.services";
 import { CacheService } from "../services/cacheServices";
 import { HTTP_STATUS } from "../utils/constants";
 import logger from "../logger";
+import { ResendEmailService } from "./ResesndServices";
 
 interface CachedOTP {
     otp: string;
@@ -11,7 +12,8 @@ interface CachedOTP {
 }
 
 export class OTPService {
-    private emailService = new EmailService();
+    private emailService = new ResendEmailService();
+    // private resendEmailService = new ResendEmailService();
 
     async generateAndSendOTP(
         email: string,

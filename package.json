@@ -61,6 +61,7 @@
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "redis": "^5.8.3",
+    "resend": "^6.12.2",
     "slugify": "^1.6.9",
     "uuid": "^8.3.2",
     "winston": "^3.18.3",

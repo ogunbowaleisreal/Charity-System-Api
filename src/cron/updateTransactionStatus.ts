@@ -13,6 +13,7 @@ async function expireStaleTransactions() {
         {
             status: "pending",
             providerTransactionId: { $in: [null, undefined] },
+            category: { $in: ["donation", "withdrawal"] },
             createdAt: { $lte: cutoff },
         },
         {

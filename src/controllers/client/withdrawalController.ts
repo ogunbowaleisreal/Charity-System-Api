@@ -8,9 +8,12 @@ const withdrawalService = new WithdrawalService();
 
 export class WithdrawalController {
     async applyForWithdrawalToBank(req: AuthenticatedClientRequest, res: Response) {
+        const userId = req.user.id;
+        const walletId = req.params.walletId;
         try {
             const withdrawal = await withdrawalService.applyForWithdrawalToBank(
-                req.body.walletId,
+                userId,
+                walletId,
                 req.body.amount,
                 req.body.accountName,
                 req.body.bankCode,
@@ -26,9 +29,10 @@ export class WithdrawalController {
     }
 
     async withdrawFundsToWwallet(req: AuthenticatedClientRequest, res: Response) {
+        const campaignId = req.params.comapignId;
         try {
             const withdrawal = await withdrawalService.withdrawFundsToWallet(
-                req.body.walletId,
+                campaignId,
                 req.body.amount,
                 req.body.narration
             );

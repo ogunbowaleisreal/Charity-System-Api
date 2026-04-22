@@ -2,8 +2,13 @@ import { Wallet } from "../../models/Wallet";
 import { WalletTransaction } from "../../models/transaction";
 import Campaign from "../../models/Campaign";
 import { AppError } from "../../middleware/errorHandler";
+import { WithdrawalRequest } from "../../models/WithdrawalRequest";
 import { startSession } from "mongoose";
 import crypto from "crypto";
+import { FlutterwaveService } from "../flutterwave.services";
+
+
+const flutterwave = new FlutterwaveService();
 
 export class WithdrawalService {
     async withdrawFundsToWallet(
@@ -60,6 +65,7 @@ export class WithdrawalService {
     // 🔹 WITHDRAW FUNDS
     // =========================
     async applyForWithdrawalToBank(
+        userId: string,
         walletId: string,
         amount: number,
         accountName: string,
@@ -78,24 +84,42 @@ export class WithdrawalService {
 
         // 1. LOCK FUNDS
         wallet.availableBalance -= amount;
-        // wallet.frozenBalance += amount;
+        wallet.lockedBalance += amount;
         await wallet.save();
 
-        const newTransaction = new WalletTransaction({
+
+
+        const withdrawalRequest = await WithdrawalRequest.create({
             wallet: walletId,
+            userId,
             amount,
             type: "withdrawal",
             status: "pending",
             narration,
             method: "bank_transfer",
             bankDetails: {
-                bankName: bank_name,
+                bankCode: bankCode,
                 accountNumber,
                 accountName: accountName,
             },
         });
-        await newTransaction.save();
 
+        // const newTransaction = new WalletTransaction({
+        //     wallet: walletId,
+        //     amount,
+        //     type: "withdrawal",
+        //     status: "pending",
+        //     narration,
+        //     method: "bank_transfer",
+        //     bankDetails: {
+        //         bankName: bank_name,
+        //         accountNumber,
+        //         accountName: accountName,
+        //     },
+        // });
+        // await newTransaction.save();
+
+        return withdrawalRequest
 
     }
 }
