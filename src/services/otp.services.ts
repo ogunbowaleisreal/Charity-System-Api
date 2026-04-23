@@ -65,7 +65,7 @@ export class OTPService {
         email: string,
         otp: string,
         type: "registration" | "password_reset" | "2fa"
-    ): Promise<void> {
+    ): Promise<boolean> {
         try {
             // Check cache first
             const cacheKey = `otp:${type}:${email}`;
@@ -76,7 +76,7 @@ export class OTPService {
                 await CacheService.delete(cacheKey);
                 await OTP.deleteMany({ email, type });
                 logger.info("OTP verified successfully from cache", { email, type });
-                return;
+                return true;
             }
 
             // Check database if not in cache or cache miss
@@ -125,6 +125,7 @@ export class OTPService {
             // OTP is valid, clean up
             await OTP.deleteMany({ email, type });
             await CacheService.delete(cacheKey);
+            return true;
 
             logger.info("OTP verified successfully from database", { email, type });
         } catch (error: any) {

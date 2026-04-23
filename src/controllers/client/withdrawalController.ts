@@ -30,8 +30,10 @@ export class WithdrawalController {
 
     async withdrawFundsToWwallet(req: AuthenticatedClientRequest, res: Response) {
         const campaignId = req.params.comapignId;
+        const userId = req.user.userId;
         try {
             const withdrawal = await withdrawalService.withdrawFundsToWallet(
+                userId,
                 campaignId,
                 req.body.amount,
                 req.body.narration

@@ -196,18 +196,6 @@ export class authService {
         // user.lastLogin = new Date();
         // await user.save();
 
-        if (client.twoFactorEnabled) {
-            otpService.generateAndSendOTP(email, "2fa");
-
-            throw {
-                message:
-                    "Just one more step! We've sent a verification code to your email. Please check your inbox and enter the code to complete your login.",
-                success: true,
-                statusCode: HTTP_STATUS.FORBIDDEN,
-            };
-        }
-        console.log(client.password)
-        console.log(password)
         // compmare password for client
         const isPasswordValid = await bcryptUtil.comparePassword(
             password, client.password as string
@@ -215,6 +203,20 @@ export class authService {
         if (!isPasswordValid) {
             throw { message: "Invalid credential", statusCode: HTTP_STATUS.UNAUTHORIZED };
         }
+
+
+        if (client.twoFactorEnabled) {
+            otpService.generateAndSendOTP(email, "2fa");
+
+            return {
+                message:
+                    "Just one more step! We've sent a verification code to your email. Please check your inbox and enter the code to complete your login.",
+                success: true,
+                statusCode: HTTP_STATUS.NO_CONTENT,
+            };
+        }
+        console.log(client.password)
+        console.log(password)
 
         // // Generate tokens
         const tokens = jwtUtil.generateTokenPair({
@@ -386,20 +388,21 @@ export class authService {
 
     async resetPassword(email: string, OTP: string, newPassword: string) {
         // try{
-        console.log("got here first ")
-        await otpService.verifyOTP(email, OTP, "password_reset");
-        // if (!isValidOTP) {
-        //     throw new Error("Invalid or expired OTP");
-        // }
+        // console.log("got here first ")
+        const isValidOTP = await otpService.verifyOTP(email, OTP, "password_reset");
+        if (!isValidOTP) {
+            throw new Error("Invalid or expired OTP");
+        }
+        // console.log("i got here at all")
         const user = await Account.findOne({ email, provider: 'local' });
-        console.log(user)
+        // console.log(user)
         if (!user) {
             throw new Error("User not found");
         }
         const password = await bcryptUtil.hashPassword(newPassword);
         user.password = password
         await user.save();
-        console.log(user)
+        // console.log(user)
         return true;
         // }catch(err:any){
         //     logger.error("password reset failed")
