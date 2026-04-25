@@ -45,4 +45,29 @@ export class WithdrawalController {
         }
     }
 
+    async verifyWitdrawal2fa(req: AuthenticatedClientRequest, res: Response) {
+        const userId = req.user.userId;
+        const campaignId = req.params.campaignId;
+        const code = req.body.otp;
+        const amount = req.body.amount;
+        const narration = req.body.narration;
+        try {
+            const withdrawal = await withdrawalService.verifyWithdrawal2fa(userId, campaignId, code, amount, narration);
+            return sendSuccessResponse(res, withdrawal);
+        } catch (error: any) {
+            logger.error(error);
+            return sendErrorResponse(res, error);
+        }
+    }
+
+    async getAllBanks(req: Request, res: Response) {
+        try {
+            const banks = await withdrawalService.getAllBanks();
+            return sendSuccessResponse(res, banks);
+        } catch (error: any) {
+            logger.error(error);
+            return sendErrorResponse(res, error);
+        }
+    }
+
 }

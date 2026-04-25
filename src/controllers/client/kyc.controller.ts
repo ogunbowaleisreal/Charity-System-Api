@@ -41,7 +41,7 @@ export class KYCController {
     async submitFace(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
         try {
             const userId = req.user.user_id;
-            const fileUrl = req.body?.path;
+            const fileUrl = req.body?.fileUrl;
 
             const result = await kycService.submitFace(userId, fileUrl);
 
@@ -89,6 +89,7 @@ export class KYCController {
             next(error);
         }
     }
+
 
     async getKYCStatus(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
         try {

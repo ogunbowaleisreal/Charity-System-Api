@@ -8,6 +8,7 @@ import crypto from "crypto";
 import { FlutterwaveService } from "../flutterwave.services";
 import { Account } from "../../models/Accounts";
 import OTPService from "../otp.services";
+import { startSession } from "mongoose";
 
 
 const flutterwave = new FlutterwaveService();
@@ -20,64 +21,105 @@ export class WithdrawalService {
         amount: number,
         narration: string
     ) {
-        const user = await Account.findById(userId);
-        if (!user) throw new AppError("User not found", 404);
+        try {
 
-        const reference = `WIT_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`; //crypto.randomUUID();
+            const session = await startSession();
+            session.startTransaction();
 
+            const user = await Account.findById(userId);
+            if (!user) throw new AppError("User not found", 404);
 
-        const campaign = await Campaign.findById(campaignId);
-
-        if (!campaign) throw new AppError("Campaign not found", 404);
-        if (campaign.status == "ongoing" || campaign.status == "upcoming") throw new AppError("Campaign is still ongoing or has not started yet", 400);
-
-        if (campaign.owner.toString() != userId) throw new AppError("Unauthorized, ypu are not the owner of this campaign", 401);
-
-        const userWallet = await Wallet.findOne({
-            userId: campaign.owner,
-        });
-
-        if (!userWallet) throw new AppError("Wallet not found", 404);
+            const reference = `WIT_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`; //crypto.randomUUID();
 
 
-        if (campaign.availableBalance < amount) {
-            throw new AppError("Insufficient balance", 400);
-        }
+            const campaign = await Campaign.findById(campaignId);
 
-        if (user.twoFactorWithdrawalEnabled == true) {
-            const otp = await otpService.generateAndSendOTP(user.email, "2fa");
+            if (!campaign) throw new AppError("Campaign not found", 404);
+            if (campaign.status == "ongoing" || campaign.status == "upcoming") throw new AppError("Campaign is still ongoing or has not started yet", 400);
 
-            return {
-                "success": true,
-                "message": "Just one more step! We've sent a verification code to your email. Please check your inbox and enter the code to complete your withdrawl.",
-                "statusCode": HTTP_STATUS.NO_CONTENT
+            if (campaign.owner.toString() != userId) throw new AppError("Unauthorized, ypu are not the owner of this campaign", 401);
+
+            const userWallet = await Wallet.findOne({
+                userId: campaign.owner,
+            });
+
+            if (!userWallet) throw new AppError("Wallet not found", 404);
+
+
+            if (campaign.availableBalance < amount) {
+                throw new AppError("Insufficient balance", 400);
+            }
+
+            if (user.twoFactorWithdrawalEnabled == true) {
+                const otp = await otpService.generateAndSendOTP(user.email, "2fa");
+
+                return {
+                    "success": true,
+                    "message": "Just one more step! We've sent a verification code to your email. Please check your inbox and enter the code to complete your withdrawl.",
+                    "statusCode": HTTP_STATUS.NO_CONTENT
+                }
+
+
             }
 
 
+            await Campaign.updateOne(
+                { _id: campaignId },
+                {
+                    $inc: {
+                        availableBalance: -amount,
+                        totalWithdrawn: amount
+                    }
+                },
+                { session }
+            );
+
+            await Wallet.updateOne(
+                { userId },
+                {
+                    $inc: { availableBalance: amount }
+                },
+                { session }
+            );
+
+            await WalletTransaction.create([{
+                wallet: userWallet._id,
+                amount,
+                type: "user",
+                status: "success",
+                category: "wallet_credit",
+                narration,
+                reference
+            }], { session });
+
+            await session.commitTransaction();
+        } catch (err) {
+            // await session.abortTransaction();
+            throw err;
         }
 
-        // 1. LOCK FUNDS
-        campaign.availableBalance -= amount;
-        //campaign.frozenBalance += amount;
-        campaign.totalWithdrawn += amount;
-        await campaign.save();
+        // // 1. LOCK FUNDS
+        // campaign.availableBalance -= amount;
+        // //campaign.frozenBalance += amount;
+        // campaign.totalWithdrawn += amount;
+        // await campaign.save();
 
-        // 2. UPDATE WALLET
-        userWallet.availableBalance += amount;
-        await userWallet.save();
+        // // 2. UPDATE WALLET
+        // userWallet.availableBalance += amount;
+        // await userWallet.save();
 
 
-        const transaction = await WalletTransaction.create({
-            wallet: userWallet._id,
-            amount,
-            type: "user",
-            status: "success",
-            category: "wallet_credit",
-            narration,
-            reference: reference,
-        })
+        // const transaction = await WalletTransaction.create({
+        //     wallet: userWallet._id,
+        //     amount,
+        //     type: "user",
+        //     status: "success",
+        //     category: "wallet_credit",
+        //     narration,
+        //     reference: reference,
+        // })
 
-        return transaction
+        // return transaction
 
     }
 
@@ -100,6 +142,8 @@ export class WithdrawalService {
         if (!userWallet) throw new AppError("Wallet not found", 404);
 
         const reference = `WIT_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
+
+
         // 1. LOCK FUNDS
         campaign.availableBalance -= amount;
         //campaign.frozenBalance += amount;
@@ -185,5 +229,10 @@ export class WithdrawalService {
 
         return withdrawalRequest
 
+    }
+
+    async getAllBanks() {
+        const banks = await flutterwave.getBanks();
+        return banks;
     }
 }

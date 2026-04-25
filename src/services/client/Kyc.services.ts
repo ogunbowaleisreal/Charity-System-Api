@@ -300,9 +300,9 @@ export class KYCService {
     async uploadUtilityBill(userId: string, utilityBillUrl: string) {
         const kyc = await this.getOrCreateKYC(userId);
 
-        if (kyc.type !== "personal") {
-            throw new Error("Utility bill upload only allowed for personal accounts");
-        }
+        // if (kyc.type !== "user") {
+        //     throw new Error("Utility bill upload only allowed for personal accounts");
+        // }
 
         // ===== STORE FILE =====
         kyc.utilityBill = utilityBillUrl;
@@ -347,7 +347,7 @@ export class KYCService {
         const utilityStatus = kyc.documentVerification?.utility?.status || "not_submitted";
 
         const isBVNVerified = bvnStatus === "verified";
-        const isLivenessVerified = livenessStatus === "verified";
+        // const isLivenessVerified = livenessStatus === "verified";
         const isFaceVerified = faceStatus === "verified";
 
         const isCACVerified = cacStatus === "verified";

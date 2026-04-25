@@ -43,7 +43,7 @@ export class EmailService {
         /**
          * Default sender email (must be verified in Resend)
          */
-        this.defaultFrom = `Help Me nigeria<${process.env.EMAIL_FROM}>` || process.env.EMAIL_FROM as string;
+        this.defaultFrom = process.env.EMAIL_FROM || process.env.EMAIL_FROM as string;
 
         if (!this.defaultFrom) {
             throw new Error("EMAIL_FROM is not defined in environment variables");

@@ -2,7 +2,7 @@ import mongoose, { Schema, model, Document, Types } from "mongoose";
 
 export interface IKYC extends Document {
     userId: Types.ObjectId;
-    type: "personal" | "organization";
+    type: "user" | "organization";
 
     // ===== INPUT DATA =====
     bvn?: string;
@@ -105,7 +105,7 @@ const KYCSchema = new Schema<IKYC>(
 
         type: {
             type: String,
-            enum: ["personal", "organization"],
+            enum: ["user", "organization"],
             required: true,
         },
 

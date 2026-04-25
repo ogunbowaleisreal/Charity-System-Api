@@ -8,6 +8,10 @@ export interface IDonation extends Document {
 
     amount: number;
 
+    serviceFee: number;
+
+    netAmount: number;
+
     currency: string;
 
     // ===== PAYMENT =====
@@ -119,6 +123,15 @@ const DonationSchema = new Schema<IDonation>(
             required: true,
         },
 
+        serviceFee: {
+            type: Number,
+            default: 0,
+        },
+
+        netAmount: {
+            type: Number,
+            required: true,
+        },
         currency: {
             type: String,
             default: "NGN",

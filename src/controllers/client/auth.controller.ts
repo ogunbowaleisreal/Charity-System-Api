@@ -92,7 +92,7 @@ export class authController {
             registeredUser.isVerified = true
             await registeredUser.save()
 
-            const kyc = await KYC.create({ userId: registeredUser._id, status: "not_started", level: 0 })
+            const kyc = await KYC.create({ userId: registeredUser._id, status: "not_started", level: 0, type: registeredUser.role })
             return res.status(200).json({ "message": "otp verification and registration completed" })
         } catch (err: any) {
             logger.error("verificaion failed", err)

@@ -12,6 +12,7 @@ export interface IAccount extends Document {
 
     provider: "local" | "google" | "apple";
     googleId?: string;
+    appleId?: string;
 
     // ===== VERIFICATION =====
     isVerified: boolean;
@@ -116,6 +117,10 @@ const AccountSchema = new Schema<IAccount>(
         },
 
         googleId: {
+            type: String,
+            default: null,
+        },
+        appleId: {
             type: String,
             default: null,
         },

@@ -492,9 +492,12 @@ export class webhookServices {
 
                         logger.info("Transaction successful, not trying to update campaign and create donation", { reference: data.tx_ref });
 
+                        const donationAmount = this.calculateDonation(data.amount);
                         const donation = await Donation.create({
                             campaign: transaction.campaignId,
-                            amount: data.amount,
+                            amount: donationAmount.grossAmount,
+                            serviceFee: donationAmount.fee,
+                            netAmount: donationAmount.netAmount,
                             type: "user",
                             donor: transaction.userId,
                             donorName: transaction.fullName,
@@ -511,17 +514,17 @@ export class webhookServices {
                         const campaign = await Campaign.findById(transaction.campaignId);
                         if (!campaign) throw new Error("Campaign not found");
                         if (campaign.isActive == false) throw new Error("Campaign is not active");
-                        if (campaign.status == "ongoing" || campaign.status == "upcoming")
-                            throw new AppError("Campaign is still ongoing or has not started yet", 400);
+                        if (campaign.status == "completed" || campaign.status == "upcoming")
+                            throw new AppError("Campaign has completed or has not started yet", 400);
 
 
                         await Campaign.updateOne(
                             { _id: transaction.campaignId },
                             {
                                 $inc: {
-                                    availableBalance: data.amount,
+                                    availableBalance: donationAmount.netAmount,  // ✅ correct
                                     donationCount: 1,
-                                    totalRaised: data.amount
+                                    totalRaised: donationAmount.grossAmount      // ✅ correct
                                 }
                             }
                         );
@@ -582,6 +585,19 @@ export class webhookServices {
         // So verification is direct match
         return flutterwaveSignature === secret;
 
+    }
+
+    private calculateDonation(amount: number) {
+        const SERVICE_FEE_PERCENT = Number(process.env.SERVICE_FEE_PERCENT || 5);
+
+        const fee = (SERVICE_FEE_PERCENT / 100) * amount;
+        const net = amount - fee;
+
+        return {
+            grossAmount: amount,
+            fee: Number(fee.toFixed(2)),
+            netAmount: Number(net.toFixed(2))
+        };
     }
 
 
