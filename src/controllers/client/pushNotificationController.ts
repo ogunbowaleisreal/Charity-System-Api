@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { NotificationService } from "../../services/admin/notificationService";
+import { PushNotificationService } from "../../services/pushNotificationService";
 import { AuthenticatedClientRequest } from "../../middleware/auth";
 import { sendSuccessResponse, sendErrorResponse } from "../../utils/helpers";
 import logger from "../../logger";
@@ -10,17 +10,17 @@ export class Notification {
     static async registerToken(req: AuthenticatedClientRequest, res: Response) {
         try {
             const userId = req.user?.userId; // assuming auth middleware
-            const { token } = req.body;
+            const { token, platform } = req.body;
             const account = await Account.findById(userId);
             if (!account) throw new Error("Account not found");
 
             // if (account.role === "user") throw new Error("Unauthorized client account");
 
 
-            await NotificationService.saveToken(userId, token);
+            await PushNotificationService.saveToken(userId, token, platform);
             logger.info("Token registered");
             // auto subscribe to jobs topic
-            await NotificationService.subscribeToTopic(token, "Requests");
+            await PushNotificationService.subscribeToTopic(token, "Requests");
             sendSuccessResponse(res, "Token registered");
         } catch (error: any) {
             logger.error(error.message);

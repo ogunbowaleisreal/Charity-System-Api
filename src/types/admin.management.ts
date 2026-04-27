@@ -231,6 +231,13 @@ export const ADMIN_PERMISSIONS = {
         SUSPEND: "admin.suspend"
     },
 
+    NOTIFICATION: {
+        VIEW: "notification.view",
+        CREATE: "notification.create",
+        UPDATE: "notification.update",
+        DELETE: "notification.delete"
+    },
+
     // Financial permissions
     TRANSACTIONS: {
         VIEW: "transactions.view_transactions",

@@ -6,15 +6,17 @@ import { HTTP_STATUS } from "../../utils/constants";
 //import { NotificationService } from "../../services/admin/notificationService";
 import logger from "../../logger";
 import { AuthenticatedClientRequest } from "../../middleware/auth";
-import { NotificationService } from "../../services/client/notificationServices"; // 👈 added
+import { NotificationService } from "../../services/notification.Services"; // 👈 added
 
 export class NotificationController {
 
     getMyNotifications = async (req: AuthenticatedClientRequest, res: Response) => {
         try {
             const userId = req.user.userId;
+            const page = parseInt(req.query.page as string)
+            const limit = parseInt(req.query.limit as string)
 
-            const formatted = await NotificationService.getUserNotifications(userId);
+            const formatted = await NotificationService.getUserNotifications(userId, page, limit);
 
             logger.info("notifications fetched successfully");
             sendSuccessResponse(res, formatted, "notifications retrieved successfully", 200);
@@ -51,6 +53,21 @@ export class NotificationController {
 
         } catch (error: any) {
             logger.error("mark all as read failed", error.message);
+            sendErrorResponse(res, error.message, HTTP_STATUS.BAD_REQUEST);
+        }
+    };
+
+    deleteNotification = async (req: AuthenticatedClientRequest, res: Response) => {
+        try {
+            const userId = req.user.userId;
+            const { notificationId } = req.params;
+
+            await NotificationService.deleteNotification(notificationId);
+
+            sendSuccessResponse(res, null, "Notification deleted", 200);
+
+        } catch (error: any) {
+            logger.error("delete notification failed", error.message);
             sendErrorResponse(res, error.message, HTTP_STATUS.BAD_REQUEST);
         }
     };
