@@ -17,6 +17,7 @@ import enquiryRoutes from "./enquiries.routes"
 import tagRoutes from "./tags.route"
 import campaignRoutes from "./campaignManagement"
 import notoficationRoutes from "./notification.routes"
+import gratuityRoutes from "./gratuity.routes"
 //import reportRoutes from "./reports.route"
 //import subscriptionManagementRoutes from "./subscriptionManagement"
 import planRoutes from "./adminPlanManagement"
@@ -31,6 +32,7 @@ router.use('/roles', roleRoutes)
 router.use('/category', categoryRoutes)
 router.use('/faqs', faqRoutes)
 router.use("/withdrawal", withdrawalManagementRoutes)
+router.use("/gratuity", gratuityRoutes)
 //router.use("/accounts", accountRoutes)
 //router.use("/requests", requestRoutes)
 //router.use("/bid", bidRoutes)

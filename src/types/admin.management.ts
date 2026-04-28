@@ -202,6 +202,13 @@ export const ADMIN_PERMISSIONS = {
         DELETE: "tag.delete"
     },
 
+    GRATUITY: {
+        VIEW: "gratuity.view",
+        CREATE: "gratuity.create",
+        UPDATE: "gratuity.update",
+        DELETE: "gratuity.delete"
+    },
+
     // Listing management permissions
     // LISTING: {
     //   VIEW: "listing.view",

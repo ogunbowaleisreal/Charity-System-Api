@@ -26,6 +26,10 @@ router.patch(
     "/read-all",
     notificationCtrl.markAllAsRead
 );
+router.delete(
+    "/:notificationId",
+    notificationCtrl.deleteNotification
+);
 
 router.post("/register-token", Notification.registerToken);
 

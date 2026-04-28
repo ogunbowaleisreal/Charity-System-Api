@@ -12,6 +12,8 @@ import { ERROR_CODES } from "../../utils/constants";
 import { FlutterwaveService } from "../flutterwave.services";
 import { WithdrawalRequest } from "../../models/WithdrawalRequest";
 import { Wallet } from "../../models/Wallet";
+import { Gratuity } from "../../models/Gratuity";
+import { PushNotificationService } from "../pushNotificationService";
 
 const flutterwave = new FlutterwaveService();
 
@@ -482,7 +484,7 @@ export class webhookServices {
                     if (transaction.status === "successful") { logger.info("Transaction already successful", { reference: data.tx_ref }); return }
                     if (transaction.status === "failed") { logger.info("Transaction already failed", { reference: data.tx_ref }); return }
 
-                    const response = await flutterwave.verifyTransaction(transaction.providerTransactionId);
+                    const response = await flutterwave.verifyTransaction(data.id);
 
                     if (response.status == "successful") {
                         transaction.status = "successful";
@@ -492,12 +494,20 @@ export class webhookServices {
 
                         logger.info("Transaction successful, not trying to update campaign and create donation", { reference: data.tx_ref });
 
-                        const donationAmount = this.calculateDonation(data.amount);
+                        const {
+                            donationAmount,
+                            gratuityAmount,
+                            gratuityPercentage
+                        } = transaction.metadata as any;
+                        // const donationAmount = transaction.metadata?.donationAmount;
+
+                        const donationCalc = this.calculateDonation(donationAmount);
+
                         const donation = await Donation.create({
                             campaign: transaction.campaignId,
-                            amount: donationAmount.grossAmount,
-                            serviceFee: donationAmount.fee,
-                            netAmount: donationAmount.netAmount,
+                            amount: donationCalc.grossAmount,
+                            serviceFee: donationCalc.fee,
+                            netAmount: donationCalc.netAmount,
                             type: "user",
                             donor: transaction.userId,
                             donorName: transaction.fullName,
@@ -517,14 +527,26 @@ export class webhookServices {
                         if (campaign.status == "completed" || campaign.status == "upcoming")
                             throw new AppError("Campaign has completed or has not started yet", 400);
 
+                        if (gratuityAmount > 0) {
+                            await Gratuity.create({
+                                amount: gratuityAmount,
+                                percentage: gratuityPercentage,
+                                userId: transaction.userId,
+                                transactionReference: transaction.reference,
+                                campaign: transaction.campaignId,
+                                purposeTitle: transaction.metadata?.purposeTitle, // snapshot
+                                currency: "NGN",
+                            });
+                        }
+
 
                         await Campaign.updateOne(
                             { _id: transaction.campaignId },
                             {
                                 $inc: {
-                                    availableBalance: donationAmount.netAmount,  // ✅ correct
+                                    availableBalance: donationCalc.netAmount,  // ✅ correct
                                     donationCount: 1,
-                                    totalRaised: donationAmount.grossAmount      // ✅ correct
+                                    totalRaised: donationCalc.grossAmount      // ✅ correct
                                 }
                             }
                         );
@@ -534,6 +556,10 @@ export class webhookServices {
                         // campaign.totalRaised += data.amount;
 
                         // await campaign.save();
+                        await PushNotificationService.sendToUser(transaction.userId.toString(), {
+                            title: "Donation successful",
+                            body: `You have successfully donated ${donationCalc.grossAmount} to ${campaign.title}`,
+                        })
                     }
                     logger.info("Transaction successful", { reference: data.tx_ref });
                     break;
@@ -588,7 +614,7 @@ export class webhookServices {
     }
 
     private calculateDonation(amount: number) {
-        const SERVICE_FEE_PERCENT = Number(process.env.SERVICE_FEE_PERCENT || 5);
+        const SERVICE_FEE_PERCENT = Number(process.env.SERVICE_FEE_PERCENT || 0);
 
         const fee = (SERVICE_FEE_PERCENT / 100) * amount;
         const net = amount - fee;

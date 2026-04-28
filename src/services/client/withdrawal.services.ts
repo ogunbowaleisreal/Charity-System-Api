@@ -9,6 +9,9 @@ import { FlutterwaveService } from "../flutterwave.services";
 import { Account } from "../../models/Accounts";
 import OTPService from "../otp.services";
 import { startSession } from "mongoose";
+import logger from "../../logger";
+import { PushNotificationService } from "../pushNotificationService";
+import { ResendEmailService } from "../ResesndServices";
 
 
 const flutterwave = new FlutterwaveService();
@@ -91,6 +94,10 @@ export class WithdrawalService {
                 narration,
                 reference
             }], { session });
+            await PushNotificationService.sendToUser(userId, {
+                title: "Withdrawal",
+                body: `You have successfully withdrawn ${amount} from ${campaign.title} campaign`,
+            });
 
             await session.commitTransaction();
         } catch (err) {
@@ -226,6 +233,7 @@ export class WithdrawalService {
         //     },
         // });
         // await newTransaction.save();
+
 
         return withdrawalRequest
 

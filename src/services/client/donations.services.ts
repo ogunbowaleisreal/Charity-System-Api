@@ -37,41 +37,54 @@ export class DonationService {
         firstname: string;
         lastname: string;
         amount: number;
+        gratuityPercentage?: number
         // paymentMethod: "card" | "bank_transfer";
     }) {
         //const reference = `don_${Date.now()}`;
         const reference = `DON_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`; //crypto.randomUUID();
 
         const user = await Account.findOne({ email: data.email }) as any
-        if (!user) logger.info("User not found, Creating donation for guest user", { email: data.email });
+        if (!user) {
+            logger.info("User not found, Creating donation for guest user", { email: data.email });
+            // throw new AppError("User not found, Creating donation for guest user", 400);
+        }
 
         const campaign = await Campaign.findById(data.campaignId);
         if (!campaign) throw new Error("Campaign not found");
         if (campaign.isActive == false) throw new AppError("Campaign is not active or has been suspended by admin, ", 400);
         if (campaign.status == "ongoing" || campaign.status == "upcoming") throw new AppError("Campaign is still ongoing or has not started yet", 400);
 
+        const amountData = this.computeDonationBreakdown(data.amount, data.gratuityPercentage || 0);
+
+
         const transaction = await WalletTransaction.create({
             //walletId: user.walletId,
             category: "donation",
             //type: "donation",
             status: "pending",
-            amount: data.amount,
+            amount: amountData.totalAmount,
             currency: "NGN",
+            gratuityAmount: amountData.gratuityAmount,
+            gratuityPercentage: amountData.gratuityPercentage,
             campaign: campaign._id,
             reference: reference,
             idempotencyKey: reference,
             fullName: `${data.firstname} ${data.lastname}`,
             type: user ? "user" : "guest",
-            userId: user._id,
+            userId: user ? user._id : null, //user._id,
             metadata: {
                 campaignId: campaign._id,
+                donationAmount: amountData.donationAmount,
+                gratuityAmount: amountData.gratuityAmount,
+                gratuityPercentage: amountData.gratuityPercentage,
+                totalAmount: amountData.totalAmount
             },
         });
 
         // 2. Initiate payment with Flutterwave
         const res = await flutterwave.initiateCardPayment({
             txRef: reference,
-            amount: data.amount * 100, // convert to kobo
+            amount: amountData.totalAmount * 100, // convert to kobo
             currency: "NGN",
             redirectUrl: `${process.env.BASE_URL}/donations`,
             customerEmail: data.email,
@@ -434,6 +447,43 @@ export class DonationService {
         //     await campaign.save();
         //     throw error;
         // }
+    }
+
+
+    // 🔒 PRIVATE: internal gratuity calculation
+    calculateGratuity(
+        donationAmount: number,
+        gratuityPercentage: number = 0
+    ) {
+        if (donationAmount <= 0) {
+            throw new Error("Invalid donation amount");
+        }
+
+        if (gratuityPercentage < 0) {
+            throw new Error("Invalid gratuity percentage");
+        }
+
+        const gratuityAmount = (donationAmount * gratuityPercentage) / 100;
+
+        const totalAmount = donationAmount + gratuityAmount;
+
+        return {
+            donationAmount: Number(donationAmount.toFixed(2)),
+            gratuityPercentage,
+            gratuityAmount: Number(gratuityAmount.toFixed(2)),
+            totalAmount: Number(totalAmount.toFixed(2)),
+        };
+    }
+
+    // ✅ PUBLIC: what your service actually uses
+    computeDonationBreakdown(
+        donationAmount: number,
+        gratuityPercentage?: number
+    ) {
+        return this.calculateGratuity(
+            donationAmount,
+            gratuityPercentage || 0
+        );
     }
 
     // =========================

@@ -20,7 +20,7 @@ export class Notification {
             await PushNotificationService.saveToken(userId, token, platform);
             logger.info("Token registered");
             // auto subscribe to jobs topic
-            await PushNotificationService.subscribeToTopic(token, "Requests");
+            await PushNotificationService.subscribeToTopic(token, "General");
             sendSuccessResponse(res, "Token registered");
         } catch (error: any) {
             logger.error(error.message);

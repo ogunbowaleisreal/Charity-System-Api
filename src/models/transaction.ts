@@ -18,6 +18,8 @@ export interface IWalletTransaction extends Document {
 
     currency: string;
     campaignId?: Types.ObjectId
+    gratuityPercentage: number
+    gratuityAmount: number
 
     grossAmount: number;
 
@@ -47,6 +49,11 @@ export interface IWalletTransaction extends Document {
         campaignId?: Types.ObjectId;
         donationId?: Types.ObjectId;
         withdrawalId?: Types.ObjectId;
+        donationAmount: number //amountData.donationAmount,
+        gratuityAmount: number //amountData.gratuityAmount,
+        gratuityPercentage: number //amountData.gratuityPercentage,
+        totalAmount: number
+        purposeTitle: string
     };
 
     balanceBefore: number;
@@ -133,6 +140,14 @@ const WalletTransactionSchema = new Schema<IWalletTransaction>(
             type: Number,
             required: true,
         },
+        gratuityPercentage: {
+            type: Number,
+            default: 0,
+        },
+        gratuityAmount: {
+            type: Number,
+            default: 0,
+        },
 
         method: {
             type: String,
@@ -174,6 +189,10 @@ const WalletTransactionSchema = new Schema<IWalletTransaction>(
             campaignId: { type: Schema.Types.ObjectId, ref: "Campaign" },
             donationId: { type: Schema.Types.ObjectId, ref: "Donation" },
             withdrawalId: { type: Schema.Types.ObjectId, ref: "Withdrawal" },
+            donationAmount: { type: Number },
+            gratuityAmount: { type: Number },
+            gratuityPercentage: { type: Number },
+            totalAmount: { type: Number }
         },
 
         balanceBefore: {
