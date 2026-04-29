@@ -31,4 +31,14 @@ export class WithdrawalRequestsManagementController {
         }
     }
 
+    async getWithdrawalRequests(req: AdminAuthenticatedRequest, res: Response, next: NextFunction) {
+        try {
+            const response = await withdrawalRequestsService.getWithdrawalRequests(req.query);
+            return sendSuccessResponse(res, response);
+        } catch (error: any) {
+            logger.error("Get transaction failed", { error });
+            return sendErrorResponse(res, error);
+        }
+    }
+
 }

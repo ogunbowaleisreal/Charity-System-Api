@@ -14,6 +14,7 @@ import transactionRoutes from "./transactions.route"
 import tagRoutes from "./tags.route"
 import planRoutes from "./plan.routes"
 import kycRoutes from "./Kyc.routes"
+import gratuityRoutes from "./gratuity.routes"
 // import dashBoardRoutes from "./dashboard"
 import notificationRoutes from "./notification.routes"
 import withdrawalRoutes from "./withdrawal.routes"
@@ -29,6 +30,7 @@ router.use('/faqs', faqRoutes)
 router.use('/campaign', campaignRoutes)
 router.use('/donation', donationRoutes)
 router.use("/faq", faqRoutes)
+router.use("/gratuity", gratuityRoutes)
 router.use("/kyc", kycRoutes)
 router.use('/tags', tagRoutes)
 router.use("/contact", contactRoutes)

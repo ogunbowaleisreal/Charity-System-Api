@@ -55,6 +55,7 @@ export interface IKYC extends Document {
             provider?: string;
             extractedData?: any;
             verifiedAt?: Date;
+            reviewedBy?: Types.ObjectId;
         };
 
         utility?: {
@@ -62,6 +63,7 @@ export interface IKYC extends Document {
             provider?: string;
             extractedData?: any;
             verifiedAt?: Date;
+            reviewedBy?: Types.ObjectId;
         };
     };
 
@@ -155,6 +157,10 @@ const KYCSchema = new Schema<IKYC>(
             },
             extractedData: Schema.Types.Mixed,
             verifiedAt: Date,
+            reviewedBy: {
+                type: Schema.Types.ObjectId,
+                ref: "Admin"
+            },
         },
 
         livenessVerification: {
@@ -165,6 +171,7 @@ const KYCSchema = new Schema<IKYC>(
             },
             confidenceScore: Number,
             verifiedAt: Date,
+
         },
 
         steps: {

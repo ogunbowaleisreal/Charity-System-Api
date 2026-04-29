@@ -6,6 +6,7 @@ import logger from "../../logger";
 import { FlutterwaveService } from "../flutterwave.services";
 import crypto from "crypto";
 import { Wallet } from "../../models/Wallet";
+import { parse } from "path";
 
 const flutterwave = new FlutterwaveService();
 
@@ -16,7 +17,10 @@ export class WithdrawalAdminService {
     // 📊 GET ALL REQUESTS (ADMIN)
     // =========================
     async getWithdrawalRequests(filters: any) {
-        const { status, page = 1, limit = 10 } = filters;
+        const { status } = filters;
+
+        const page = parseInt(filters.page) || 1;
+        const limit = parseInt(filters.limit) || 10;
 
         const skip = (page - 1) * limit;
 

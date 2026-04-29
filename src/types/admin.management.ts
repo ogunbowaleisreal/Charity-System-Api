@@ -181,6 +181,11 @@ export const ADMIN_PERMISSIONS = {
         DELETE: "campaign.delete",
         SUSPEND: "campaign.suspend",
     },
+    KYC: {
+        VIEW: "kyc.view",
+        APPROVE: "kyc.approve",
+        REJECT: "kyc.reject",
+    },
 
     // BIDS: {
     //     VIEW: "bids.view",
@@ -200,6 +205,11 @@ export const ADMIN_PERMISSIONS = {
         VIEW: "tag.view",
         UPDATE: "tag.update",
         DELETE: "tag.delete"
+    },
+    WITHDRAWAL: {
+        VIEW: "withdrawal.view",
+        APPROVE: "withdrawal.approve",
+        REJECT: "withdrawal.reject",
     },
 
     GRATUITY: {

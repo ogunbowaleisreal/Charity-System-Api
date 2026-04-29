@@ -35,14 +35,14 @@ export interface WalletTransactionFilters extends WalletTransactionBaseFilter {
 
     status?: "pending" | "processing" | "successful" | "failed" | "expired";
 
-    provider?: "flutterwave" | "googlepay" | "safehaven";
+    provider?: "flutterwave" | "googlepay"
 
     method?: "card" | "bank_transfer" | "wallet";
 
     minAmount?: number;
     maxAmount?: number;
 
-    type?: "credit" | "debit"; // ⚠️ (see note below)
+    type?: "user" | "guest"; // ⚠️ (see note below)
 }
 
 // =========================
@@ -84,7 +84,7 @@ export class WalletTransactionServices {
     // 📊 GET USER TRANSACTIONS (WITH FILTERS)
     // =========================
     async getWalletTransactionHistory(
-        userId: string,
+        userId: string | null,
         filters: WalletTransactionFilters
     ): Promise<PaginatedResponse<IWalletTransaction>> {
         try {
@@ -103,9 +103,14 @@ export class WalletTransactionServices {
 
             const { skip } = buildPagination(page, limit);
 
-            const query: FilterQuery<IWalletTransaction> = {
-                userId: new Types.ObjectId(userId)
-            };
+            // const query: FilterQuery<IWalletTransaction> = {
+            //     userId: new Types.ObjectId(userId)
+            // };
+            const query: FilterQuery<IWalletTransaction> = {};
+
+            if (userId) {
+                query.userId = new Types.ObjectId(userId);
+            }
 
             // =========================
             // FILTERS
