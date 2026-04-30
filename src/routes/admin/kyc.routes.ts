@@ -21,13 +21,13 @@ router.get(
 );
 
 router.post(
-    "/:userId",
-    authorize([ADMIN_PERMISSIONS.KYC?.APPROVE]),
+    "/approve/:userId",
+    authorize([ADMIN_PERMISSIONS.KYC?.APPROVE, ADMIN_PERMISSIONS.KYC?.REJECT, ADMIN_PERMISSIONS.KYC?.VIEW]),
     kycCtrl.approveDocument
 );
 
 router.put(
-    "/:userId",
+    "/reject/:userId",
     authorize([ADMIN_PERMISSIONS.KYC?.REJECT]),
     kycCtrl.rejectDocument
 );

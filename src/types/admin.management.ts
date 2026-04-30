@@ -218,6 +218,12 @@ export const ADMIN_PERMISSIONS = {
         UPDATE: "gratuity.update",
         DELETE: "gratuity.delete"
     },
+    SERVICE_FEE: {
+        VIEW: "servicefee.view",
+        CREATE: "servicefee.create",
+        UPDATE: "servicefee.update",
+        DELETE: "servicefee.delete"
+    },
 
     // Listing management permissions
     // LISTING: {

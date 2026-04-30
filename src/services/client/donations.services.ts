@@ -10,6 +10,7 @@ import { WalletTransaction } from "../../models/transaction";
 import { Account } from "../../models/Accounts";
 import { FlutterwaveService } from "../flutterwave.services";
 import logger from "../../logger";
+import { ServiceFeeConfig } from "../../models/ServiceFee";
 
 const safeHaven = new SaveHavenService();
 const flutterwave = new FlutterwaveService();
@@ -55,6 +56,8 @@ export class DonationService {
         if (campaign.status == "ongoing" || campaign.status == "upcoming") throw new AppError("Campaign is still ongoing or has not started yet", 400);
 
         const amountData = this.computeDonationBreakdown(data.amount, data.gratuityPercentage || 0);
+        const serviceFee = await ServiceFeeConfig.findOne({ isActive: true })
+        // if(!serviceFee) 
 
 
         const transaction = await WalletTransaction.create({
@@ -77,7 +80,10 @@ export class DonationService {
                 donationAmount: amountData.donationAmount,
                 gratuityAmount: amountData.gratuityAmount,
                 gratuityPercentage: amountData.gratuityPercentage,
-                totalAmount: amountData.totalAmount
+                totalAmount: amountData.totalAmount,
+                feeType: serviceFee ? serviceFee.type : "none",
+                feeValue: serviceFee ? serviceFee.value : 0,
+
             },
         });
 

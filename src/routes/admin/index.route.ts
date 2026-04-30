@@ -21,6 +21,7 @@ import gratuityRoutes from "./gratuity.routes"
 import withdrawalRoutes from "./withdrawal.routes"
 import transactionRoutes from "./transaction.management"
 import kycRoutes from "./kyc.routes"
+import serviceFeeRoutes from "./service.fee.routes"
 //import reportRoutes from "./reports.route"
 //import subscriptionManagementRoutes from "./subscriptionManagement"
 import planRoutes from "./adminPlanManagement"
@@ -42,6 +43,7 @@ router.use("/kyc", kycRoutes)
 //router.use("/bid", bidRoutes)
 //router.use("/assignments", assignmentRoutes)
 router.use("/business-category", businessCategoryRoutes)
+router.use("/service-fee", serviceFeeRoutes)
 router.use("/transactions", transactionRoutes)
 router.use("/tags", tagRoutes)
 router.use("/campaign", campaignRoutes)

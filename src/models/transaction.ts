@@ -54,6 +54,8 @@ export interface IWalletTransaction extends Document {
         gratuityPercentage: number //amountData.gratuityPercentage,
         totalAmount: number
         purposeTitle: string
+        feeType: string,
+        feeValue: number
     };
 
     balanceBefore: number;
@@ -192,7 +194,9 @@ const WalletTransactionSchema = new Schema<IWalletTransaction>(
             donationAmount: { type: Number },
             gratuityAmount: { type: Number },
             gratuityPercentage: { type: Number },
-            totalAmount: { type: Number }
+            totalAmount: { type: Number },
+            feeType: { type: String },
+            feeValue: { type: Number },
         },
 
         balanceBefore: {
