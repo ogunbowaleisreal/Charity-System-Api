@@ -201,12 +201,12 @@ const WalletTransactionSchema = new Schema<IWalletTransaction>(
 
         balanceBefore: {
             type: Number,
-            required: true,
+            //required: true,
         },
 
         balanceAfter: {
             type: Number,
-            required: true,
+            // required: true,
         },
     },
     {

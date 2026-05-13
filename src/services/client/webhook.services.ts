@@ -237,7 +237,8 @@ export class webhookServices {
                 );
             }
 
-            return null;
+            //return null;
+            logger.error("unhandled event here")
 
         } catch (error) {
             console.log(error);
@@ -373,6 +374,7 @@ export class webhookServices {
                         if (!campaign) throw new Error("Campaign not found");
 
                         const response = await flutterwave.verifyTransaction(data.id);
+                        console.log(response)
 
                         if (response.status == "successful") {
 
@@ -495,8 +497,11 @@ export class webhookServices {
 
             await session.commitTransaction();
 
-        } catch (error) {
+        } catch (error: any) {
             await session.abortTransaction();
+            logger.error("Transaction failed", { error });
+            console.error("FULL WEBHOOK ERROR:", error);
+            console.error("STACK:", error?.stack);
             throw error;
         } finally {
             await session.endSession();
