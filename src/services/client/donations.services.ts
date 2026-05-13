@@ -94,7 +94,7 @@ export class DonationService {
         // 2. Initiate payment with Flutterwave
         const res = await flutterwave.initiateCardPayment({
             txRef: reference,
-            amount: amountData.totalAmount * 100, // convert to kobo
+            amount: amountData.totalAmount, // convert to kobo
             currency: "NGN",
             redirectUrl: `${process.env.BASE_URL}/donations`,
             customerEmail: data.email,
