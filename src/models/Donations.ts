@@ -15,7 +15,7 @@ export interface IDonation extends Document {
     currency: string;
 
     // ===== PAYMENT =====
-    paymentProvider: "safe haven" | "google pay" | "manual";
+    paymentProvider: "flutterwave" | "google pay" | "manual";
     reference: string; // unique (VERY IMPORTANT)
     paymentStatus: "pending" | "success" | "failed";
 
