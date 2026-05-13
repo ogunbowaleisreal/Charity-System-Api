@@ -446,16 +446,21 @@ export class webhookServices {
                                 },
                                 { session }
                             );
+                            if (transaction.userId) {
+                                PushNotificationService.sendToUser(
+                                    transaction.userId.toString(),
+                                    {
+                                        title: "Donation successful",
+                                        body: `You have successfully donated ${donationCalc.grossAmount} to ${campaign.title}`,
+                                    }
+                                ).catch(err => {
+                                    logger.error("Push notification failed", err);
+                                });
 
-                            PushNotificationService.sendToUser(
-                                transaction.userId.toString(),
-                                {
-                                    title: "Donation successful",
-                                    body: `You have successfully donated ${donationCalc.grossAmount} to ${campaign.title}`,
-                                }
-                            ).catch(err => {
-                                logger.error("Push notification failed", err);
-                            });
+                            }
+
+
+
                         }
 
                         logger.info("Transaction successful", { reference: data.tx_ref });
