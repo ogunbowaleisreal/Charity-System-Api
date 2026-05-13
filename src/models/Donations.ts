@@ -188,10 +188,10 @@ const DonationSchema = new Schema<IDonation>(
         // =========================
         // 🔴 NEW: IDEMPOTENCY
         // =========================
-        idempotencyKey: {
-            type: String,
-            required: true,
-        },
+        // idempotencyKey: {
+        //     type: String,
+        //     required: true,
+        // },
 
         // =========================
         // 🔴 NEW: PAYMENT FLOW STATE
