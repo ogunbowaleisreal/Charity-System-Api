@@ -416,10 +416,10 @@ export class webhookServices {
                                 currency: "NGN",
                                 paymentProvider: "flutterwave",
                                 reference: transaction.reference,
-                                paymentStatus: "successful",
+                                paymentStatus: "success",
                                 paymentStatusExtended: "initialized",
                                 settlementStatus: "settled",
-                                allocationStatus: "allocated",
+                                allocationStatus: "allocated_to_campaign",
                                 paymentMethod: transaction.method,
                             }], { session });
 

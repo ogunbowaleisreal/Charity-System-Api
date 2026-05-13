@@ -145,7 +145,7 @@ const DonationSchema = new Schema<IDonation>(
         // ===== PAYMENT =====
         paymentProvider: {
             type: String,
-            enum: ["safe haven", "google pay", "manual"],
+            enum: ["safe haven", "flutterwave", "google pay", "manual"],
             required: true,
         },
 
