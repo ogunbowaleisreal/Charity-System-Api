@@ -346,6 +346,8 @@ export class webhookServices {
             const data = payload.data;
             const status = data.status;
 
+            logger.info(data)
+
             if (payload.event === "charge.completed") {
                 switch (status) {
                     case "successful": {
