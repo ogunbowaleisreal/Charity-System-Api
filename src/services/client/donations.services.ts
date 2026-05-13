@@ -70,7 +70,7 @@ export class DonationService {
             method: "bank_transfer",
             gratuityAmount: amountData.gratuityAmount,
             gratuityPercentage: amountData.gratuityPercentage,
-            campaign: campaign._id,
+            campaignId: campaign._id,
             provider: "flutterwave",
             netAmount: amountData.donationAmount,
             grossAmount: amountData.totalAmount,
