@@ -13,7 +13,7 @@ export interface IGratuity extends Document {
     campaign?: Types.ObjectId;
 
     // Snapshot of what admin set at the time
-    purposeTitle: string;
+    // purposeTitle: string;
 
     source: "donation";
 
@@ -50,10 +50,10 @@ const GratuitySchema = new Schema<IGratuity>(
             ref: "Campaign",
         },
 
-        purposeTitle: {
-            type: String,
-            required: true,
-        },
+        // purposeTitle: {
+        //     type: String,
+        //     required: true,
+        // },
 
         source: {
             type: String,

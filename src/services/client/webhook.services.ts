@@ -430,7 +430,7 @@ export class webhookServices {
                                     userId: transaction.userId,
                                     transactionReference: transaction.reference,
                                     campaign: transaction.campaignId,
-                                    purposeTitle: transaction.metadata?.purposeTitle,
+                                    //purposeTitle: transaction.metadata?.purposeTitle,
                                     currency: "NGN",
                                 }], { session });
                             }
