@@ -78,6 +78,7 @@ export class DonationService {
             idempotencyKey: reference,
             fullName: `${data.firstname} ${data.lastname}`,
             type: user ? "user" : "guest",
+            serviceCharge: serviceFee ? serviceFee.value : 0,
             userId: user ? user._id : null, //user._id,
             metadata: {
                 campaignId: campaign._id,

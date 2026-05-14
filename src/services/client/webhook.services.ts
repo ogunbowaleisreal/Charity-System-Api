@@ -383,6 +383,8 @@ export class webhookServices {
                             transaction.status = "successful";
                             transaction.providerReference = data.flw_ref;
                             transaction.providerTransactionId = data.id;
+                            transaction.updatedAt = new Date();
+
 
                             await transaction.save({ session });
 

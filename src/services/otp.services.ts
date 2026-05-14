@@ -125,16 +125,17 @@ export class OTPService {
             // OTP is valid, clean up
             await OTP.deleteMany({ email, type });
             await CacheService.delete(cacheKey);
+            logger.info("OTP verified successfully from database", { email, type });
+
             return true;
 
-            logger.info("OTP verified successfully from database", { email, type });
         } catch (error: any) {
             logger.error("OTP verification failed", {
                 email,
                 type,
                 error: error.message,
             });
-            throw error;
+            return false;
         }
     }
 
