@@ -362,11 +362,13 @@ export class webhookServices {
 
                         if (transaction.status === "successful") {
                             logger.info("Transaction already successful", { reference: data.tx_ref });
+                            await session.abortTransaction();
                             return;
                         }
 
                         if (transaction.status === "failed") {
                             logger.info("Transaction already failed", { reference: data.tx_ref });
+                            await session.abortTransaction();
                             return;
                         }
 
@@ -418,6 +420,7 @@ export class webhookServices {
                                 currency: "NGN",
                                 paymentProvider: "flutterwave",
                                 reference: transaction.reference,
+                                //providerR
                                 paymentStatus: "success",
                                 paymentStatusExtended: "initialized",
                                 settlementStatus: "settled",

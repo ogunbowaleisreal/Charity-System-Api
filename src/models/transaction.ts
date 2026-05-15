@@ -36,7 +36,7 @@ export interface IWalletTransaction extends Document {
 
     reference: string; // internal idempotency key
 
-    providerReference?: string; // Safe Haven reference
+    providerReference?: string; // FlutterWave reference
     providerTransactionId: number;
 
     bankDetails?: {

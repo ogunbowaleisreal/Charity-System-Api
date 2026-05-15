@@ -50,8 +50,8 @@ export class NotificationService {
         type: "DONATION" | "WITHDRAWAL" | "GENERAL",
         segment: "allUsers" | "verifiedUsers",
     },
-        page: number,
-        limit: number
+        page: number = 1,
+        limit: number = 10
     ) {
         const notificatiosn = await Notification.find(filter).sort({ createdAt: -1 })
             .skip((page - 1) * limit)
@@ -76,22 +76,40 @@ export class NotificationService {
     // -------------------------
     // GET USER NOTIFICATIONS
     // -------------------------
-    static async getUserNotifications(userId: Types.ObjectId, page = 1, limit = 20) {
+    static async getUserNotifications(
+        userId: Types.ObjectId,
+        query: any
+    ) {
+        const page = Number(query.page) || 1;
+        const limit = Number(query.limit) || 10;
+
         const skip = (page - 1) * limit;
 
-        const notification = await Notification.find({ userId })
+        // remove pagination params
+        const {
+            page: _page,
+            limit: _limit,
+            ...filterQuery
+        } = query;
+
+        // always enforce userId
+        const finalQuery = {
+            userId,
+            ...filterQuery,
+        };
+
+        const notifications = await Notification.find(finalQuery)
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
             .lean();
 
-        const total = await Notification.countDocuments({
-            userId: userId,
-            // isDeleted: false,
-        });
+        const total = await Notification.countDocuments(finalQuery);
+
         const totalPages = Math.ceil(total / limit);
+
         return {
-            notification,
+            notifications,
             pagination: {
                 current_page: page,
                 total_pages: totalPages,
@@ -99,8 +117,8 @@ export class NotificationService {
                 total_records: total,
                 has_next_page: page < totalPages,
                 has_prev_page: page > 1,
-            }
-        }
+            },
+        };
     }
 
     // -------------------------

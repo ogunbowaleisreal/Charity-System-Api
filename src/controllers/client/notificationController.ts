@@ -13,10 +13,10 @@ export class NotificationController {
     getMyNotifications = async (req: AuthenticatedClientRequest, res: Response) => {
         try {
             const userId = req.user.userId;
-            const page = parseInt(req.query.page as string)
-            const limit = parseInt(req.query.limit as string)
+            // const page = parseInt(req.query.page as string)
+            // const limit = parseInt(req.query.limit as string)
 
-            const formatted = await NotificationService.getUserNotifications(userId, page, limit);
+            const formatted = await NotificationService.getUserNotifications(userId, req.query);
 
             logger.info("notifications fetched successfully");
             sendSuccessResponse(res, formatted, "notifications retrieved successfully", 200);
