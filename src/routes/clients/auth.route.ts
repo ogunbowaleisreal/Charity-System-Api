@@ -16,5 +16,6 @@ router.post('/logout', authCtrl.logout)
 router.post('/verify-2fa', authCtrl.verify2FA)
 router.post('/refresh-token', authCtrl.refreshToken)
 router.post('/forgot-password', authCtrl.PasswordResetOtp)
-router.post('/reset-password', authCtrl.resetPassword)
+router.post('/reset-password', authCtrl.verifyAndResetPassword)
+router.post('/verify-password-reset-otp', authCtrl.verifyPasswordResetOtp)
 export default router;

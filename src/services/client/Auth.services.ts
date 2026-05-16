@@ -403,6 +403,62 @@ export class authService {
         //     logger.error("password reset failed")
         // }
     }
+
+    async verifyPasswordResetOTP(email: string, otp: string) {
+        const isValidOTP = await otpService.verifyOTP(
+            email,
+            otp,
+            "password_reset"
+        );
+
+        if (!isValidOTP) {
+            throw new Error("Invalid or expired OTP");
+        }
+
+        await CacheService.set(
+            `password_reset_verified:${email}`,
+            true,
+            600
+        );
+
+        return true;
+    }
+
+    async verifyAndResetPassword(
+        email: string,
+        newPassword: string
+    ) {
+        const verified = await CacheService.get(
+            `password_reset_verified:${email}`
+        );
+
+        if (!verified) {
+            throw new Error("OTP verification required");
+        }
+
+        const user = await Account.findOne({
+            email,
+            provider: "local"
+        });
+
+        if (!user) {
+            throw new Error("User not found");
+        }
+
+        const hashedPassword =
+            await bcryptUtil.hashPassword(newPassword);
+
+        user.password = hashedPassword;
+
+        await user.save();
+
+        // clear verification session
+        await CacheService.delete(
+            `password_reset_verified:${email}`
+        );
+
+        return true;
+    }
     async changePassword(accountId: string, oldPassword: string, newPassword: string) {
         const clientAccount = await Account.findById(accountId)
         const hashedPassword = clientAccount?.password

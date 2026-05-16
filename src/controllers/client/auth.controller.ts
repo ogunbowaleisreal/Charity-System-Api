@@ -258,5 +258,45 @@ export class authController {
             //return res.status(500).json({ message: "Internal Server Error", error: err })
         }
     }
+
+    async verifyPasswordResetOtp(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { email, otp } = req.body;
+            if (!email || !otp) {
+                return res.status(400).json({ message: "Email and OTP are required" });
+            }
+            const response = await Authservice.verifyPasswordResetOTP(email, otp);
+            if (!response) {
+                throw new Error("Password reset failed")
+            }
+            logger.info("password reset OTP verified successfully",)
+            return res.status(200).json({ message: "Password reset OTP verified successfully" });
+        } catch (err: any) {
+            logger.error("password reset OTP error", err)
+            sendErrorResponse(res, err.message, err.statusCode)
+            next(err)
+            //return res.status(500).json({ message: "Internal Server Error", error: err })
+        }
+    }
+
+    async verifyAndResetPassword(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { email, newPassword } = req.body;
+            if (!email || !newPassword) {
+                return res.status(400).json({ message: "Email, OTP and new password are required" });
+            }
+            const response = await Authservice.verifyAndResetPassword(email, newPassword);
+            if (!response) {
+                throw new Error("Password reset failed")
+            }
+            logger.info("password reset successful",)
+            return res.status(200).json({ message: "Password reset successful" });
+        } catch (err: any) {
+            logger.error("password reset error", err)
+            sendErrorResponse(res, err.message, err.statusCode)
+            next(err)
+            //return res.status(500).json({ message: "Internal Server Error", error: err }) 
+        }
+    }
 }
 
