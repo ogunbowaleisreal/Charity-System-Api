@@ -96,11 +96,7 @@ export class clientProfileServices {
         if (profile) {
             return { profile }
         }
-        // if (profile?.account) {
-        //     profile.subscription = profile.account.subscriptionPlan;
-        //     delete profile.account.subscriptionPlan;
-        // }
-        // return null
+
     }
 
     async deleteAccount(userId: mongoose.Types.ObjectId) {

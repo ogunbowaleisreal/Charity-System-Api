@@ -4,7 +4,7 @@ import managementRoutes from './admin.management.route'
 import roleRoutes from "./rolesManagement"
 import categoryRoutes from "./category"
 import faqRoutes from "./faq"
-//import accountRoutes from "./accountManagement"
+import accountRoutes from "./accountManagement"
 //import requestRoutes from "./request.routes"
 //import bidRoutes from "./bid"
 //import assignmentRoutes from "./assignment.routes"
@@ -38,7 +38,7 @@ router.use('/faqs', faqRoutes)
 router.use("/withdrawal", withdrawalManagementRoutes)
 router.use("/gratuity", gratuityRoutes)
 router.use("/kyc", kycRoutes)
-//router.use("/accounts", accountRoutes)
+router.use("/accounts", accountRoutes)
 //router.use("/requests", requestRoutes)
 //router.use("/bid", bidRoutes)
 //router.use("/assignments", assignmentRoutes)
