@@ -4,6 +4,7 @@ import Campaign from "../../models/Campaign";
 import Comment from "../../models/Comment";
 import { Donation } from "../../models/Donations";
 import { WalletTransaction } from "../../models/transaction";
+import { ResendEmailService } from "../ResesndServices";
 
 import {
     PaginationQuery,
@@ -88,6 +89,7 @@ export interface TransactionFilters extends BaseFilter {
     provider?: "flutterwave" | "googlepay" | "safehaven";
 }
 export class AccountAdminService {
+    emailService = new ResendEmailService()
     // =========================
     // 🔍 GET ALL ACCOUNTS
     // =========================
@@ -172,6 +174,7 @@ export class AccountAdminService {
 
         await account.save();
 
+        this.emailService.sendAccountSuspendedNotification(account.email, reason)
         return account;
     }
 
@@ -191,6 +194,8 @@ export class AccountAdminService {
 
         account.status = "active";
         await account.save();
+
+        await this.emailService.sendAccountUnsuspendedNotification(account.email)
 
         return account;
     }

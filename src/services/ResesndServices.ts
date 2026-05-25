@@ -351,6 +351,26 @@ export class ResendEmailService {
             throw new Error("Failed to send suspension notification");
         }
     }
+    async sendAccountDeletedNotification(
+        email: string,
+        reason?: string
+    ): Promise<void> {
+        try {
+            const html = this.getAccountDeletedTemplate(reason);
+
+            await this.sendEmail(email, "Account Deleted", html);
+
+            logger.info("Account deleted email sent", { email });
+        } catch (error) {
+            logger.error("Failed to send account deleted email", {
+                email,
+                error,
+            });
+
+            throw new Error("Failed to send account deletion notification");
+        }
+    }
+
 
     // ============================
     // 📧 TEMPLATES (GREEN PALETTE)
@@ -359,6 +379,48 @@ export class ResendEmailService {
     /**
      * OTP Email Template
      */
+
+
+    private getAccountDeletedTemplate(reason?: string): string {
+        return `
+  <div style="background:#f0fdf4;padding:24px;font-family:Arial;">
+    <div style="max-width:600px;margin:auto;background:#fff;padding:24px;border-radius:8px;">
+      
+      <h2 style="color:#065f46;">Help me Nigeria</h2>
+
+      <h3 style="color:#b91c1c;">Account Deleted</h3>
+
+      <p style="color:#374151;">
+        Your account has been permanently deleted from our platform.
+      </p>
+
+      ${reason
+                ? `<p style="color:#374151;">
+                    <strong>Reason:</strong> ${reason}
+                 </p>`
+                : ""
+            }
+
+      <p style="color:#6b7280;margin-top:20px;">
+        If you believe this action was taken in error or need further assistance,
+        please contact support.
+      </p>
+
+      <div style="text-align:center;margin:30px 0;">
+        <a href="mailto:${process.env.ADMIN_EMAIL || "support@helpmenigeria.com"}"
+          style="background:#047857;color:white;padding:12px 24px;text-decoration:none;border-radius:4px;">
+          Contact Support
+        </a>
+      </div>
+
+      <p style="font-size:12px;color:#9ca3af;text-align:center;">
+        © ${new Date().getFullYear()} Help me Nigeria
+      </p>
+    </div>
+  </div>
+  `;
+    }
+
     private getOTPTemplate(otp: string, type: OTPType): string {
         return `
     <div style="font-family: Arial, sans-serif; background-color: #f0fdf4; padding: 24px;">

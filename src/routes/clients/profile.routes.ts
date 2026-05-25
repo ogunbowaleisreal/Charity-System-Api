@@ -7,11 +7,11 @@ import { rateLimiter } from "../../middleware/ratelimiter";
 
 const router = Router()
 const profileCtrl = new profileController()
-//router.use(verifyJwt as any)
+router.use(verifyJwt as any)
 router.use(rateLimiter.general)
 router.use(verifyClientToken)
 
-router.patch('/update/client',
+router.patch('/update',
     //verifyJwt,
     profileCtrl.updateClientProfile)
 
@@ -21,6 +21,10 @@ router.post("/change-password",
 router.post("/delete-account",
     //verifyJwt,
     profileCtrl.deleteAccount
+)
+
+router.delete("/delete-account-verification",
+    profileCtrl.verifyAccountDeletionOtp
 )
 router.get("/client/profile",
     //verifyJwt,

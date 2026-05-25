@@ -82,7 +82,7 @@ export class CampaignAdminController {
             const adminId = req.admin?.adminId;
 
             const campaign = await campaignAdminService.getCampaignById(
-                req.params.campaign_id
+                req.params.campaignId
             );
 
             return sendSuccessResponse(

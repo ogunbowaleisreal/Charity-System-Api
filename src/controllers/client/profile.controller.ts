@@ -6,8 +6,7 @@ import logger from "../../logger";
 import { authService } from "../../services/client/Auth.services";
 import { sendSuccessResponse, sendErrorResponse } from "../../utils/helpers";
 import { AuthenticatedClientRequest } from "../../middleware/auth";
-import { th } from "zod/v4/locales";
-import { cli } from "winston/lib/winston/config";
+import { HTTP_STATUS } from "../../utils/constants";
 
 
 const clientServices = new clientProfileServices()
@@ -48,21 +47,40 @@ export class profileController {
 
     }
 
-    async deleteAccount(req: Request, res: Response) {
+    async deleteAccount(req: AuthenticatedClientRequest, res: Response) {
         try {
             const { email } = req.body;
+
             if (!email) {
                 return res.status(400).json({ message: "Email is required" });
             }
-            const deleted = await clientServices.deleteAccount(email);
-            if (deleted) {
-                return res.status(200).json({ message: "Account deleted successfully", data: deleted });
-            } else {
-                return res.status(400).json({ message: "Account not found" });
-            }
+            const response = await clientServices.deleteAccount(email);
+            sendSuccessResponse(res, response)
+            //return res.status(200).json({ message: "Account deleted successfully", data: deleted });
+            // } else {
+            //     return res.status(400).json({ message: "Account not found" });
+            // }
         } catch (err) {
             return res.status(500).json({ message: "Internal Server Error", error: err })
         }
+    }
+    async verifyAccountDeletionOtp(req: AuthenticatedClientRequest, res: Response) {
+        try {
+            const { email, otp } = req.body;
+            const accountId = req.user?.userId
+            if (!email || !otp) {
+                return res.status(400).json({ message: "Email and otp is required" });
+            }
+            const deleted = await clientServices.deleteAccount2FA(accountId, otp)
+
+            if (deleted) {
+                sendSuccessResponse(res, deleted, "account deleted successfully", HTTP_STATUS.OK)
+            }
+
+        } catch (err: any) {
+            sendErrorResponse(res, err.message, err.statusCode)
+        }
+
     }
 
     async changePassword(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {

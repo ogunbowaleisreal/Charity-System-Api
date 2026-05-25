@@ -5,9 +5,13 @@ import { ClientSubscription } from "../../models/clientSubcription";
 import { Account } from "../../models/Accounts";
 import { IAccount } from "../../models/Accounts";
 import RefreshToken from "../../models/refresh.token";
+import { ResendEmailService } from "../ResesndServices";
+import OTPService from "../otp.services";
 // import { comparePassword } from "../../utils/hash.utils";
 
 export class clientProfileServices {
+    emailService = new ResendEmailService()
+    OtpService = new OTPService()
     async updateClientProfile(
         accountId: mongoose.Types.ObjectId,
         fields: IAccount
@@ -98,14 +102,33 @@ export class clientProfileServices {
         }
 
     }
+    async deleteAccount(email: string) {
+        const user = await Account.find({ email })
+        if (!user) {
+            throw new Error("Account not found")
+        }
+        await this.OtpService.generateAndSendOTP(email, "2fa")
 
-    async deleteAccount(userId: mongoose.Types.ObjectId) {
-        const updatedData = await Account.findByIdAndUpdate({ _id: userId }, { isDeleted: true }, { new: true });
+        return { message: "2FA Otp sent to your email" }
+
+    }
+
+    async deleteAccount2FA(userId: mongoose.Types.ObjectId, otp: string) {
+
+        const account = await Account.findById(userId)
+        if (!account) {
+            throw new Error("Account mot found")
+        }
+        account.isDeleted = true
+        //    AndUpdate({ _id: userId }, { isDeleted: true }, { new: true });
+        await this.OtpService.verifyOTP(account.email, otp, "2fa")
         const deletedRefreshTokens = await RefreshToken.deleteMany({ userId: userId });
-        if (updatedData) {
-            return updatedData;
+        if (account) {
+            this.emailService.sendAccountDeletedNotification(account.email)
+            return account;
         } else {
             return false;
         }
+
     }
 }

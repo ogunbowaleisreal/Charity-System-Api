@@ -137,6 +137,10 @@ export class CampaignAdminService {
 
         const [campaigns, total] = await Promise.all([
             Campaign.find(query)
+                .populate("owner", "email fullName firstName lastName phoneNumber profilePicture")
+                .populate("authors", "email fullName")
+                .populate("category", "name")
+                .populate("tags", "name")
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
