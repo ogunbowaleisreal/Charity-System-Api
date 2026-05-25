@@ -177,21 +177,21 @@ const AccountSchema = new Schema<IAccount>(
 
         logo: {
             type: String,
-            required: function (this: IAccount) {
-                return this.role === "organization";
-            },
+            // required: function (this: IAccount) {
+            //     return this.role === "organization";
+            // },
         },
         about: {
             type: String,
-            required: function (this: IAccount) {
-                return this.role === "organization";
-            }
+            // required: function (this: IAccount) {
+            //     return this.role === "organization";
+            // }
         },
         businessAddress: {
             type: String,
-            required: function (this: IAccount) {
-                return this.role === "organization";
-            },
+            // required: function (this: IAccount) {
+            //     return this.role === "organization";
+            // },
         },
 
 
@@ -221,9 +221,9 @@ const AccountSchema = new Schema<IAccount>(
 
         cacDocument: {
             type: String,
-            required: function (this: IAccount) {
-                return this.role === "organization";
-            },
+            // required: function (this: IAccount) {
+            //     return this.role === "organization";
+            // },
         },
 
         addressVerification: String,
