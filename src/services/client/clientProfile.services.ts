@@ -113,7 +113,7 @@ export class clientProfileServices {
 
     }
 
-    async deleteAccount2FA(userId: mongoose.Types.ObjectId, otp: string) {
+    async deleteAccount2FA(userId: mongoose.Types.ObjectId, otp: string, reason?: string) {
 
         const account = await Account.findById(userId)
         if (!account) {
@@ -124,7 +124,7 @@ export class clientProfileServices {
         await this.OtpService.verifyOTP(account.email, otp, "2fa")
         const deletedRefreshTokens = await RefreshToken.deleteMany({ userId: userId });
         if (account) {
-            this.emailService.sendAccountDeletedNotification(account.email)
+            this.emailService.sendAccountDeletedNotification(account.email, reason)
             return account;
         } else {
             return false;

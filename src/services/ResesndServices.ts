@@ -391,7 +391,7 @@ export class ResendEmailService {
       <h3 style="color:#b91c1c;">Account Deleted</h3>
 
       <p style="color:#374151;">
-        Your account has been permanently deleted from our platform.
+        Your account has been deleted from our platform.
       </p>
 
       ${reason

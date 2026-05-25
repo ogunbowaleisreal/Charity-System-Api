@@ -66,12 +66,12 @@ export class profileController {
     }
     async verifyAccountDeletionOtp(req: AuthenticatedClientRequest, res: Response) {
         try {
-            const { email, otp } = req.body;
+            const { email, otp, reason } = req.body;
             const accountId = req.user?.userId
             if (!email || !otp) {
                 return res.status(400).json({ message: "Email and otp is required" });
             }
-            const deleted = await clientServices.deleteAccount2FA(accountId, otp)
+            const deleted = await clientServices.deleteAccount2FA(accountId, otp, reason)
 
             if (deleted) {
                 sendSuccessResponse(res, deleted, "account deleted successfully", HTTP_STATUS.OK)
