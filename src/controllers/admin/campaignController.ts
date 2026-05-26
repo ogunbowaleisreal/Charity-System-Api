@@ -49,9 +49,10 @@ export class CampaignAdminController {
     async suspendCampaign(req: AdminAuthenticatedRequest, res: Response, next: NextFunction) {
         try {
             const adminId = req.admin?.adminId;
-            const { campaignId } = req.params;
+            const campaignId = req.params.campaignId;
+            console.log(campaignId)
             const stats = await campaignAdminService.suspendCampaign(campaignId);
-            return sendSuccessResponse(res, stats);
+            return sendSuccessResponse(res, stats, "campaign suspended");
         } catch (err: any) {
             logger.error(err.message);
             next(err);
@@ -61,9 +62,9 @@ export class CampaignAdminController {
     async unsuspendCampaign(req: AdminAuthenticatedRequest, res: Response, next: NextFunction) {
         try {
             const adminId = req.admin?.adminId;
-            const { campaignId } = req.params;
+            const campaignId = req.params.campaignId;
             const stats = await campaignAdminService.unsuspendCampaign(campaignId);
-            return sendSuccessResponse(res, stats);
+            return sendSuccessResponse(res, stats, "campaign unsuspended");
         } catch (err: any) {
             logger.error(err.message);
             next(err);
@@ -109,7 +110,7 @@ export class CampaignAdminController {
             const adminId = req.admin?.adminId;
 
             const comments = await campaignAdminService.getCampaignComments(
-                req.params.campaign_id,
+                req.params.campaignId,
                 req.query
             );
 
@@ -137,7 +138,7 @@ export class CampaignAdminController {
             const adminId = req.admin?.adminId;
 
             const donations = await campaignAdminService.getCampaignDonations(
-                req.params.campaign_id,
+                req.params.campaignId,
                 req.query
             );
 

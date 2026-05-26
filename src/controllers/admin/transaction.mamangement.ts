@@ -9,22 +9,23 @@ const transactionService = new WalletTransactionServices();
 export class AdminTransactionController {
     async getWalletTransactionHistory(req: AdminAuthenticatedRequest, res: Response, next: NextFunction) {
         try {
-            const { userId, filters } = req.body;
-            const response = await transactionService.getWalletTransactionHistory(userId, filters);
-            return sendSuccessResponse(res, response);
+            // const { userId, filters } = req.body;
+            const response = await transactionService.getWalletTransactionHistory(req.query);
+            sendSuccessResponse(res, response, "transaction retrieved successfully");
         } catch (error: any) {
-            logger.error("Get transaction failed", { error });
+            logger.error("Get transaction failed", error);
             return sendErrorResponse(res, error);
         }
     }
 
     async getWalletTransaction(req: AdminAuthenticatedRequest, res: Response, next: NextFunction) {
         try {
-            const { transactionId } = req.body;
+            const transactionId = req.params.transactionId;
+            console.log(transactionId)
             const response = await transactionService.getWalletTransaction(transactionId);
-            return sendSuccessResponse(res, response);
+            sendSuccessResponse(res, response, "Transaction retrieved ");
         } catch (error: any) {
-            logger.error("Get transaction failed", { error });
+            logger.error("Get transaction failed", error);
             return sendErrorResponse(res, error);
         }
     }

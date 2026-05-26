@@ -6,7 +6,8 @@ const router = Router()
 const transactionCtrl = new TransactionController()
 router.use(verifyJwt as any)
 
-router.get('/all', transactionCtrl.getTransactionById)
+
 router.get('/history', transactionCtrl.getTransactionsHistory)
+router.get('/:transactionId', transactionCtrl.getTransactionById)
 
 export default router

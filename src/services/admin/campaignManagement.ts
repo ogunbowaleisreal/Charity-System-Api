@@ -238,7 +238,7 @@ export class CampaignAdminService {
     async suspendCampaign(campaignId: string) {
         return await Campaign.findByIdAndUpdate(
             campaignId,
-            { isActive: false },
+            { isActive: false, },
             { new: true }
         );
     }

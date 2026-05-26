@@ -11,8 +11,8 @@ const transactionService = new WalletTransactionServices()
 export class TransactionController {
     async getTransactionById(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
         try {
-            const clientId = req.params.clientId
-            const transactions = await transactionService.getWalletTransaction(clientId)
+            const transactionId = req.params.transactionId
+            const transactions = await transactionService.getWalletTransaction(transactionId)
             sendSuccessResponse(res, transactions, "transactions fetched successfully", 200)
         } catch (error: any) {
             logger.error("transaction fetch failed", error.message)
@@ -26,7 +26,8 @@ export class TransactionController {
         try {
             // console.log(req.user)
             const clientId = req.user.userId
-            const transactions = await transactionService.getWalletTransactionHistory(clientId)
+
+            const transactions = await transactionService.getWalletTransactionHistory(clientId, req.query as any)
             sendSuccessResponse(res, transactions, "transactions fetched successfully", 200)
         } catch (error: any) {
             logger.error("transaction fetch failed", error.message)

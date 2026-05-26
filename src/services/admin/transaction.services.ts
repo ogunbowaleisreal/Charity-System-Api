@@ -23,6 +23,7 @@ export interface WalletTransactionBaseFilter {
 // TRANSACTION FILTERS
 // =========================
 export interface WalletTransactionFilters extends WalletTransactionBaseFilter {
+
     category?:
     | "donation"
     | "withdrawal"
@@ -32,6 +33,8 @@ export interface WalletTransactionFilters extends WalletTransactionBaseFilter {
     | "wallet_credit"
     | "wallet_debit"
     | "campaign_credit";
+
+    userId: string;
 
     status?: "pending" | "processing" | "successful" | "failed" | "expired";
 
@@ -84,11 +87,12 @@ export class WalletTransactionServices {
     // 📊 GET USER TRANSACTIONS (WITH FILTERS)
     // =========================
     async getWalletTransactionHistory(
-        userId: string | null,
+        //userId: string | null,
         filters: WalletTransactionFilters
     ): Promise<PaginatedResponse<IWalletTransaction>> {
         try {
             const {
+                userId,
                 category,
                 status,
                 provider,

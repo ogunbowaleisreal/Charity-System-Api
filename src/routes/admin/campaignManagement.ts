@@ -48,13 +48,13 @@ router.get(
 );
 
 router.get(
-    "suspend/:campaignId",
+    "/suspend/:campaignId",
     authorize([ADMIN_PERMISSIONS.CAMPAIGNS.SUSPEND]) as any,
     campaignCtrl.suspendCampaign
 )
 
 router.get(
-    "unsuspend/:campaignId",
+    "/unsuspend/:campaignId",
     authorize([ADMIN_PERMISSIONS.CAMPAIGNS.SUSPEND]) as any,
     campaignCtrl.unsuspendCampaign
 )

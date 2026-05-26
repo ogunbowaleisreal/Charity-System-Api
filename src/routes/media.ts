@@ -9,7 +9,7 @@ import { HTTP_STATUS } from "../utils/constants";
 const router = Router();
 const imagekitService = new ImageKitService();
 
-router.use(verifyClientToken);
+//router.use(verifyClientToken);
 
 // Get ImageKit signature for frontend uploads
 router.get(
