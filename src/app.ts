@@ -42,11 +42,7 @@ app.post(
 app.use(helmet())
 
 app.use(cors({
-    origin: [
-        "http://localhost:5173",
-        "https://yourfrontend.com",
-        "https://laprenge-app.vercel.app"
-    ],
+    origin: "*",
     optionsSuccessStatus: 200
 }))
 app.use(cookieParser())
