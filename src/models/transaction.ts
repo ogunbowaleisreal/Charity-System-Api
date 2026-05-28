@@ -125,7 +125,7 @@ const WalletTransactionSchema = new Schema<IWalletTransaction>(
 
         grossAmount: {
             type: Number,
-            required: true,
+            // required: true,
         },
 
         serviceCharge: {
@@ -140,7 +140,7 @@ const WalletTransactionSchema = new Schema<IWalletTransaction>(
 
         netAmount: {
             type: Number,
-            required: true,
+            //required: true,
         },
         gratuityPercentage: {
             type: Number,

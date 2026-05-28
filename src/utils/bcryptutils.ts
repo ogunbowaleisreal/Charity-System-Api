@@ -16,11 +16,23 @@ class BcryptUtil {
         }
     }
 
+    // async comparePassword(password: string, hash: string): Promise<boolean> {
+    //     try {
+    //         return await bcrypt.compare(password, hash);
+    //     } catch (error) {
+    //         throw new Error("Failed to compare password");
+    //     }
+    // }
     async comparePassword(password: string, hash: string): Promise<boolean> {
         try {
+            if (!password || !hash) {
+                throw new Error("Missing password or hash in bcrypt compare");
+            }
+
             return await bcrypt.compare(password, hash);
         } catch (error) {
-            throw new Error("Failed to compare password");
+            console.error("bcrypt compare error:", error);
+            throw error; // DO NOT hide it
         }
     }
 

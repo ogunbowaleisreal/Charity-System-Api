@@ -18,6 +18,15 @@ router.patch('/update',
 router.post("/change-password",
     //verifyJwt,
     profileCtrl.changePassword)
+
+router.post("/verify-password-reset-otp",
+    //verifyJwt,
+    profileCtrl.verifyPasswordResetOtp)
+
+router.post("/set-password",
+    //verifyJwt,
+    profileCtrl.verifyAndResetPassword
+)
 router.post("/delete-account",
     //verifyJwt,
     profileCtrl.deleteAccount
@@ -26,7 +35,7 @@ router.post("/delete-account",
 router.delete("/delete-account-verification",
     profileCtrl.verifyAccountDeletionOtp
 )
-router.get("/client/profile",
+router.get("/",
     //verifyJwt,
     profileCtrl.getClientProfile)
 

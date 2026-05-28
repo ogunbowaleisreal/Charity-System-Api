@@ -3,12 +3,16 @@ import { WithdrawalService } from "../../services/client/withdrawal.services";
 import logger from "../../logger";
 import { sendSuccessResponse, sendErrorResponse } from "../../utils/helpers";
 import { AuthenticatedClientRequest } from "../../middleware/auth";
+import { Bank } from "../../models/Banks";
+import { FlutterwaveService } from "../../services/flutterwave.services";
 
 const withdrawalService = new WithdrawalService();
+const flutterwave = new FlutterwaveService();
 
 export class WithdrawalController {
+
     async applyForWithdrawalToBank(req: AuthenticatedClientRequest, res: Response) {
-        const userId = req.user.id;
+        const userId = req.user.userid;
         const walletId = req.params.walletId;
         try {
             const withdrawal = await withdrawalService.applyForWithdrawalToBank(
@@ -28,17 +32,92 @@ export class WithdrawalController {
         }
     }
 
+
+
+    async resetWalletPin(req: AuthenticatedClientRequest, res: Response) {
+        const userId = req.user.userId
+        try {
+            await withdrawalService.resetWalletPin(userId)
+            return sendSuccessResponse(res, "wallet pin reset otp sent successfully")
+        } catch (err: any) {
+            logger.error(err);
+            return sendErrorResponse(res, err.message, err.statusCode, err);
+        }
+    }
+
+    async verifyWalletPinResetOTP(req: AuthenticatedClientRequest, res: Response) {
+        const userId = req.user.userId
+        try {
+            await withdrawalService.verifyWalletPinResetOTP(userId, req.body.otp)
+            logger.info("wallet pin reset OTP verified successfully")
+            return sendSuccessResponse(res, "wallet pin reset OTP verified successfully")
+        } catch (err: any) {
+            logger.error(err);
+            return sendErrorResponse(res, err.message);
+        }
+    }
+
+    async getUserWallet(req: AuthenticatedClientRequest, res: Response) {
+        const userId = req.user.userId
+        try {
+            const wallet = await withdrawalService.getUserWallet(userId)
+            return sendSuccessResponse(res, wallet, "wallet fetched successfully", 200)
+        } catch (err: any) {
+            logger.error(err);
+            return sendErrorResponse(res, err.message);
+        }
+    }
+
+    async verifyBankAccount(req: AuthenticatedClientRequest, res: Response) {
+        const userId = req.user.userId
+        try {
+            const wallet = await flutterwave.nameEnquiry(req.body.accountNumber, req.body.bankCode)
+            return sendSuccessResponse(res, wallet, "bank account verified successfully", 200)
+        } catch (err: any) {
+            logger.error(err);
+            return sendErrorResponse(res, err.message);
+        }
+    }
+
+
+    async setWalletPin(req: AuthenticatedClientRequest, res: Response) {
+        const userId = req.user.userId
+        try {
+            const wallet = await withdrawalService.setWalletPin(userId, req.body.newPin)
+            logger.info("wallet pin set successfully")
+            return sendSuccessResponse(res, wallet, "wallet pin set successfully")
+
+        } catch (err: any) {
+            logger.error(err);
+            return sendErrorResponse(res, err.message, err.statusCode);
+        }
+    }
+
+    async verifyWalletPin(req: AuthenticatedClientRequest, res: Response) {
+        const userId = req.user.userId
+        try {
+            const isVerified = await withdrawalService.verifyWalletPin(userId, req.body.walletPin)
+            logger.info("wallet pin verified successfully")
+            return sendSuccessResponse(res, "wallet pin verified successfully")
+        } catch (err: any) {
+            logger.error(err);
+            return sendErrorResponse(res, err.message, err.statusCode);
+        }
+    }
+
     async withdrawFundsToWwallet(req: AuthenticatedClientRequest, res: Response) {
-        const campaignId = req.params.comapignId;
+        const campaignId = req.params.campaignId;
         const userId = req.user.userId;
+        console.log(campaignId);
         try {
             const withdrawal = await withdrawalService.withdrawFundsToWallet(
                 userId,
                 campaignId,
+                req.body.walletPin,
                 req.body.amount,
                 req.body.narration
             );
-            return sendSuccessResponse(res, withdrawal);
+            return sendSuccessResponse(res, withdrawal, "withdrawal successful");
         } catch (error: any) {
             logger.error(error);
             return sendErrorResponse(res, error);

@@ -18,11 +18,12 @@ import gratuityRoutes from "./gratuity.routes"
 // import dashBoardRoutes from "./dashboard"
 import notificationRoutes from "./notification.routes"
 import withdrawalRoutes from "./withdrawal.routes"
-
+import bankRoutes from "./bank.routes"
 const router = Router();
 
 router.use('/oauth', oauthRoutes)
 router.use('/auth', authRoutes)
+router.use('/banks', bankRoutes)
 router.use('/profile', profileRoutes)
 //router.use('/subscription', subscriptionRoutes)
 router.use('/account', accountRoutes)
@@ -38,7 +39,7 @@ router.use("/campaign-category", businessCategoryRoutes)
 router.use("/transactions", transactionRoutes)
 router.use("/enquiries", enquiryRoutes)
 router.use("/plans", planRoutes)
-router.use("/withdrawal", withdrawalRoutes)
+router.use("/withdraw", withdrawalRoutes)
 // router.use("/dashboard", dashBoardRoutes)
 router.use("/notifications", notificationRoutes)
 

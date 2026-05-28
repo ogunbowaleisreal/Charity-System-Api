@@ -459,6 +459,7 @@ export class authService {
 
         return true;
     }
+
     async changePassword(accountId: string, oldPassword: string, newPassword: string) {
         const clientAccount = await Account.findById(accountId)
         const hashedPassword = clientAccount?.password

@@ -70,6 +70,12 @@ export interface IAccount extends Document {
     lastLoginIp: string;
     lastLoginLocation: {};
 
+    //======BANK DETAILS =======//
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+    bankCode: string;
+
     // ===== SYSTEM =====
     status: "active" | "suspended" | "deleted";
     lastLogin?: Date;
@@ -227,6 +233,12 @@ const AccountSchema = new Schema<IAccount>(
         },
 
         addressVerification: String,
+
+        // =======BANK DETAILS =======//
+        bankName: String,
+        accountNumber: String,
+        accountName: String,
+        bankCode: String,
 
         // ===== SECURITY =====
         twoFactorEnabled: {

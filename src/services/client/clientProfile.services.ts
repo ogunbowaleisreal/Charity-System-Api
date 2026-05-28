@@ -43,6 +43,10 @@ export class clientProfileServices {
             "dateOfBirth",
             "houseAddress",
             "visibility",
+            "bankName",
+            "accountNumber",
+            "accountName",
+            "bankCode",
         ];
 
 
@@ -77,6 +81,10 @@ export class clientProfileServices {
         if (fields.x !== undefined) updateAccount.x = fields.x;
         if (fields.website !== undefined) updateAccount.website = fields.website;
         if (fields.instagram !== undefined) updateAccount.instagram = fields.instagram;
+        if (fields.bankName !== undefined) updateAccount.bankName = fields.bankName
+        if (fields.accountNumber !== undefined) updateAccount.accountNumber = fields.accountNumber
+        if (fields.accountName !== undefined) updateAccount.accountName = fields.accountName
+        if (fields.bankCode !== undefined) updateAccount.bankCode = fields.bankCode
         if (fields.twoFactorEnabled !== undefined) updateAccount.twoFactorEnabled = fields.twoFactorEnabled
         if (fields.twoFactorWithdrawalEnabled !== undefined) updateAccount.twoFactorWithdrawalEnabled = fields.twoFactorWithdrawalEnabled
 
@@ -98,7 +106,7 @@ export class clientProfileServices {
             .lean();
 
         if (profile) {
-            return { profile }
+            return profile
         }
 
     }

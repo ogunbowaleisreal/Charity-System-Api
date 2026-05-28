@@ -12,6 +12,8 @@ import { startSession } from "mongoose";
 import logger from "../../logger";
 import { PushNotificationService } from "../pushNotificationService";
 import { ResendEmailService } from "../ResesndServices";
+import CacheService from "../cacheServices";
+import bcryptUtil from "../../utils/bcryptutils";
 
 
 const flutterwave = new FlutterwaveService();
@@ -21,6 +23,7 @@ export class WithdrawalService {
     async withdrawFundsToWallet(
         userId: string,
         campaignId: string,
+        walletPin: string,
         amount: number,
         narration: string
     ) {
@@ -29,28 +32,30 @@ export class WithdrawalService {
             const session = await startSession();
             session.startTransaction();
 
+            const isVerified = await this.verifyWalletPin(userId, walletPin);
+            if (!isVerified) throw new Error("Invalid wallet pin");
+
             const user = await Account.findById(userId);
-            if (!user) throw new AppError("User not found", 404);
+            if (!user) throw new Error("User not found");
 
             const reference = `WIT_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`; //crypto.randomUUID();
 
 
             const campaign = await Campaign.findById(campaignId);
 
-            if (!campaign) throw new AppError("Campaign not found", 404);
-            if (campaign.status == "ongoing" || campaign.status == "upcoming") throw new AppError("Campaign is still ongoing or has not started yet", 400);
+            if (!campaign) throw new Error("Campaign not found");
+            //  if (campaign.status == "ongoing" || campaign.status == "upcoming") throw new AppError("Campaign is still ongoing or has not started yet", 400);
 
-            if (campaign.owner.toString() != userId) throw new AppError("Unauthorized, ypu are not the owner of this campaign", 401);
+            // if (campaign.owner.toString() != userId) throw new AppError("Unauthorized, ypu are not the owner of this campaign", 401);
 
             const userWallet = await Wallet.findOne({
-                userId: campaign.owner,
+                userId: userId,
             });
 
-            if (!userWallet) throw new AppError("Wallet not found", 404);
-
+            if (!userWallet) throw new Error("Wallet not found");
 
             if (campaign.availableBalance < amount) {
-                throw new AppError("Insufficient balance", 400);
+                throw new Error("Insufficient balance",);
             }
 
             if (user.twoFactorWithdrawalEnabled == true) {
@@ -89,8 +94,11 @@ export class WithdrawalService {
                 wallet: userWallet._id,
                 amount,
                 type: "user",
-                status: "success",
+                status: "successful",
+                fullName: `${user.firstName} ${user.lastName}`,
                 category: "wallet_credit",
+                provider: "flutterwave",
+                method: "wallet",
                 narration,
                 reference
             }], { session });
@@ -129,6 +137,119 @@ export class WithdrawalService {
         // return transaction
 
     }
+
+    async resetWalletPin(userId: string) {
+
+        //const userId = req.user.userId
+        const account = await Account.findById(userId)
+        if (!account) {
+            throw new Error("error retrieving user account")
+        }
+        await otpService.generateAndSendOTP(account.email, "password_reset")
+    }
+
+    async verifyWalletPinResetOTP(userId: string, otp: string) {
+        const user = await Account.findById(userId);
+        if (!user) throw new AppError("User not found", 404);
+        const isValidOTP = await otpService.verifyOTP(user.email, otp, "password_reset");
+        if (!isValidOTP) {
+            throw new AppError("Invalid or expired OTP", 400);
+        }
+        await CacheService.set(
+            `wallet_pin_reset_verified:${user.email}`,
+            true,
+            600
+        );
+        return true
+    }
+
+    async getUserWallet(userId: string) {
+        const wallet = await Wallet.findOne({ userId: userId }).lean();
+        if (!wallet) throw new Error("Wallet not found");
+        return wallet
+    }
+
+    async setWalletPin(userId: string, Pin: string) {
+        if (!/^\d{6}$/.test(Pin)) {
+            throw new AppError("PIN must be exactly 6 digits", 400);
+        }
+
+        const user = await Account.findById(userId).lean();
+        if (!user) {
+            throw new Error("User not found");
+        }
+
+        const verified = await CacheService.get(
+            `wallet_pin_reset_verified:${user.email}`
+        );
+
+        if (!verified) {
+            throw new Error("OTP verification required");
+        }
+
+        const wallet = await Wallet.findOne({ userId: user._id });
+        if (!wallet) throw new Error("Wallet not found");
+
+        // ✅ hash ONCE
+        const hashedPin = await bcryptUtil.hashPassword(Pin);
+
+        wallet.walletPin = hashedPin;
+        await wallet.save();
+
+        await CacheService.delete(
+            `wallet_pin_reset_verified:${user.email}`
+        );
+
+        return true;
+    }
+
+    // async setWalletPin(userId: string, Pin: string) {
+    //     if (!/^\d{6}$/.test(Pin)) {
+    //         throw new AppError("PIN must be exactly 6 digits", 400);
+    //     }
+    //     const newPin = await bcryptUtil.hashPassword(Pin);
+    //     const user = await Account.findById(userId).lean();
+    //     if (!user) {
+    //         throw new Error("User not found");
+    //     }
+    //     const verified = await CacheService.get(
+    //         `wallet_pin_reset_verified:${user.email}`
+    //     );
+
+    //     if (!verified) {
+    //         throw new Error("OTP verification required");
+    //     }
+
+    //     const wallet = await Wallet.findOne({
+    //         userId: user._id
+    //     })
+    //     if (!wallet) throw new Error("Wallet not found");
+    //     const hashedPin =
+    //         await bcryptUtil.hashPassword(newPin);
+
+    //     wallet.walletPin = hashedPin;
+    //     await wallet?.save();
+
+    //     // clear verification session
+    //     await CacheService.delete(
+    //         `wallet_pin_reset_verified:${user.email}`
+    //     );
+
+    //     return true;
+    // }
+
+    async verifyWalletPin(userId: string, walletPin: string) {
+        const wallet = await Wallet.findOne({ userId }).select("+walletPin").lean();
+        if (!wallet) throw new AppError("wallet retrieval failed", 404);
+        // console.log(wallet.walletPin)
+        //console.log(wallet, walletPin)
+        const isValidPin = await bcryptUtil.comparePassword(walletPin, wallet.walletPin);
+        if (!isValidPin) {
+            throw new AppError("Invalid wallet pin", 400);
+        }
+        return true
+    }
+
 
     async verifyWithdrawal2fa(userId: string, campaignId: string, otp: string, amount: number, narration: string) {
         const user = await Account.findById(userId);
@@ -194,7 +315,7 @@ export class WithdrawalService {
         if (!wallet) throw new AppError("Wallet not found", 404);
 
         if (wallet.availableBalance < amount) {
-            throw new AppError("Insufficient balance", 400);
+            throw new Error("Insufficient balance");
         }
 
         // 1. LOCK FUNDS

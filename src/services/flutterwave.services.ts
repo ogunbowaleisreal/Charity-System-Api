@@ -135,6 +135,7 @@ export class FlutterwaveService {
                     ERROR_CODES.VALIDATION_ERROR
                 );
             }
+            // console.log(response)
 
             logger.info(`Flutterwave: Verified account: ${accountNumber}`);
             return {

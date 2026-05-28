@@ -10,6 +10,7 @@ import { sendSuccessResponse, sendErrorResponse } from "../../utils/helpers";
 import { HTTP_STATUS } from "../../utils/constants";
 import { KYCService } from "../../services/client/Kyc.services";
 import { KYC } from "../../models/KYC";
+import { Wallet } from "../../models/Wallet";
 
 const otpService = new OTPService();
 const Authservice = new authService()
@@ -93,6 +94,7 @@ export class authController {
             await registeredUser.save()
 
             const kyc = await KYC.create({ userId: registeredUser._id, status: "not_started", level: 0, type: registeredUser.role })
+            const newWallet = await Wallet.create({ userId: registeredUser._id })
             return res.status(200).json({ "message": "otp verification and registration completed" })
         } catch (err: any) {
             logger.error("verificaion failed", err)
