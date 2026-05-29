@@ -5,6 +5,7 @@ import roleRoutes from "./rolesManagement"
 import categoryRoutes from "./category"
 import faqRoutes from "./faq"
 import accountRoutes from "./accountManagement"
+import announcementRoutes from "./announcement.routes"
 //import requestRoutes from "./request.routes"
 //import bidRoutes from "./bid"
 //import assignmentRoutes from "./assignment.routes"
@@ -30,6 +31,7 @@ import planRoutes from "./adminPlanManagement"
 const router = Router();
 
 router.use('/auth', adminAuthRoute);
+router.use('/announcement', announcementRoutes)
 router.use('/management', managementRoutes);
 // router.use('/dashboard', adminDashboardRoutes)
 router.use('/roles', roleRoutes)

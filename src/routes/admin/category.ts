@@ -45,7 +45,7 @@ router.get(
 
 router.get(
     "/:id",
-    requireRole(["admin", "super_admin", "moderator"]) as any,
+    //requireRole(["admin", "super_admin", "moderator"]) as any,
     authorize([ADMIN_PERMISSIONS.CONTENT.VIEW]) as any,
     //validateParams(categoryIdValidation),
     categoryController.getCategoryById as any
@@ -53,7 +53,7 @@ router.get(
 
 router.post(
     "/create",
-    requireRole(["admin", "super_admin"]) as any,
+    //requireRole(["admin", "super_admin"]) as any,
     authorize([ADMIN_PERMISSIONS.CONTENT.CREATE]) as any,
     //validateRequest(createCategoryValidation),
     categoryController.createCategory as any
@@ -61,7 +61,7 @@ router.post(
 
 router.put(
     "/:id",
-    requireRole(["admin", "super_admin"]) as any,
+    //requireRole(["admin", "super_admin"]) as any,
     authorize([ADMIN_PERMISSIONS.CONTENT.UPDATE]) as any,
     //validateParams(categoryIdValidation),
     //validateRequest(updateCategoryValidation),
@@ -70,7 +70,7 @@ router.put(
 
 router.delete(
     "/:id",
-    requireRole(["admin", "super_admin"]) as any,
+    //requireRole(["admin", "super_admin"]) as any,
     authorize([ADMIN_PERMISSIONS.CONTENT.DELETE]) as any,
     //validateParams(categoryIdValidation),
     categoryController.deleteCategory as any

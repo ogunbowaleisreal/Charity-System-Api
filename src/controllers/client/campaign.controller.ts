@@ -43,7 +43,7 @@ export class CampaignController {
 
             const campaign = await campaignServices.updateCampaign(
                 campaignId,
-                req.user._id,
+                req.user.userId,
                 req.body
             );
 
@@ -64,7 +64,7 @@ export class CampaignController {
 
             const campaign = await campaignServices.deleteCampaign(
                 campaignId,
-                req.user._id
+                req.user.userId
             );
 
             return sendSuccessResponse(res, campaign);

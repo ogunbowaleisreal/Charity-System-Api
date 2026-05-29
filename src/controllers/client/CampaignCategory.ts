@@ -10,7 +10,7 @@ export class CampaignCategoryController {
 
     async campaignCategory(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
         try {
-            const businessCategory = await campaignCategoryServices.getCampaignCategory()
+            const businessCategory = await campaignCategoryServices.getAllCategories(req.query)
             sendSuccessResponse(res, businessCategory, "campaign category fetched")
         } catch (err: any) {
             logger.error("campaign category fetch failed")

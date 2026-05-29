@@ -5,6 +5,7 @@ export interface AdminUpdatePayload {
 }
 import { Document, Schema } from "mongoose";
 import { Request } from "express";
+import { AnnounceController } from "../controllers/admin/Announcement.controller";
 
 export interface AdminJWTPayload {
     id: string;
@@ -259,6 +260,13 @@ export const ADMIN_PERMISSIONS = {
         CREATE: "notification.create",
         UPDATE: "notification.update",
         DELETE: "notification.delete"
+    },
+
+    ANNOUNCEMENT: {
+        VIEW: "announcement.view",
+        CREATE: "announcement.create",
+        UPDATE: "announcement.update",
+        DELETE: "announcement.delete"
     },
 
     // Financial permissions

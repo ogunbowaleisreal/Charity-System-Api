@@ -5,6 +5,8 @@ export interface IComment extends Document {
     user: Types.ObjectId;
 
     message: string;
+    firstName: string;
+    lastName: string;
 
     // ===== OPTIONAL =====
     parentComment?: Types.ObjectId; // for replies (future)
@@ -30,6 +32,12 @@ const CommentSchema = new Schema<IComment>(
             type: Schema.Types.ObjectId,
             ref: "Account",
             required: true,
+        },
+        firstName: {
+            type: String
+        },
+        lastName: {
+            type: String
         },
 
         message: {

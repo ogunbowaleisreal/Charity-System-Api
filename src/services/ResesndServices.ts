@@ -626,6 +626,190 @@ export class ResendEmailService {
     }
 }
 
+
+export class AnnouncementTemplates {
+
+    // =========================================
+    // BASE TEMPLATE
+    // =========================================
+    static baseTemplate(content: string, title?: string) {
+
+        return `
+        <!DOCTYPE html>
+        <html lang="en">
+
+        <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+            <title>${title || "Help me Nigeria"}</title>
+        </head>
+
+        <body
+            style="
+                margin:0;
+                padding:0;
+                background:#f0fdf4;
+                font-family:Arial,sans-serif;
+            "
+        >
+
+            <div
+                style="
+                    max-width:600px;
+                    margin:40px auto;
+                    background:#ffffff;
+                    border-radius:12px;
+                    overflow:hidden;
+                    box-shadow:0 2px 10px rgba(0,0,0,0.05);
+                "
+            >
+
+                <!-- HEADER -->
+                <div
+                    style="
+                        background:linear-gradient(135deg,#047857,#065f46);
+                        padding:32px 24px;
+                        text-align:center;
+                    "
+                >
+
+                    <h1
+                        style="
+                            margin:0;
+                            color:white;
+                            font-size:28px;
+                        "
+                    >
+                        Help me Nigeria
+                    </h1>
+
+                    <p
+                        style="
+                            color:#d1fae5;
+                            margin-top:10px;
+                            font-size:14px;
+                        "
+                    >
+                        Empowering Communities Through Support
+                    </p>
+
+                </div>
+
+                <!-- BODY -->
+                <div
+                    style="
+                        padding:32px 24px;
+                        color:#374151;
+                        line-height:1.7;
+                        font-size:15px;
+                    "
+                >
+                    ${content}
+                </div>
+
+                <!-- FOOTER -->
+                <div
+                    style="
+                        background:#ecfdf5;
+                        border-top:1px solid #d1fae5;
+                        padding:20px;
+                        text-align:center;
+                    "
+                >
+
+                    <p
+                        style="
+                            margin:0;
+                            color:#6b7280;
+                            font-size:13px;
+                        "
+                    >
+                        © ${new Date().getFullYear()} Help me Nigeria
+                    </p>
+
+                    <p
+                        style="
+                            margin-top:8px;
+                            color:#9ca3af;
+                            font-size:12px;
+                        "
+                    >
+                        This email was sent automatically by Help me Nigeria.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </body>
+
+        </html>
+        `;
+    }
+
+    // =========================================
+    // ANNOUNCEMENT TEMPLATE
+    // =========================================
+    static announcementTemplate(data: {
+        title: string;
+        message: string;
+        ctaText?: string;
+        ctaLink?: string;
+    }) {
+
+        return this.baseTemplate(
+            `
+            <h2
+                style="
+                    color:#065f46;
+                    margin-top:0;
+                "
+            >
+                ${data.title}
+            </h2>
+
+            <p>
+                ${data.message}
+            </p>
+
+            ${data.ctaText && data.ctaLink
+                ? `
+                <div
+                    style="
+                        margin-top:30px;
+                        text-align:center;
+                    "
+                >
+
+                    <a
+                        href="${data.ctaLink}"
+
+                        style="
+                            background:#047857;
+                            color:white;
+                            text-decoration:none;
+                            padding:12px 24px;
+                            border-radius:6px;
+                            display:inline-block;
+                            font-weight:bold;
+                        "
+                    >
+                        ${data.ctaText}
+                    </a>
+
+                </div>
+                `
+                : ""
+            }
+            `,
+            data.title
+        );
+    }
+}
+
+
+
 /**
  * Simple Template System
  * You can later replace this with:
@@ -634,6 +818,7 @@ export class ResendEmailService {
  * - Or external template files
  */
 class Templates {
+
     /**
      * OTP Email Template
      */

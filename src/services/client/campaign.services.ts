@@ -352,10 +352,13 @@ export class CampaignService {
         if (!campaign) throw new Error("Campaign not found");
         if (campaign.isDeleted) throw new Error("Campaign has been deleted");
         if (campaign.allowComments === false) throw new Error("Comments are disabled for this campaign");
+        const user = await Account.findById(userId)
 
         return await Comment.create({
             campaign: campaignId,
             user: userId,
+            firstName: user?.firstName,
+            lastName: user?.lastName,
             message,
         });
     }
