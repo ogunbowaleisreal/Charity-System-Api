@@ -91,6 +91,9 @@ export class DonationService {
 
             },
         });
+        const linkExpiration = new Date(
+            Date.now() + 15 * 60 * 1000
+        ).toISOString();
 
         // 2. Initiate payment with Flutterwave
         const res = await flutterwave.initiateCardPayment({
@@ -100,6 +103,7 @@ export class DonationService {
             redirectUrl: `${process.env.BASE_URL}/donations`,
             customerEmail: data.email,
             customerName: `${data.firstname} ${data.lastname}`,
+            link_expiration: linkExpiration
             // customerPhone: data.phone,
             //lastname: data.lastname,
             //  reference,
@@ -194,6 +198,9 @@ export class DonationService {
             paymentMethod: data.paymentMethod,
             donorEmailSnapshot: data.email,
         });
+        const linkExpiration = new Date(
+            Date.now() + 15 * 60 * 1000
+        ).toISOString();
 
         if (data.paymentMethod === "card") {
             const res = await flutterwave.initiateCardPayment({
@@ -203,6 +210,7 @@ export class DonationService {
                 redirectUrl: `${process.env.BASE_URL}/api/v1/webhooks/flutterwave/callback`,
                 customerEmail: data.email,
                 customerName: `${data.firstname} ${data.lastname}`,
+                link_expiration: linkExpiration
             });
 
             return {

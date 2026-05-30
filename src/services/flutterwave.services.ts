@@ -335,6 +335,7 @@ export class FlutterwaveService {
         customerEmail: string;
         customerName: string;
         customerPhone?: string;
+        link_expiration: string
     }): Promise<FlutterwavePaymentInitResponse> {
         try {
             const payload: any = {
@@ -352,6 +353,7 @@ export class FlutterwaveService {
                     description: "Fund your wallet",
                 },
                 payment_options: "card", // Only card
+                link_expiration: data.link_expiration
             };
 
             const response = await this.client.post("/payments", payload);
