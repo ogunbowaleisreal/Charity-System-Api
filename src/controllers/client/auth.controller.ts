@@ -46,6 +46,7 @@ export class authController {
                 if (role == "organization") {
                     newUser.companyName = companyName
                     newUser.organizationType = organizationType
+                    //newUser.role = role
                 }
                 // newUser.gender = gender
                 // newUser.status = "pending"

@@ -100,35 +100,91 @@ export interface AuthResponse {
     message?: string;
     success?: boolean;
     statusCode?: number;
+
     user?: {
+        // =========================
+        // IDENTIFICATION
+        // =========================
         id: string;
         email: string;
-        firstName: string;
-        lastName: string;
-        role: string;
-        isVerified?: boolean;
-        //twoFactorEnabled?: boolean;
-        phone?: string;
-        location?: string;
-        businessName?: string;
-        businessPhone?: string;
-        businessCategory?: string;
-        businessAddress?: string;
+        phoneNumber: string;
+        role: "user" | "organization";
+        provider: "local" | "google" | "apple";
+
+        // =========================
+        // BASIC INFO
+        // =========================
+        firstName?: string;
+        lastName?: string;
+        fullName?: string;
+
         gender?: string;
-        status?: string;
+        dateOfBirth?: Date;
+
+        // =========================
+        // PROFILE (PERSONAL)
+        // =========================
+        houseAddress?: string;
+        country?: string;
+        state?: string;
+        visibility?: boolean;
         profilePicture?: string;
-        logo?: string;
-        totalViews?: number;
-        totalListings?: number;
-        averageRating?: number;
-        twoFactorEnabled?: boolean;
+
+        // =========================
+        // PROFILE (ORG)
+        // =========================
         companyName?: string;
         organizationType?: string;
-        totalReviews?: number;
-        subscriptionPlan?: string;
-        subscriptionStartDate?: Date;
-        subscriptionEndDate?: Date | null;
-        //orderNotifications?: boolean;
+        logo?: string;
+        about?: string;
+        businessAddress?: string;
+
+        // =========================
+        // SOCIALS
+        // =========================
+        website?: string;
+        instagram?: string;
+        facebook?: string;
+        x?: string;
+        tiktok?: string;
+        youtube?: string;
+        snapchat?: string;
+
+        // =========================
+        // KYC
+        // =========================
+        kycStatus?: "pending" | "verified";
+        facialVerification?: string;
+        bvn?: string;
+        cacDocument?: string;
+        addressVerification?: string;
+
+        // =========================
+        // BANK DETAILS
+        // =========================
+        bankName?: string;
+        accountNumber?: string;
+        accountName?: string;
+        bankCode?: string;
+
+        // =========================
+        // SECURITY
+        // =========================
+        isVerified?: boolean;
+        status?: "active" | "suspended" | "deleted";
+        isDeleted?: boolean;
+
+        twoFactorEnabled?: boolean;
+        twoFactorWithdrawalEnabled?: boolean;
+
+        loginAttempts?: number;
+        lastLoginIp?: string;
+        lastLoginLocation?: any;
+        lastLogin?: Date;
+
+        // =========================
+        // META
+        // =========================
         createdAt?: Date;
         updatedAt?: Date;
     };
@@ -138,6 +194,49 @@ export interface AuthResponse {
         expiresIn: number;
     };
 }
+
+// export interface AuthResponse {
+//     message?: string;
+//     success?: boolean;
+//     statusCode?: number;
+//     user?: {
+//         id: string;
+//         email: string;
+//         firstName: string;
+//         lastName: string;
+//         role: string;
+//         isVerified?: boolean;
+//         //twoFactorEnabled?: boolean;
+//         phone?: string;
+//         location?: string;
+//         businessName?: string;
+//         businessPhone?: string;
+//         businessCategory?: string;
+//         businessAddress?: string;
+//         gender?: string;
+//         status?: string;
+//         profilePicture?: string;
+//         logo?: string;
+//         totalViews?: number;
+//         totalListings?: number;
+//         averageRating?: number;
+//         twoFactorEnabled?: boolean;
+//         companyName?: string;
+//         organizationType?: string;
+//         totalReviews?: number;
+//         subscriptionPlan?: string;
+//         subscriptionStartDate?: Date;
+//         subscriptionEndDate?: Date | null;
+//         //orderNotifications?: boolean;
+//         createdAt?: Date;
+//         updatedAt?: Date;
+//     };
+//     tokens?: {
+//         accessToken: string;
+//         refreshToken: string;
+//         expiresIn: number;
+//     };
+// }
 
 export interface TokenPair {
     accessToken: string;

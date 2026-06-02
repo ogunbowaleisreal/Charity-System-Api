@@ -56,60 +56,111 @@ export class authService {
     ): Promise<AuthResponse> => {
         if (user.role === "user") {
             return {
-                // message: "Account verified successfully",
+                message: "Account verified successfully",
                 user: {
                     id: user._id,
+
+                    // ===== BASIC =====
                     firstName: user.firstName,
                     lastName: user.lastName,
+                    fullName: user.fullName,
                     email: user.email,
+                    phoneNumber: user.phoneNumber,
+
                     role: user.role,
+                    provider: user.provider,
+
+                    // ===== STATUS =====
                     status: user.status,
                     isVerified: user.isVerified,
-                    // profilePicture: user.profilePicture,
-                    phone: user.phoneNumber,
-                    country: user.country,
+                    // kycStatus: user.kycStatus,
+
+                    // ===== PROFILE =====
+                    gender: user.gender,
+                    dateOfBirth: user.dateOfBirth,
                     houseAddress: user.houseAddress,
+                    country: user.country,
                     state: user.state,
                     visibility: user.visibility,
-                    dateOfBirth: user.dateOfBirth,
-                    gender: user.gender,
                     profilePicture: user.profilePicture,
-                    kyc: kyc,
-                    // businessName: user.businessName,
-                    //companyName: user.companyName,
-                    // businessCategory: user.businessCategory,
-                    // businessPhone: user.businessPhone,
+
+                    // ===== ORGANIZATION =====
+                    // companyName: user.companyName,
+                    // organizationType: user.organizationType,
+                    // logo: user.logo,
+                    // about: user.about,
                     // businessAddress: user.businessAddress,
-                    // location: user.location,
-                    // totalViews: user.totalViews,
-                    // totalListings: user.totalListings,
-                    // averageRating: user.averageRating,
-                    // totalReviews: user.totalReviews,
+
+                    // ===== SOCIALS =====
+                    website: user.website,
+                    instagram: user.instagram,
+                    facebook: user.facebook,
+                    x: user.x,
+                    tiktok: user.tiktok,
+                    youtube: user.youtube,
+                    snapchat: user.snapchat,
+
+                    // // ===== KYC =====
+                    // facialVerification: user.facialVerification,
+                    // bvn: user.bvn,
+                    // cacDocument: user.cacDocument,
+                    // addressVerification: user.addressVerification,
+
+                    // // ===== BANK =====
+                    // bankName: user.bankName,
+                    // accountNumber: user.accountNumber,
+                    // accountName: user.accountName,
+                    // bankCode: user.bankCode,
+
+                    // ===== SECURITY =====
                     twoFactorEnabled: user.twoFactorEnabled,
+                    twoFactorWithdrawalEnabled:
+                        user.twoFactorWithdrawalEnabled,
+
+                    // ===== LOGIN INFO =====
+                    lastLogin: user.lastLogin,
+                    // lastLoginIp: user.lastLoginIp,
+                    // lastLoginLocation: user.lastLoginLocation,
+
+                    // ===== FLAGS =====
+                    // isDeleted: user.isDeleted,
+
+                    // ===== META =====
                     createdAt: user.createdAt,
                     updatedAt: user.updatedAt,
+
+                    // ===== EXTRA =====
+                    kyc,
                 } as any,
                 tokens,
             };
         }
         // console.log("got here")
         return {
-            // message: "Account verified successfully",
+            message: "Account verified successfully",
             user: {
                 id: user._id as string,
                 email: user.email,
                 firstName: user.firstName,
                 lastName: user.lastName,
-                phone: user.phoneNumber,
+                phoneNumber: user.phoneNumber,
                 profilePicture: user.profilePicture,
                 logo: user.logo,
                 //lastName: user.lastName,
                 role: user.role,
                 gender: user.gender,
+                provider: user.provider,
                 isVerified: user.isVerified,
                 twoFactorEnabled: user.twoFactorEnabled,
                 companyName: user.companyName,
                 organizationType: user.organizationType,
+                // website: user.website,
+                instagram: user.instagram,
+                facebook: user.facebook,
+                x: user.x,
+                tiktok: user.tiktok,
+                youtube: user.youtube,
+                snapchat: user.snapchat,
 
                 //twoFactorEnabled: user.twoFactorEnabled,
             },
@@ -201,7 +252,7 @@ export class authService {
 
 
         if (client.twoFactorEnabled) {
-            otpService.generateAndSendOTP(email, "2fa");
+            await otpService.generateAndSendOTP(email, "2fa");
 
             return {
                 message:
@@ -210,8 +261,8 @@ export class authService {
                 statusCode: HTTP_STATUS.NO_CONTENT,
             };
         }
-        console.log(client.password)
-        console.log(password)
+        // console.log(client.password)
+        // console.log(password)
 
         // // Generate tokens
         const tokens = jwtUtil.generateTokenPair({
@@ -248,7 +299,8 @@ export class authService {
         //   throw { message: "User not found", statusCode: HTTP_STATUS.NOT_FOUND };
         // }
 
-        await otpService.verifyOTP(email, otp, "2fa");
+        const verified = await otpService.verifyOTP(email, otp, "2fa");
+        if (!verified) throw new Error("Invalid OTP")
 
         const tokens = jwtUtil.generateTokenPair({
             userId: client._id as string,

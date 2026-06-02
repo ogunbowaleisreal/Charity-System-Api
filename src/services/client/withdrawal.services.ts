@@ -138,6 +138,31 @@ export class WithdrawalService {
 
     }
 
+    async firstTimeWalletPinSet(userId: string, pin: string) {
+        if (!/^\d{6}$/.test(pin)) {
+            throw new AppError("PIN must be exactly 6 digits", 400);
+        }
+        const hashedPin = await bcryptUtil.hashPassword(pin)
+
+        // await Wallet.updateOne(
+        //     { userId },
+        //     {
+        //         $set: {
+        //             walletPin: hashedPin,
+        //         },
+        //     }
+        // )
+        const wallet = await Wallet.findOne({ userId }).select("+walletPin")
+        if (!wallet) throw new Error("Wallet not found")
+        if (wallet.walletPin) {
+            throw new Error(
+                "Wallet PIN has already been set, try reseting "
+            );
+        }
+        wallet.walletPin = hashedPin
+        await wallet.save()
+    }
+
     async resetWalletPin(userId: string) {
 
         //const userId = req.user.userId

@@ -45,6 +45,18 @@ export class WithdrawalController {
         }
     }
 
+    async firstTimeWalletPinSet(req: AuthenticatedClientRequest, res: Response) {
+        const userId = req.user.userId
+        console.log("goit here ")
+        try {
+            await withdrawalService.firstTimeWalletPinSet(userId, req.body.walletPin)
+            return sendSuccessResponse(res, "wallet pin set successfully")
+        } catch (err: any) {
+            logger.error(err);
+            return sendErrorResponse(res, err.message, err.statusCode, err);
+        }
+    }
+
     async verifyWalletPinResetOTP(req: AuthenticatedClientRequest, res: Response) {
         const userId = req.user.userId
         try {

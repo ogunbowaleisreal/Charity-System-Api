@@ -73,6 +73,13 @@ export interface FlutterwaveUSSDResponse {
     reference: string;
 }
 
+const mockNameEnquiryResponse = (bank_code: string, accountNumber: string) => {
+    return {
+        accountNumber: accountNumber,
+        accountName: "John Doe",
+        bankCode: bank_code,
+    };
+}
 export class FlutterwaveService {
     private client: AxiosInstance;
     private provider = PROVIDERS.FLUTTERWAVE;
@@ -116,6 +123,10 @@ export class FlutterwaveService {
         accountBank: string
     ): Promise<{ accountNumber: string; accountName: string; bankCode: string }> {
         try {
+            if (process.env.NODE_ENV === "development") {
+                return mockNameEnquiryResponse(accountBank, accountNumber);
+
+            }
             const response = await this.client.post("/accounts/resolve", {
                 account_number: accountNumber,
                 account_bank: accountBank,
@@ -142,7 +153,8 @@ export class FlutterwaveService {
                 accountNumber: response.data.data.account_number,
                 accountName: response.data.data.account_name,
                 bankCode: accountBank,
-            };
+            }
+
         } catch (error: any) {
             if (error instanceof AppError) throw error;
 

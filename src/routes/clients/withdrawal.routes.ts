@@ -13,7 +13,7 @@ router.use(verifyClientToken);
 router.get("/banks", withdrawalCtrl.getAllBanks);
 router.post("/verify-2fa", withdrawalCtrl.verifyWitdrawal2fa);
 router.get("/bank/account-name", withdrawalCtrl.verifyBankAccount);
-
+router.post("/wallet/set-wallet-pin", withdrawalCtrl.firstTimeWalletPinSet);
 router.get("/wallet/reset-pin", withdrawalCtrl.resetWalletPin);
 router.post("/wallet/verify-pin", withdrawalCtrl.verifyWalletPin);
 router.post("/wallet/verify-reset-otp", withdrawalCtrl.verifyWalletPinResetOTP);

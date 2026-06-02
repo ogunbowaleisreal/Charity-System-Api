@@ -65,7 +65,7 @@ export class clientProfileServices {
 
         if (fields.firstName !== undefined) updateAccount.firstName = fields.firstName;
         if (fields.lastName !== undefined) updateAccount.lastName = fields.lastName;
-        if (fields.phoneNumber !== undefined) updateAccount.phone = fields.phoneNumber;
+        if (fields.phoneNumber !== undefined) updateAccount.phoneNumber = fields.phoneNumber;
         if (fields.snapchat !== undefined) updateAccount.snapchat = fields.snapchat;
         if (fields.tiktok !== undefined) updateAccount.tiktok = fields.tiktok;
         if (fields.country !== undefined) updateAccount.country = fields.country;
@@ -75,16 +75,16 @@ export class clientProfileServices {
         if (fields.houseAddress !== undefined) updateAccount.houseAddress = fields.houseAddress;
         if (fields.visibility !== undefined) updateAccount.visibility = fields.visibility;
         if (fields.profilePicture !== undefined)
-            updateAccount.picture = fields.profilePicture;
+            updateAccount.profilePicture = fields.profilePicture;
         if (fields.youtube !== undefined) updateAccount.youtube = fields.youtube;
         if (fields.facebook !== undefined) updateAccount.facebook = fields.facebook;
         if (fields.x !== undefined) updateAccount.x = fields.x;
         if (fields.website !== undefined) updateAccount.website = fields.website;
         if (fields.instagram !== undefined) updateAccount.instagram = fields.instagram;
-        if (fields.bankName !== undefined) updateAccount.bankName = fields.bankName
-        if (fields.accountNumber !== undefined) updateAccount.accountNumber = fields.accountNumber
-        if (fields.accountName !== undefined) updateAccount.accountName = fields.accountName
-        if (fields.bankCode !== undefined) updateAccount.bankCode = fields.bankCode
+        // if (fields.bankName !== undefined) updateAccount.bankName = fields.bankName
+        // if (fields.accountNumber !== undefined) updateAccount.accountNumber = fields.accountNumber
+        // if (fields.accountName !== undefined) updateAccount.accountName = fields.accountName
+        // if (fields.bankCode !== undefined) updateAccount.bankCode = fields.bankCode
         if (fields.twoFactorEnabled !== undefined) updateAccount.twoFactorEnabled = fields.twoFactorEnabled
         if (fields.twoFactorWithdrawalEnabled !== undefined) updateAccount.twoFactorWithdrawalEnabled = fields.twoFactorWithdrawalEnabled
 
