@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const tags_controller_1 = require("../../controllers/client/tags.controller");
+const auth_1 = require("../../middleware/auth");
+const ratelimiter_1 = require("../../middleware/ratelimiter");
+const router = (0, express_1.Router)();
+const tagController = new tags_controller_1.TagController();
+router.use(ratelimiter_1.rateLimiter.general);
+router.use(auth_1.verifyClientToken);
+router.get("/", tagController.getAllTags);
+exports.default = router;

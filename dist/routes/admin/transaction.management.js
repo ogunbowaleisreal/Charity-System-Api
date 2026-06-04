@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const ratelimiter_1 = require("../../middleware/ratelimiter");
+const admin_management_1 = require("../../types/admin.management");
+const adminAuth_1 = require("../../middleware/adminAuth");
+const transaction_mamangement_1 = require("../../controllers/admin/transaction.mamangement");
+const router = (0, express_1.Router)();
+const transactionCtrl = new transaction_mamangement_1.AdminTransactionController();
+router.use(ratelimiter_1.rateLimiter.general);
+router.use(adminAuth_1.verifyAdminToken);
+router.get("/list", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.TRANSACTIONS.VIEW]), transactionCtrl.getWalletTransactionHistory);
+router.get("/list/:transactionId", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.TRANSACTIONS.VIEW]), transactionCtrl.getWalletTransaction);
+exports.default = router;

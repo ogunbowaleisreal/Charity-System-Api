@@ -1,0 +1,22 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const auth_controller_1 = require("../../controllers/client/auth.controller");
+const ratelimiter_1 = require("../../middleware/ratelimiter");
+const authCtrl = new auth_controller_1.authController();
+const router = (0, express_1.default)();
+router.use(ratelimiter_1.rateLimiter.auth);
+router.post('/login', authCtrl.login);
+router.post('/register', authCtrl.register);
+router.post("/verify-otp", authCtrl.verifyOtp);
+router.post("/resend-otp", authCtrl.resendOtp);
+router.post('/logout', authCtrl.logout);
+router.post('/verify-2fa', authCtrl.verify2FA);
+router.post('/refresh-token', authCtrl.refreshToken);
+router.post('/forgot-password', authCtrl.PasswordResetOtp);
+router.post('/reset-password', authCtrl.verifyAndResetPassword);
+router.post('/verify-password-reset-otp', authCtrl.verifyPasswordResetOtp);
+exports.default = router;

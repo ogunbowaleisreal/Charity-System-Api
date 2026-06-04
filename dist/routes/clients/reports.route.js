@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const reportController_1 = require("../../controllers/client/reportController");
+const auth_1 = require("../../middleware/auth");
+const ratelimiter_1 = require("../../middleware/ratelimiter");
+const router = (0, express_1.Router)();
+const reportCtrl = new reportController_1.ClientReportController();
+router.use(auth_1.verifyClientToken);
+router.use(ratelimiter_1.rateLimiter.general);
+router.post("/upload/:accountId", reportCtrl.uploadReport.bind(reportCtrl));
+router.get("/history", reportCtrl.getMyReports.bind(reportCtrl));
+exports.default = router;

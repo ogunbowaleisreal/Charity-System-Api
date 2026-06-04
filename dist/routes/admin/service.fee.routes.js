@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const serviceFee_management_1 = require("../../controllers/admin/serviceFee.management");
+const adminAuth_1 = require("../../middleware/adminAuth");
+const ratelimiter_1 = require("../../middleware/ratelimiter");
+const admin_management_1 = require("../../types/admin.management");
+const router = (0, express_1.Router)();
+const serviceFeeCtrl = new serviceFee_management_1.ServiceFeeController();
+router.use(ratelimiter_1.rateLimiter.general);
+router.use(adminAuth_1.verifyAdminToken);
+router.get("/", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.SERVICE_FEE.VIEW, admin_management_1.ADMIN_PERMISSIONS.SERVICE_FEE.UPDATE]), serviceFeeCtrl.getServiceFee);
+router.patch("/update", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.SERVICE_FEE.UPDATE, admin_management_1.ADMIN_PERMISSIONS.SERVICE_FEE.VIEW]), serviceFeeCtrl.updateServiceFee);
+exports.default = router;

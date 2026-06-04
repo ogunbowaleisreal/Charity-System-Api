@@ -1,0 +1,21 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const ratelimiter_1 = require("../../middleware/ratelimiter");
+const sanitizer_1 = require("../../middleware/sanitizer");
+const adminAuth_1 = require("../../middleware/adminAuth");
+const admin_management_1 = require("../../types/admin.management");
+const tags_controller_1 = require("../../controllers/admin/tags.controller");
+const router = (0, express_1.default)();
+const tagController = new tags_controller_1.TagController();
+router.use(ratelimiter_1.rateLimiter.general);
+router.use(adminAuth_1.verifyAdminToken);
+router.post("/", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.TAG.CREATE]), sanitizer_1.sanitizeInput, tagController.createTag);
+router.get("/", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.TAG.VIEW]), sanitizer_1.sanitizeInput, tagController.getAllTags);
+router.get("/:tagId", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.TAG.VIEW]), sanitizer_1.sanitizeInput, tagController.getTagById);
+router.patch("/:tagId", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.TAG.UPDATE]), sanitizer_1.sanitizeInput, tagController.updateTag);
+router.delete("/:tagId", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.TAG.DELETE]), sanitizer_1.sanitizeInput, tagController.deleteTag);
+exports.default = router;
