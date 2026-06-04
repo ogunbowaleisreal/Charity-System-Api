@@ -29,6 +29,7 @@ export class WithdrawalAdminService {
 
         const [data, total] = await Promise.all([
             WithdrawalRequest.find(query)
+                .populate("userId firstName lastName role phoneNumber")
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),

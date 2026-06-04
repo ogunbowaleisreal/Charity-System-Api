@@ -39,4 +39,9 @@ router.get("/",
     //verifyJwt,
     profileCtrl.getClientProfile)
 
+router.post(
+    "/toggle-2fa",
+    profileCtrl.toggle2FA
+)
+
 export default router

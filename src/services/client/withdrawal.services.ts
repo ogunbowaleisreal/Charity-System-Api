@@ -18,6 +18,7 @@ import bcryptUtil from "../../utils/bcryptutils";
 
 const flutterwave = new FlutterwaveService();
 const otpService = new OTPService();
+const emailService = new ResendEmailService()
 
 export class WithdrawalService {
     async withdrawFundsToWallet(
@@ -337,7 +338,7 @@ export class WithdrawalService {
     ) {
         const wallet = await Wallet.findById(walletId);
 
-        if (!wallet) throw new AppError("Wallet not found", 404);
+        if (!wallet) throw new Error("Wallet not found");
 
         if (wallet.availableBalance < amount) {
             throw new Error("Insufficient balance");
@@ -365,6 +366,9 @@ export class WithdrawalService {
             },
         });
 
+        await emailService.sendNewWwithdrawalRequestNotification(withdrawalRequest)
+        //await PushNotificationService.sendToUsers()
+
         // const newTransaction = new WalletTransaction({
         //     wallet: walletId,
         //     amount,
@@ -379,7 +383,6 @@ export class WithdrawalService {
         //     },
         // });
         // await newTransaction.save();
-
 
         return withdrawalRequest
 

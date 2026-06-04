@@ -87,6 +87,7 @@ export class authController {
             if (!verified) {
                 return res.status(403).json({ "message": "otp verification failed" })
             }
+
             const registeredUser = await Account.findOne({ email })
             if (!registeredUser) {
                 return res.status(404).json({ "message": "user not registered" })

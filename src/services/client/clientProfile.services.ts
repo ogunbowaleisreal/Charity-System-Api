@@ -85,7 +85,7 @@ export class clientProfileServices {
         // if (fields.accountNumber !== undefined) updateAccount.accountNumber = fields.accountNumber
         // if (fields.accountName !== undefined) updateAccount.accountName = fields.accountName
         // if (fields.bankCode !== undefined) updateAccount.bankCode = fields.bankCode
-        if (fields.twoFactorEnabled !== undefined) updateAccount.twoFactorEnabled = fields.twoFactorEnabled
+        //if (fields.twoFactorEnabled !== undefined) updateAccount.twoFactorEnabled = fields.twoFactorEnabled
         if (fields.twoFactorWithdrawalEnabled !== undefined) updateAccount.twoFactorWithdrawalEnabled = fields.twoFactorWithdrawalEnabled
 
 
@@ -139,4 +139,45 @@ export class clientProfileServices {
         }
 
     }
+
+    async enableTwoFactorAuth(accountId: string) {
+        const account = await Account.findById(accountId);
+
+        if (!account) {
+            throw new Error("Account not found");
+        }
+
+        if (account.twoFactorEnabled) {
+            throw new Error("Two-factor authentication is already enabled");
+        }
+
+        account.twoFactorEnabled = true;
+        await account.save();
+
+        return {
+            twoFactorEnabled: account.twoFactorEnabled,
+            message: account.twoFactorEnabled ? "2FA toggled on" : "2FA toggled off"
+        };
+    }
+
+    async disableTwoFactorAuth(accountId: string) {
+        const account = await Account.findById(accountId);
+
+        if (!account) {
+            throw new Error("Account not found");
+        }
+
+        if (!account.twoFactorEnabled) {
+            throw new Error("Two-factor authentication is already disabled");
+        }
+
+        account.twoFactorEnabled = false;
+        await account.save();
+
+        return {
+            twoFactorEnabled: account.twoFactorEnabled,
+            message: account.twoFactorEnabled ? "2FA toggled on" : "2FA toggled off"
+        };
+    }
+
 }

@@ -23,7 +23,7 @@ const otpService = new OTPService();
 
 export class authService {
 
-    private async saveRefreshToken(
+    async saveRefreshToken(
         tokenId: string,
         userId: string,
         userType: string,
@@ -45,7 +45,7 @@ export class authService {
         await CacheService.setRefreshToken(tokenId, { userId, userType });
     }
 
-    private formatLoginResponse = async (
+    formatLoginResponse = async (
         user: IAccount,
         tokens: {
             accessToken: string;

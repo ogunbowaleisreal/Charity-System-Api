@@ -2,6 +2,8 @@
 
 import { Resend } from "resend";
 import logger from "../logger";
+import Admin from "../models/AdminModel";
+
 
 
 /**
@@ -189,7 +191,8 @@ export class ResendEmailService {
         this.defaultFrom =
             process.env.EMAIL_FROM || "Help me Nigeria <no-reply@helpmenigeria.com>";
     }
-
+    emailService = new EmailService()
+    templateService = new AnnouncementTemplates()
     /**
      * Core send method (internal use)
      */
@@ -371,6 +374,28 @@ export class ResendEmailService {
         }
     }
 
+    async sendNewWwithdrawalRequestNotification(
+        request: any,
+    ) {
+        const admins = await Admin.find({
+            permissions: {
+                $all:
+                    [
+                        "withdrawalAdminService.view",
+                        "withdrawalAdminService.approve",
+                        "withdrawalAdminService.reject"
+                    ]
+            }
+        })
+        // const adminIds = admins.map(admin => String(admin._id));
+        const emailData: BulkEmailItem[] = admins.map(admin => ({
+            to: admin.email,
+            subject: "Withdrawal Request Requires Review",
+            html: this.getWithdrawalRequestNotificationTemplate(`${admin.firstName} ${admin.lastName}`, request.amount,)
+        }));
+        this.emailService.sendBulkEmails(emailData)
+
+    }
 
     // ============================
     // 📧 TEMPLATES (GREEN PALETTE)
@@ -379,6 +404,67 @@ export class ResendEmailService {
     /**
      * OTP Email Template
      */
+    private getWithdrawalRequestNotificationTemplate(
+        userName: string,
+        amount: number,
+        currency: string = "NGN"
+    ): string {
+        return ` <div style="font-family:Arial,sans-serif;background:#f0fdf4;padding:24px;"> <div style="max-width:600px;margin:auto;background:#fff;padding:24px;border-radius:8px;">
+
+
+    <h2 style="color:#065f46;">Help me Nigeria</h2>
+
+    <h3 style="color:#111827;">New Withdrawal Request</h3>
+
+    <p style="color:#374151;">
+      A new withdrawal request has been submitted and requires administrative review.
+    </p>
+
+    <div style="
+      background:#ecfdf5;
+      border:1px solid #a7f3d0;
+      border-radius:6px;
+      padding:16px;
+      margin:24px 0;
+    ">
+      <p style="margin:0 0 8px 0;color:#111827;">
+        <strong>User:</strong> ${userName}
+      </p>
+
+      <p style="margin:0;color:#111827;">
+        <strong>Amount:</strong> ${currency} ${amount.toLocaleString()}
+      </p>
+    </div>
+
+    <p style="color:#374151;">
+      Please review the request and take the appropriate action.
+    </p>
+
+    <div style="text-align:center;margin:30px 0;">
+      <a
+        href="${process.env.ADMIN_PORTAL_URL}/withdrawals"
+        style="
+          background:#047857;
+          color:white;
+          padding:12px 24px;
+          text-decoration:none;
+          border-radius:4px;
+          display:inline-block;
+        "
+      >
+        Review Withdrawal
+      </a>
+    </div>
+
+    <p style="font-size:12px;color:#9ca3af;text-align:center;">
+      © ${new Date().getFullYear()} Help me Nigeria
+    </p>
+
+  </div>
+</div>
+`;
+
+    }
 
 
     private getAccountDeletedTemplate(reason?: string): string {
@@ -488,6 +574,8 @@ export class ResendEmailService {
   </div>
   `;
     }
+
+
 
 
     private getPasswordResetConfirmationTemplate(

@@ -3,7 +3,7 @@ module.exports = {
         {
             name: 'api.help-me-nigeria.staging',
             script: './dist/server.js',
-            cwd: '/var/www/help-me-nigeria-backend',
+            cwd: '/home/deploy/apps/help-me-nigeria-backend',
             instances: 1,
             exec_mode: 'fork',
 

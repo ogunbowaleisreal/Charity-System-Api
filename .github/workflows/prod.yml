@@ -33,25 +33,17 @@ jobs:
       - name: Deploy to DigitalOcean
         run: |
           # ✅ Updated: Upload prebuilt dist folder, not building on the server
-          rsync -avz --delete ./dist ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/var/www/help-me-nigeria-backend/
+          rsync -avz --delete ./dist ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/home/deploy/apps/help-me-nigeria-backend/
 
           # Upload package files (for production dependencies)
-          rsync -avz package.json package-lock.json ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/var/www/help-me-nigeria-backend/
+          rsync -avz package.json package-lock.json ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/home/deploy/apps/help-me-nigeria-backend/
 
           # ✅ Upload ecosystem.config.js so PM2 can reload
-          rsync -avz ecosystem.config.js ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/var/www/help-me-nigeria-backend/
+          rsync -avz ecosystem.config.js ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/home/deploy/apps/help-me-nigeria-backend/
 
           # Install production dependencies and reload PM2
           ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }} << 'EOF'
-            cd /var/www/help-me-nigeria-backend    
-
-            # Load NVM and Node environment
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" 
-
-            # Install production dependencies
-            npm ci --production
+            cd /home/deploy/apps/help-me-nigeria-backend
 
             # Reload PM2 with new prebuilt code
             pm2 reload ecosystem.config.js --env production 

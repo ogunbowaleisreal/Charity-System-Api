@@ -168,6 +168,41 @@ export class profileController {
         }
     }
 
+    async toggle2FA(req: AuthenticatedClientRequest, res: Response) {
+        try {
+            const { enabled } = req.body;
+            const userId = req.user.userId
+
+            if (!userId) {
+                sendErrorResponse(
+                    res,
+                    "Must be logged in to perform this action",
+                    HTTP_STATUS.UNAUTHORIZED
+                );
+                return;
+            }
+
+            let result;
+            if (enabled) {
+                result = await clientServices.enableTwoFactorAuth(userId);
+            } else {
+                result = await clientServices.disableTwoFactorAuth(userId);
+            }
+
+            sendSuccessResponse(res, { twoFactorEnabled: enabled }, result.message);
+        } catch (error: any) {
+            logger.error("Toggle 2FA error", {
+                message: error.message,
+                statusCode: error.statusCode || HTTP_STATUS.INTERNAL_SERVER_ERROR,
+            });
+
+            sendErrorResponse(
+                res,
+                "Internal server error",
+                HTTP_STATUS.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
 
 
 
