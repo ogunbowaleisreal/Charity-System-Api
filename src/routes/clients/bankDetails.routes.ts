@@ -26,4 +26,9 @@ router.patch(
     bankCtrl.updateBankDetails
 );
 
+router.delete(
+    "/delete/:bankDetailsId",
+    bankCtrl.deleteBankDetails
+);
+
 export default router;

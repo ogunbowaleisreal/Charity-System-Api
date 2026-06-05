@@ -6,7 +6,7 @@ export interface IAccount extends Document {
     lastName: string;
     email: string;
     phoneNumber: string;
-    password?: string;
+    password: string;
 
     role: "user" | "organization";
 

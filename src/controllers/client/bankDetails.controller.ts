@@ -29,7 +29,7 @@ export class BankDetailsController {
             return sendSuccessResponse(res, bankDetails);
         } catch (error: any) {
             logger.error(error);
-            return sendErrorResponse(res, error);
+            return sendErrorResponse(res, error.message, error.statusCode);
         }
     }
 
@@ -105,24 +105,25 @@ export class BankDetailsController {
     // 🔹 DELETE
     // =============================
 
-    // async deleteBankDetails(
-    //     req: AuthenticatedClientRequest,
-    //     res: Response,
-    //     next: NextFunction
-    // ) {
-    //     try {
-    //         const { bankDetailsId } = req.params;
+    async deleteBankDetails(
+        req: AuthenticatedClientRequest,
+        res: Response,
+        next: NextFunction
+    ) {
+        try {
+            const { bankDetailsId } = req.params;
 
-    //         const bankDetails =
-    //             await bankDetailsService.deleteBankDetails(
-    //                 bankDetailsId,
-    //                 req.user._id
-    //             );
+            const bankDetails =
+                await bankDetailsService.deleteBankDetails(
+                    bankDetailsId,
+                    req.user._id
+                );
+            logger.info("Bank details deleted successfully");
 
-    //         return sendSuccessResponse(res, bankDetails);
-    //     } catch (error: any) {
-    //         logger.error(error);
-    //         return sendErrorResponse(res, error);
-    //     }
-    // }
+            return sendSuccessResponse(res, bankDetails, "bank details deleted successfully");
+        } catch (error: any) {
+            logger.error(error);
+            return sendErrorResponse(res, error.message, error.statusCode);
+        }
+    }
 }

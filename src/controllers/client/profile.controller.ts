@@ -9,6 +9,7 @@ import { AuthenticatedClientRequest } from "../../middleware/auth";
 import { HTTP_STATUS } from "../../utils/constants";
 import OTPService from "../../services/otp.services";
 import { Account } from "../../models/Accounts";
+import { success } from "zod";
 
 
 const clientServices = new clientProfileServices()
@@ -47,19 +48,21 @@ export class profileController {
 
     async deleteAccount(req: AuthenticatedClientRequest, res: Response) {
         try {
-            const { email } = req.body;
+            const { password, reason } = req.body;
+            const userId = req.user?.userId
 
-            if (!email) {
-                return res.status(400).json({ message: "Email is required" });
+            if (!password) {
+                return res.status(400).json({ message: "Passsword is required" });
             }
-            const response = await clientServices.deleteAccount(email);
-            sendSuccessResponse(res, response)
-            //return res.status(200).json({ message: "Account deleted successfully", data: deleted });
-            // } else {
-            //     return res.status(400).json({ message: "Account not found" });
-            // }
-        } catch (err) {
-            return res.status(500).json({ message: "Internal Server Error", error: err })
+            const response = await clientServices.deleteAccount(userId, password, reason);
+            if (!response) {
+                return res.status(400).json({ message: "Account not found" });
+            }
+            return sendSuccessResponse(res, { message: "Account deleted Successfully", success: true }, "Account deleted Successfully", HTTP_STATUS.OK)
+
+        } catch (err: any) {
+            sendErrorResponse(res, err.message, err.statusCode)
+            //return res.status(500).json({ message: "Internal Server Error", error: err })
         }
     }
     async verifyAccountDeletionOtp(req: AuthenticatedClientRequest, res: Response) {
@@ -198,8 +201,9 @@ export class profileController {
 
             sendErrorResponse(
                 res,
-                "Internal server error",
-                HTTP_STATUS.INTERNAL_SERVER_ERROR
+                error.message,
+                HTTP_STATUS.INTERNAL_SERVER_ERROR,
+
             );
         }
     }

@@ -4,6 +4,8 @@ import connectDB from "./config/database";
 import { connectRedis, disconnectRedis } from "./config/redis"; // add disconnect function
 import http from "http";
 import { start } from "repl";
+import { } from "./cron/updateTransactionStatus";
+import { startAnnouncementCron } from "./cron/announcementCron";
 
 require('dotenv').config();
 
@@ -16,6 +18,7 @@ async function startServer() {
         await connectDB();
         await connectRedis();
 
+        startAnnouncementCron()
 
         mongoose.connection.once('open', () => {
             console.log('Successfully connected to MongoDB');

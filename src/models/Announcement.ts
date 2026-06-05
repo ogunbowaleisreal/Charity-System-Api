@@ -1,6 +1,7 @@
 import { Schema, model, Document, Types } from "mongoose";
 
 export interface IAnnouncement extends Document {
+    _id: Types.ObjectId;
     title: string;
     message: string;
 
@@ -13,7 +14,8 @@ export interface IAnnouncement extends Document {
     | "organizations"
     | "normal_users"
     | "active_users"
-    | "suspended_users";
+    | "suspended_users"
+    | "specific";
 
     status:
     | "pending"
@@ -23,7 +25,8 @@ export interface IAnnouncement extends Document {
 
     sentCount: number;
     failedCount: number;
-
+    specificUsers: Types.ObjectId[];
+    announcementStartAt: Date;
     createdBy: Types.ObjectId;
 
     lastSentAt?: Date;
@@ -60,6 +63,7 @@ const AnnouncementSchema = new Schema<IAnnouncement>(
                 "normal_users",
                 "active_users",
                 "suspended_users",
+                "specific"
             ],
             required: true,
         },
@@ -73,6 +77,16 @@ const AnnouncementSchema = new Schema<IAnnouncement>(
                 "failed",
             ],
             default: "pending",
+        },
+        specificUsers: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: "Account",
+            },
+        ],
+
+        announcementStartAt: {
+            type: Date,
         },
 
         sentCount: {
