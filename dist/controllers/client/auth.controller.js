@@ -14,7 +14,7 @@ const helpers_1 = require("../../utils/helpers");
 const constants_1 = require("../../utils/constants");
 const Kyc_services_1 = require("../../services/client/Kyc.services");
 const KYC_1 = require("../../models/KYC");
-const Wallet_1 = require("../../models/Wallet");
+const wallet_1 = require("../../models/wallet");
 const otpService = new otp_services_1.OTPService();
 const Authservice = new Auth_services_1.authService();
 const kycService = new Kyc_services_1.KYCService();
@@ -89,7 +89,7 @@ class authController {
             registeredUser.isVerified = true;
             await registeredUser.save();
             const kyc = await KYC_1.KYC.create({ userId: registeredUser._id, status: "not_started", level: 0, type: registeredUser.role });
-            const newWallet = await Wallet_1.Wallet.create({ userId: registeredUser._id });
+            const newWallet = await wallet_1.Wallet.create({ userId: registeredUser._id });
             return res.status(200).json({ "message": "otp verification and registration completed" });
         }
         catch (err) {

@@ -5,7 +5,7 @@ import Campaign from "../../models/Campaign";
 import logger from "../../logger";
 import { FlutterwaveService } from "../flutterwave.services";
 import crypto from "crypto";
-import { Wallet } from "../../models/Wallet";
+import { Wallet } from "../../models/wallet";
 import { parse } from "path";
 
 const flutterwave = new FlutterwaveService();

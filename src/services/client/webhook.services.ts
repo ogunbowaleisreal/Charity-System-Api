@@ -11,7 +11,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { ERROR_CODES } from "../../utils/constants";
 import { FlutterwaveService } from "../flutterwave.services";
 import { WithdrawalRequest } from "../../models/WithdrawalRequest";
-import { Wallet } from "../../models/Wallet";
+import { Wallet } from "../../models/wallet";
 import { Gratuity } from "../../models/Gratuity";
 import { PushNotificationService } from "../pushNotificationService";
 import { ServiceFeeService } from "../servicefee.services";

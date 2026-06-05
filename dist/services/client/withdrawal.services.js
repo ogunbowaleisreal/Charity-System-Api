@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WithdrawalService = void 0;
-const Wallet_1 = require("../../models/Wallet");
+const wallet_1 = require("../../models/wallet");
 const transaction_1 = require("../../models/transaction");
 const Campaign_1 = __importDefault(require("../../models/Campaign"));
 const errorHandler_1 = require("../../middleware/errorHandler");
@@ -39,7 +39,7 @@ class WithdrawalService {
                 throw new Error("Campaign not found");
             //  if (campaign.status == "ongoing" || campaign.status == "upcoming") throw new AppError("Campaign is still ongoing or has not started yet", 400);
             // if (campaign.owner.toString() != userId) throw new AppError("Unauthorized, ypu are not the owner of this campaign", 401);
-            const userWallet = await Wallet_1.Wallet.findOne({
+            const userWallet = await wallet_1.Wallet.findOne({
                 userId: userId,
             });
             if (!userWallet)
@@ -61,7 +61,7 @@ class WithdrawalService {
                     totalWithdrawn: amount
                 }
             }, { session });
-            await Wallet_1.Wallet.updateOne({ userId }, {
+            await wallet_1.Wallet.updateOne({ userId }, {
                 $inc: { availableBalance: amount }
             }, { session });
             await transaction_1.WalletTransaction.create([{
@@ -118,7 +118,7 @@ class WithdrawalService {
         //         },
         //     }
         // )
-        const wallet = await Wallet_1.Wallet.findOne({ userId }).select("+walletPin");
+        const wallet = await wallet_1.Wallet.findOne({ userId }).select("+walletPin");
         if (!wallet)
             throw new Error("Wallet not found");
         if (wallet.walletPin) {
@@ -147,7 +147,7 @@ class WithdrawalService {
         return true;
     }
     async getUserWallet(userId) {
-        const wallet = await Wallet_1.Wallet.findOne({ userId: userId }).lean();
+        const wallet = await wallet_1.Wallet.findOne({ userId: userId }).lean();
         if (!wallet)
             throw new Error("Wallet not found");
         return wallet;
@@ -164,7 +164,7 @@ class WithdrawalService {
         if (!verified) {
             throw new Error("OTP verification required");
         }
-        const wallet = await Wallet_1.Wallet.findOne({ userId: user._id });
+        const wallet = await wallet_1.Wallet.findOne({ userId: user._id });
         if (!wallet)
             throw new Error("Wallet not found");
         // ✅ hash ONCE
@@ -204,7 +204,7 @@ class WithdrawalService {
     //     return true;
     // }
     async verifyWalletPin(userId, walletPin) {
-        const wallet = await Wallet_1.Wallet.findOne({ userId }).select("+walletPin").lean();
+        const wallet = await wallet_1.Wallet.findOne({ userId }).select("+walletPin").lean();
         if (!wallet)
             throw new errorHandler_1.AppError("wallet retrieval failed", 404);
         // console.log(wallet.walletPin)
@@ -226,7 +226,7 @@ class WithdrawalService {
         const campaign = await Campaign_1.default.findById(campaignId);
         if (!campaign)
             throw new errorHandler_1.AppError("Campaign not found", 404);
-        const userWallet = await Wallet_1.Wallet.findOne({
+        const userWallet = await wallet_1.Wallet.findOne({
             userId: userId,
         });
         if (!userWallet)
@@ -255,7 +255,7 @@ class WithdrawalService {
     // 🔹 WITHDRAW FUNDS
     // =========================
     async applyForWithdrawalToBank(userId, walletId, amount, accountName, bankCode, bank_name, accountNumber, narration) {
-        const wallet = await Wallet_1.Wallet.findById(walletId);
+        const wallet = await wallet_1.Wallet.findById(walletId);
         if (!wallet)
             throw new Error("Wallet not found");
         if (wallet.availableBalance < amount) {

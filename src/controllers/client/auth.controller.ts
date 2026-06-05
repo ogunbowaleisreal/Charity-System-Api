@@ -10,7 +10,7 @@ import { sendSuccessResponse, sendErrorResponse } from "../../utils/helpers";
 import { HTTP_STATUS } from "../../utils/constants";
 import { KYCService } from "../../services/client/Kyc.services";
 import { KYC } from "../../models/KYC";
-import { Wallet } from "../../models/Wallet";
+import { Wallet } from "../../models/wallet";
 
 const otpService = new OTPService();
 const Authservice = new authService()

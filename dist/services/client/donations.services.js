@@ -11,7 +11,7 @@ const safeHaven_services_1 = require("../../services/safeHaven.services");
 const crypto_1 = __importDefault(require("crypto"));
 const errorHandler_1 = require("../../middleware/errorHandler");
 const constants_1 = require("../../utils/constants");
-const Wallet_1 = require("../../models/Wallet");
+const wallet_1 = require("../../models/wallet");
 const transaction_1 = require("../../models/transaction");
 const Accounts_1 = require("../../models/Accounts");
 const flutterwave_services_1 = require("../flutterwave.services");
@@ -343,7 +343,7 @@ class DonationService {
             throw new errorHandler_1.AppError("Campaign not found", 404);
         if (campaign.status == "ongoing" || campaign.status == "upcoming")
             throw new errorHandler_1.AppError("Campaign is still ongoing or has not started yet", 400);
-        const userWallet = await Wallet_1.Wallet.findOne({
+        const userWallet = await wallet_1.Wallet.findOne({
             userId: campaign.owner,
         });
         if (!userWallet)
@@ -405,7 +405,7 @@ class DonationService {
     // 🔹 WITHDRAW FUNDS
     // =========================
     async applyForWithdrawalToBank(walletId, amount, accountName, bankCode, bank_name, accountNumber, narration) {
-        const wallet = await Wallet_1.Wallet.findById(walletId);
+        const wallet = await wallet_1.Wallet.findById(walletId);
         if (!wallet)
             throw new errorHandler_1.AppError("Wallet not found", 404);
         if (wallet.availableBalance < amount) {
