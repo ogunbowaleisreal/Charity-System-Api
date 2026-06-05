@@ -13,9 +13,9 @@ module.exports = {
             },
 
             // Logging
-            error_file: '/var/log/apps/backend/err.log',
-            out_file: '/var/log/apps/backend/out.log',
-            log_file: '/var/log/apps/backend/combined.log',
+            // error_file: '/var/log/apps/backend/err.log',
+            // out_file: '/var/log/apps/backend/out.log',
+            // log_file: '/var/log/apps/backend/combined.log',
 
             log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
 
