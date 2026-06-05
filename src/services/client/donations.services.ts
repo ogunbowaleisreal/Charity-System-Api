@@ -52,8 +52,8 @@ export class DonationService {
 
         const campaign = await Campaign.findById(data.campaignId);
         if (!campaign) throw new Error("Campaign not found");
-        if (campaign.isActive == false) throw new AppError("Campaign is not active or has been suspended, ", 400);
-        if (campaign.status == "completed" || campaign.status == "upcoming") throw new AppError("Campaign is still upcoming or has been completed", 400);
+        if (campaign.isActive == false) throw new Error("Campaign is not active or has been suspended, ");
+        if (campaign.status == "completed" || campaign.status == "upcoming") throw new Error("Campaign is still upcoming or has been completed");
 
         const amountData = this.computeDonationBreakdown(data.amount, data.gratuityPercentage || 0);
         const serviceFee = await ServiceFeeConfig.findOne({ isActive: true })

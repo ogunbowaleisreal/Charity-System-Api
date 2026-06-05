@@ -58,7 +58,7 @@ class CampaignService {
             .skip((page - 1) * limit)
             .limit(limit)
             .populate("owner", "firstName lastName companyName logo ")
-            .populate("category", "name")
+            .populate("category", "categoryName description image status")
             .populate("tags", "name");
         const total = await Campaign_1.default.countDocuments(filter);
         const totalPages = Math.ceil(total / limit);
@@ -77,7 +77,7 @@ class CampaignService {
     async getCampaignById(campaignId) {
         const campaign = await Campaign_1.default.findById(campaignId)
             .populate("owner", "firstName lastName companyName logo")
-            .populate("category", "name")
+            .populate("category", "categoryName description image status")
             .populate("tags", "name");
         if (!campaign || campaign.isDeleted) {
             throw new Error("Campaign not found");
@@ -251,7 +251,7 @@ class CampaignService {
                 isDeleted: false,
             }).sort({ likes: -1 })
                 .limit(20)
-                .populate("user", "firstName lastName profilePicture");
+                .populate("user", "firstName lastName profilePicture logo");
         }
         const comments = await Comment_1.default.find({
             campaign: campaignId,
@@ -259,7 +259,7 @@ class CampaignService {
         }).sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
-            .populate("user", "firstName lastName profilePicture");
+            .populate("user", "firstName lastName profilePicture logo");
         const total = await Comment_1.default.countDocuments({
             campaign: campaignId,
             isDeleted: false,

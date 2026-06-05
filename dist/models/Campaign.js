@@ -19,7 +19,7 @@ const CampaignSchema = new mongoose_1.Schema({
     category: {
         type: mongoose_1.Schema.Types.ObjectId,
         required: true,
-        ref: "CampaignCategory",
+        ref: "Category",
     },
     authors: [{
             type: mongoose_1.Schema.Types.ObjectId,

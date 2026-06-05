@@ -134,7 +134,7 @@ export class CampaignService {
             .skip((page - 1) * limit)
             .limit(limit)
             .populate("owner", "firstName lastName companyName logo ")
-            .populate("category", "name")
+            .populate("category", "categoryName description image status")
             .populate("tags", "name");
 
         const total = await Campaign.countDocuments(filter);
@@ -156,7 +156,7 @@ export class CampaignService {
     async getCampaignById(campaignId: string) {
         const campaign = await Campaign.findById(campaignId)
             .populate("owner", "firstName lastName companyName logo")
-            .populate("category", "name")
+            .populate("category", "categoryName description image status")
             .populate("tags", "name");
 
         if (!campaign || campaign.isDeleted) {
@@ -372,7 +372,7 @@ export class CampaignService {
                 isDeleted: false,
             }).sort({ likes: -1 })
                 .limit(20)
-                .populate("user", "firstName lastName profilePicture");
+                .populate("user", "firstName lastName profilePicture logo");
         }
         const comments = await Comment.find({
             campaign: campaignId,
@@ -380,7 +380,7 @@ export class CampaignService {
         }).sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
-            .populate("user", "firstName lastName profilePicture");
+            .populate("user", "firstName lastName profilePicture logo");
 
         const total = await Comment.countDocuments({
             campaign: campaignId,
