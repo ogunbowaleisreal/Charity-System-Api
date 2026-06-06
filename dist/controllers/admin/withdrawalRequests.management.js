@@ -18,7 +18,7 @@ class WithdrawalRequestsManagementController {
         }
         catch (error) {
             logger_1.default.error("Get transaction failed", { error });
-            return (0, helpers_1.sendErrorResponse)(res, error);
+            return (0, helpers_1.sendErrorResponse)(res, error.message, 400, error);
         }
     }
     async rejectWithdrawalRequest(req, res, next) {
@@ -29,7 +29,7 @@ class WithdrawalRequestsManagementController {
         }
         catch (error) {
             logger_1.default.error("Get transaction failed", { error });
-            return (0, helpers_1.sendErrorResponse)(res, error);
+            return (0, helpers_1.sendErrorResponse)(res, error.message, 400, error);
         }
     }
     async getWithdrawalRequests(req, res, next) {

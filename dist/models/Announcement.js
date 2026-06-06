@@ -26,6 +26,7 @@ const AnnouncementSchema = new mongoose_1.Schema({
             "normal_users",
             "active_users",
             "suspended_users",
+            "specific"
         ],
         required: true,
     },
@@ -38,6 +39,15 @@ const AnnouncementSchema = new mongoose_1.Schema({
             "failed",
         ],
         default: "pending",
+    },
+    specificUsers: [
+        {
+            type: mongoose_1.Schema.Types.ObjectId,
+            ref: "Account",
+        },
+    ],
+    announcementStartAt: {
+        type: Date,
     },
     sentCount: {
         type: Number,

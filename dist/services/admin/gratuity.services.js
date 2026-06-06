@@ -10,11 +10,18 @@ const CONFIG_ID = "gratuity_config";
 class AdminGratuityService {
     // 🔹 Get current config (admin view)
     async getConfig() {
-        return await GratuityConfig_1.default.findById(CONFIG_ID);
+        return await GratuityConfig_1.default.findOne();
+    }
+    async createConfig(data) {
+        const existingConfig = await GratuityConfig_1.default.findOne();
+        if (existingConfig) {
+            throw new errorHandler_1.AppError("Gratuity config already exists", 400);
+        }
+        return await GratuityConfig_1.default.create(data);
     }
     // 🔹 Update config (admin only)
-    async updateConfig(data) {
-        const config = await GratuityConfig_1.default.findByIdAndUpdate(CONFIG_ID, {
+    async updateConfig(gratuityId, data) {
+        const config = await GratuityConfig_1.default.findByIdAndUpdate(gratuityId, {
             $set: data
         }, {
             new: true,
@@ -26,8 +33,8 @@ class AdminGratuityService {
         return config;
     }
     // 🔹 Toggle only (useful for quick admin switch)
-    async toggleGratuity(isEnabled) {
-        return await GratuityConfig_1.default.findByIdAndUpdate(CONFIG_ID, { $set: { isEnabled } }, { new: true });
+    async toggleGratuity(gratuityId, isEnabled) {
+        return await GratuityConfig_1.default.findByIdAndUpdate(gratuityId, { $set: { isEnabled } }, { new: true });
     }
 }
 exports.AdminGratuityService = AdminGratuityService;

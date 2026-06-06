@@ -34,5 +34,17 @@ class BankDetailsService {
         Object.assign(bankDetails, payload);
         return await bankDetails.save();
     }
+    async deleteBankDetails(bankDetailsId, userId) {
+        const bankDetails = await BankDetails_1.BankDetail.findOne({
+            _id: bankDetailsId,
+            user: userId,
+            isDeleted: false,
+        });
+        if (!bankDetails) {
+            throw new Error("Bank details not found");
+        }
+        bankDetails.isDeleted = true;
+        return await bankDetails.save();
+    }
 }
 exports.BankDetailsService = BankDetailsService;

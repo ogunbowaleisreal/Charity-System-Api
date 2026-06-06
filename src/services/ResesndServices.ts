@@ -381,9 +381,9 @@ export class ResendEmailService {
             permissions: {
                 $all:
                     [
-                        "withdrawalAdminService.view",
-                        "withdrawalAdminService.approve",
-                        "withdrawalAdminService.reject"
+                        "withdrawal.view",
+                        "withdrawal.approve",
+                        "withdrawal.reject"
                     ]
             }
         })

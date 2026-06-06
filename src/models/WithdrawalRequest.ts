@@ -132,7 +132,7 @@ const WithdrawalRequestSchema = new Schema<IWithdrawalRequest>(
 
         reference: {
             type: String,
-            required: true,
+            //   required: true,
             unique: true,
             index: true,
         },
@@ -142,7 +142,7 @@ const WithdrawalRequestSchema = new Schema<IWithdrawalRequest>(
 
         idempotencyKey: {
             type: String,
-            required: true,
+            // required: true,
             unique: true,
         },
 

@@ -38,19 +38,20 @@ class profileController {
     }
     async deleteAccount(req, res) {
         try {
-            const { email } = req.body;
-            if (!email) {
-                return res.status(400).json({ message: "Email is required" });
+            const { password, reason } = req.body;
+            const userId = req.user?.userId;
+            if (!password) {
+                return res.status(400).json({ message: "Passsword is required" });
             }
-            const response = await clientServices.deleteAccount(email);
-            (0, helpers_1.sendSuccessResponse)(res, response);
-            //return res.status(200).json({ message: "Account deleted successfully", data: deleted });
-            // } else {
-            //     return res.status(400).json({ message: "Account not found" });
-            // }
+            const response = await clientServices.deleteAccount(userId, password, reason);
+            if (!response) {
+                return res.status(400).json({ message: "Account not found" });
+            }
+            return (0, helpers_1.sendSuccessResponse)(res, { message: "Account deleted Successfully", success: true }, "Account deleted Successfully", constants_1.HTTP_STATUS.OK);
         }
         catch (err) {
-            return res.status(500).json({ message: "Internal Server Error", error: err });
+            (0, helpers_1.sendErrorResponse)(res, err.message, err.statusCode);
+            //return res.status(500).json({ message: "Internal Server Error", error: err })
         }
     }
     async verifyAccountDeletionOtp(req, res) {
@@ -173,7 +174,7 @@ class profileController {
                 message: error.message,
                 statusCode: error.statusCode || constants_1.HTTP_STATUS.INTERNAL_SERVER_ERROR,
             });
-            (0, helpers_1.sendErrorResponse)(res, "Internal server error", constants_1.HTTP_STATUS.INTERNAL_SERVER_ERROR);
+            (0, helpers_1.sendErrorResponse)(res, error.message, constants_1.HTTP_STATUS.INTERNAL_SERVER_ERROR);
         }
     }
     async getClientProfile(req, res, next) {

@@ -89,7 +89,7 @@ const WithdrawalRequestSchema = new mongoose_1.Schema({
     rejectionReason: String,
     reference: {
         type: String,
-        required: true,
+        //   required: true,
         unique: true,
         index: true,
     },
@@ -97,7 +97,7 @@ const WithdrawalRequestSchema = new mongoose_1.Schema({
     providerTransactionId: String,
     idempotencyKey: {
         type: String,
-        required: true,
+        // required: true,
         unique: true,
     },
     processedAt: Date,

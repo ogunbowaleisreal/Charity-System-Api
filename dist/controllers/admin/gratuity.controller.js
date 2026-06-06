@@ -22,12 +22,24 @@ class AdminGratuityController {
             return (0, helpers_1.sendErrorResponse)(res, error);
         }
     }
+    async createGratuityConfig(req, res, next) {
+        try {
+            const config = await adminGratuityService.createConfig(req.body);
+            logger_1.default.info("Gratuity config created successfully");
+            return (0, helpers_1.sendSuccessResponse)(res, config, "Gratuity config created successfully");
+        }
+        catch (error) {
+            logger_1.default.error("Admin get config error:", error);
+            return (0, helpers_1.sendErrorResponse)(res, error);
+        }
+    }
     // =========================
     // 🔹 UPDATE CONFIG
     // =========================
     async updateConfig(req, res, next) {
         try {
-            const updated = await adminGratuityService.updateConfig(req.body);
+            const gratuityId = req.params.gratuityId;
+            const updated = await adminGratuityService.updateConfig(gratuityId, req.body);
             return (0, helpers_1.sendSuccessResponse)(res, updated, "Gratuity config updated successfully");
         }
         catch (error) {
@@ -41,7 +53,8 @@ class AdminGratuityController {
     async toggleGratuity(req, res, next) {
         try {
             const { isEnabled } = req.body;
-            const updated = await adminGratuityService.toggleGratuity(isEnabled);
+            const gratuityId = req.params.gratuityId;
+            const updated = await adminGratuityService.toggleGratuity(gratuityId, isEnabled);
             return (0, helpers_1.sendSuccessResponse)(res, updated, `Gratuity ${isEnabled ? "enabled" : "disabled"} successfully`);
         }
         catch (error) {

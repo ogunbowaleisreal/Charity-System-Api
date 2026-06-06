@@ -255,6 +255,7 @@ class WithdrawalService {
     // 🔹 WITHDRAW FUNDS
     // =========================
     async applyForWithdrawalToBank(userId, walletId, amount, accountName, bankCode, bank_name, accountNumber, narration) {
+        console.log(userId);
         const wallet = await wallet_1.Wallet.findById(walletId);
         if (!wallet)
             throw new Error("Wallet not found");
@@ -271,6 +272,7 @@ class WithdrawalService {
             amount,
             type: "withdrawal",
             status: "pending",
+            availableBalanceAtRequest: wallet.availableBalance,
             narration,
             method: "bank_transfer",
             bankDetails: {

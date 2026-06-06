@@ -16,7 +16,7 @@ export class WithdrawalRequestsManagementController {
             return sendSuccessResponse(res, response);
         } catch (error: any) {
             logger.error("Get transaction failed", { error });
-            return sendErrorResponse(res, error);
+            return sendErrorResponse(res, error.message, 400, error);
         }
     }
 
@@ -27,7 +27,7 @@ export class WithdrawalRequestsManagementController {
             return sendSuccessResponse(res, response);
         } catch (error: any) {
             logger.error("Get transaction failed", { error });
-            return sendErrorResponse(res, error);
+            return sendErrorResponse(res, error.message, 400, error);
         }
     }
 

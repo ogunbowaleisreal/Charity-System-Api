@@ -336,6 +336,7 @@ export class WithdrawalService {
         accountNumber: string,
         narration: string
     ) {
+        console.log(userId)
         const wallet = await Wallet.findById(walletId);
 
         if (!wallet) throw new Error("Wallet not found");
@@ -357,6 +358,7 @@ export class WithdrawalService {
             amount,
             type: "withdrawal",
             status: "pending",
+            availableBalanceAtRequest: wallet.availableBalance,
             narration,
             method: "bank_transfer",
             bankDetails: {

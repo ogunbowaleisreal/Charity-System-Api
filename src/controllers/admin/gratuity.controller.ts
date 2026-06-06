@@ -30,6 +30,25 @@ export class AdminGratuityController {
         }
     }
 
+    async createGratuityConfig(
+        req: AdminAuthenticatedRequest,
+        res: Response,
+        next: NextFunction
+    ) {
+        try {
+            const config = await adminGratuityService.createConfig(req.body);
+            logger.info("Gratuity config created successfully");
+            return sendSuccessResponse(
+                res,
+                config,
+                "Gratuity config created successfully"
+            );
+        } catch (error: any) {
+            logger.error("Admin get config error:", error);
+            return sendErrorResponse(res, error);
+        }
+    }
+
     // =========================
     // 🔹 UPDATE CONFIG
     // =========================
@@ -39,7 +58,8 @@ export class AdminGratuityController {
         next: NextFunction
     ) {
         try {
-            const updated = await adminGratuityService.updateConfig(req.body);
+            const gratuityId = req.params.gratuityId
+            const updated = await adminGratuityService.updateConfig(gratuityId, req.body);
 
             return sendSuccessResponse(
                 res,
@@ -62,8 +82,9 @@ export class AdminGratuityController {
     ) {
         try {
             const { isEnabled } = req.body;
+            const gratuityId = req.params.gratuityId
 
-            const updated = await adminGratuityService.toggleGratuity(isEnabled);
+            const updated = await adminGratuityService.toggleGratuity(gratuityId, isEnabled);
 
             return sendSuccessResponse(
                 res,

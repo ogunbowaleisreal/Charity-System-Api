@@ -8,6 +8,7 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const database_1 = __importDefault(require("./config/database"));
 const redis_1 = require("./config/redis"); // add disconnect function
 const http_1 = __importDefault(require("http"));
+const announcementCron_1 = require("./cron/announcementCron");
 require('dotenv').config();
 const PORT = process.env.PORT || 3000;
 const server = http_1.default.createServer(app_1.default);
@@ -15,6 +16,7 @@ async function startServer() {
     try {
         await (0, database_1.default)();
         await (0, redis_1.connectRedis)();
+        (0, announcementCron_1.startAnnouncementCron)();
         mongoose_1.default.connection.once('open', () => {
             console.log('Successfully connected to MongoDB');
         });

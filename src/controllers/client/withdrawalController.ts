@@ -12,7 +12,7 @@ const flutterwave = new FlutterwaveService();
 export class WithdrawalController {
 
     async applyForWithdrawalToBank(req: AuthenticatedClientRequest, res: Response) {
-        const userId = req.user.userid;
+        const userId = req.user.userId;
         const walletId = req.params.walletId;
         try {
             const withdrawal = await withdrawalService.applyForWithdrawalToBank(

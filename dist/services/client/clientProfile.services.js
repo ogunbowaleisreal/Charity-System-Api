@@ -8,12 +8,14 @@ const Accounts_1 = require("../../models/Accounts");
 const refresh_token_1 = __importDefault(require("../../models/refresh.token"));
 const ResesndServices_1 = require("../ResesndServices");
 const otp_services_1 = __importDefault(require("../otp.services"));
+const bcryptutils_1 = __importDefault(require("../../utils/bcryptutils"));
 // import { comparePassword } from "../../utils/hash.utils";
 class clientProfileServices {
     constructor() {
         this.emailService = new ResesndServices_1.ResendEmailService();
         this.OtpService = new otp_services_1.default();
     }
+    // AuthService = new authService()
     async updateClientProfile(accountId, fields) {
         const allowedFields = [
             "businessAddress",
@@ -116,13 +118,27 @@ class clientProfileServices {
             return profile;
         }
     }
-    async deleteAccount(email) {
-        const user = await Accounts_1.Account.find({ email });
+    async deleteAccount(userId, password, reason) {
+        const user = await Accounts_1.Account.findById(userId);
         if (!user) {
             throw new Error("Account not found");
         }
-        await this.OtpService.generateAndSendOTP(email, "2fa");
-        return { message: "2FA Otp sent to your email" };
+        const verified = await bcryptutils_1.default.comparePassword(password, user.password);
+        if (!verified) {
+            throw new Error("Invalid password");
+        }
+        user.isDeleted = true;
+        await user.save();
+        const deletedRefreshTokens = await refresh_token_1.default.deleteMany({ userId: userId });
+        if (deletedRefreshTokens.deletedCount && deletedRefreshTokens.deletedCount > 0) {
+            await this.emailService.sendAccountDeletedNotification(user.email, reason);
+            return true;
+        }
+        else {
+            return false;
+        }
+        // await this.OtpService.generateAndSendOTP(email, "2fa")
+        ///   return { message: "2FA Otp sent to your email" }
     }
     async deleteAccount2FA(userId, otp, reason) {
         const account = await Accounts_1.Account.findById(userId);
@@ -132,7 +148,6 @@ class clientProfileServices {
         account.isDeleted = true;
         //    AndUpdate({ _id: userId }, { isDeleted: true }, { new: true });
         await this.OtpService.verifyOTP(account.email, otp, "2fa");
-        const deletedRefreshTokens = await refresh_token_1.default.deleteMany({ userId: userId });
         if (account) {
             this.emailService.sendAccountDeletedNotification(account.email, reason);
             return account;
@@ -146,9 +161,9 @@ class clientProfileServices {
         if (!account) {
             throw new Error("Account not found");
         }
-        if (account.twoFactorEnabled) {
-            throw new Error("Two-factor authentication is already enabled");
-        }
+        // if (account.twoFactorEnabled) {
+        //     throw new Error("Two-factor authentication is already enabled");
+        // }
         account.twoFactorEnabled = true;
         await account.save();
         return {
@@ -161,9 +176,9 @@ class clientProfileServices {
         if (!account) {
             throw new Error("Account not found");
         }
-        if (!account.twoFactorEnabled) {
-            throw new Error("Two-factor authentication is already disabled");
-        }
+        // if (!account.twoFactorEnabled) {
+        //     throw new Error("Two-factor authentication is already disabled");
+        // }
         account.twoFactorEnabled = false;
         await account.save();
         return {

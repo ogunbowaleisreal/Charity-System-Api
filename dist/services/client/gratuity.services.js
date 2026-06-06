@@ -9,16 +9,20 @@ const CONFIG_ID = "gratuity_config";
 class UserGratuityService {
     // 🔹 Get current gratuity settings for frontend
     async getCurrentGratuity() {
-        let config = await GratuityConfig_1.default.findById(CONFIG_ID)
+        let config = await GratuityConfig_1.default.findOne()
             .select("isEnabled title description suggestedPercentages");
         // 🔒 fallback if not initialized
         if (!config) {
-            config = await GratuityConfig_1.default.create({
-                _id: CONFIG_ID,
-                isEnabled: false,
-                title: "Support the platform",
-                suggestedPercentages: [5, 10, 15]
-            });
+            // config = await GratuityConfig.create({
+            //     _id: CONFIG_ID,
+            //     isEnabled: false,
+            //     title: "Support the platform",
+            //     suggestedPercentages: [5, 10, 15]
+            // });
+            config = {
+                "message": "Gratuity config not initialized",
+                "isEnabled": false,
+            };
         }
         return config;
     }

@@ -19,7 +19,7 @@ class BankDetailsController {
         }
         catch (error) {
             logger_1.default.error(error);
-            return (0, helpers_1.sendErrorResponse)(res, error);
+            return (0, helpers_1.sendErrorResponse)(res, error.message, error.statusCode);
         }
     }
     // =============================
@@ -64,6 +64,21 @@ class BankDetailsController {
         catch (error) {
             logger_1.default.error(error);
             return (0, helpers_1.sendErrorResponse)(res, error);
+        }
+    }
+    // =============================
+    // 🔹 DELETE
+    // =============================
+    async deleteBankDetails(req, res, next) {
+        try {
+            const { bankDetailsId } = req.params;
+            const bankDetails = await bankDetailsService.deleteBankDetails(bankDetailsId, req.user._id);
+            logger_1.default.info("Bank details deleted successfully");
+            return (0, helpers_1.sendSuccessResponse)(res, bankDetails, "bank details deleted successfully");
+        }
+        catch (error) {
+            logger_1.default.error(error);
+            return (0, helpers_1.sendErrorResponse)(res, error.message, error.statusCode);
         }
     }
 }

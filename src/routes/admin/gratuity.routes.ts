@@ -23,17 +23,22 @@ router.get(
     authorize([ADMIN_PERMISSIONS.GRATUITY?.VIEW]),
     gratuityCtrl.getConfig.bind(gratuityCtrl)
 );
+router.post(
+    "/create",
+    authorize([ADMIN_PERMISSIONS.GRATUITY?.CREATE]),
+    gratuityCtrl.createGratuityConfig.bind(gratuityCtrl)
+)
 
 // Update config
 router.put(
-    "/config",
+    "/config/:gratuityId",
     authorize([ADMIN_PERMISSIONS.GRATUITY?.UPDATE]),
     gratuityCtrl.updateConfig.bind(gratuityCtrl)
 );
 
 // Toggle gratuity system
 router.patch(
-    "/config/toggle",
+    "/config/toggle/:gratuityId",
     authorize([ADMIN_PERMISSIONS.GRATUITY?.UPDATE]),
     gratuityCtrl.toggleGratuity.bind(gratuityCtrl)
 );

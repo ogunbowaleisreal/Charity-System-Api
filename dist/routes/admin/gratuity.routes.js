@@ -17,8 +17,9 @@ router.use(ratelimiter_1.rateLimiter.general);
 // =========================
 // Get current config (admin view)
 router.get("/config", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.GRATUITY?.VIEW]), gratuityCtrl.getConfig.bind(gratuityCtrl));
+router.post("/create", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.GRATUITY?.CREATE]), gratuityCtrl.createGratuityConfig.bind(gratuityCtrl));
 // Update config
-router.put("/config", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.GRATUITY?.UPDATE]), gratuityCtrl.updateConfig.bind(gratuityCtrl));
+router.put("/config/:gratuityId", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.GRATUITY?.UPDATE]), gratuityCtrl.updateConfig.bind(gratuityCtrl));
 // Toggle gratuity system
-router.patch("/config/toggle", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.GRATUITY?.UPDATE]), gratuityCtrl.toggleGratuity.bind(gratuityCtrl));
+router.patch("/config/toggle/:gratuityId", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.GRATUITY?.UPDATE]), gratuityCtrl.toggleGratuity.bind(gratuityCtrl));
 exports.default = router;

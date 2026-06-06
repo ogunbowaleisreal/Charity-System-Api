@@ -282,9 +282,9 @@ class ResendEmailService {
         const admins = await AdminModel_1.default.find({
             permissions: {
                 $all: [
-                    "withdrawalAdminService.view",
-                    "withdrawalAdminService.approve",
-                    "withdrawalAdminService.reject"
+                    "withdrawal.view",
+                    "withdrawal.approve",
+                    "withdrawal.reject"
                 ]
             }
         });

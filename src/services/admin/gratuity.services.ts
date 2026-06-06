@@ -7,18 +7,38 @@ export class AdminGratuityService {
 
     // 🔹 Get current config (admin view)
     async getConfig() {
-        return await GratuityConfig.findById(CONFIG_ID);
+        return await GratuityConfig.findOne();
+    }
+
+    async createConfig(data: {
+        isEnabled?: boolean;
+        title?: string;
+        description?: string;
+        suggestedPercentages?: number[];
+    }) {
+
+        const existingConfig =
+            await GratuityConfig.findOne();
+
+        if (existingConfig) {
+            throw new AppError(
+                "Gratuity config already exists",
+                400
+            );
+        }
+
+        return await GratuityConfig.create(data);
     }
 
     // 🔹 Update config (admin only)
-    async updateConfig(data: {
+    async updateConfig(gratuityId: string, data: {
         isEnabled?: boolean;
         title?: string;
         description?: string;
         suggestedPercentages?: number[];
     }) {
         const config = await GratuityConfig.findByIdAndUpdate(
-            CONFIG_ID,
+            gratuityId,
             {
                 $set: data
             },
@@ -36,9 +56,9 @@ export class AdminGratuityService {
     }
 
     // 🔹 Toggle only (useful for quick admin switch)
-    async toggleGratuity(isEnabled: boolean) {
+    async toggleGratuity(gratuityId: string, isEnabled: boolean) {
         return await GratuityConfig.findByIdAndUpdate(
-            CONFIG_ID,
+            gratuityId,
             { $set: { isEnabled } },
             { new: true }
         );

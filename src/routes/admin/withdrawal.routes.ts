@@ -10,7 +10,7 @@ const withdrawalCtrl = new WithdrawalRequestsManagementController();
 router.use(rateLimiter.general);
 router.use(verifyAdminToken);
 
-router.get("/approve/:requestId",
+router.post("/approve/:requestId",
     authorize([ADMIN_PERMISSIONS.WITHDRAWAL.APPROVE, ADMIN_PERMISSIONS.WITHDRAWAL.REJECT, ADMIN_PERMISSIONS.WITHDRAWAL.VIEW]),
     withdrawalCtrl.acceptWithdrawalRequest);
 router.post("/reject/:requestId",

@@ -9,7 +9,7 @@ const router = (0, express_1.Router)();
 const withdrawalCtrl = new withdrawalRequests_management_1.WithdrawalRequestsManagementController();
 router.use(ratelimiter_1.rateLimiter.general);
 router.use(adminAuth_1.verifyAdminToken);
-router.get("/approve/:requestId", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.WITHDRAWAL.APPROVE, admin_management_1.ADMIN_PERMISSIONS.WITHDRAWAL.REJECT, admin_management_1.ADMIN_PERMISSIONS.WITHDRAWAL.VIEW]), withdrawalCtrl.acceptWithdrawalRequest);
+router.post("/approve/:requestId", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.WITHDRAWAL.APPROVE, admin_management_1.ADMIN_PERMISSIONS.WITHDRAWAL.REJECT, admin_management_1.ADMIN_PERMISSIONS.WITHDRAWAL.VIEW]), withdrawalCtrl.acceptWithdrawalRequest);
 router.post("/reject/:requestId", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.WITHDRAWAL.REJECT, admin_management_1.ADMIN_PERMISSIONS.WITHDRAWAL.APPROVE, admin_management_1.ADMIN_PERMISSIONS.WITHDRAWAL.VIEW]), withdrawalCtrl.rejectWithdrawalRequest);
 router.get("/list", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.WITHDRAWAL.VIEW, admin_management_1.ADMIN_PERMISSIONS.WITHDRAWAL.APPROVE, admin_management_1.ADMIN_PERMISSIONS.WITHDRAWAL.REJECT]), withdrawalCtrl.getWithdrawalRequests);
 exports.default = router;

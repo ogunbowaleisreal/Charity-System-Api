@@ -11,4 +11,5 @@ router.use(auth_1.verifyClientToken);
 router.post("/create", bankCtrl.createBankDetails);
 router.get("/user", bankCtrl.getUserBankDetails);
 router.patch("/update/:bankDetailsId", bankCtrl.updateBankDetails);
+router.delete("/delete/:bankDetailsId", bankCtrl.deleteBankDetails);
 exports.default = router;
