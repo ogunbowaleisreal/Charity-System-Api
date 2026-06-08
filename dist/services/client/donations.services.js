@@ -77,7 +77,7 @@ class DonationService {
             txRef: reference,
             amount: amountData.totalAmount, // convert to kobo
             currency: "NGN",
-            redirectUrl: `${process.env.BASE_URL}/donations`,
+            redirectUrl: `${process.env.REDIRECT_URL}`,
             customerEmail: data.email,
             customerName: `${data.firstname} ${data.lastname}`,
             link_expiration: linkExpiration

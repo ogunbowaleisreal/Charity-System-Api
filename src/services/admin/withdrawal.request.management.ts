@@ -29,7 +29,7 @@ export class WithdrawalAdminService {
 
         const [data, total] = await Promise.all([
             WithdrawalRequest.find(query)
-                .populate("userId firstName lastName role phoneNumber")
+                .populate("userId", "email firstName lastName role phoneNumber logo profilePicture")
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
@@ -121,7 +121,7 @@ export class WithdrawalAdminService {
                 fullName: request.bankDetails.accountName,
                 method: "bank_transfer",
                 provider: "flutterwave",
-                reference: reference,
+                reference: request.reference,
                 providerReference: reference,
                 //   providerTransactionId: transfer.id,
                 balanceBefore: 0, // 🔴 you should calculate this properly

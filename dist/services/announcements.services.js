@@ -156,7 +156,7 @@ class AnnouncementService {
                 { description: { $regex: search, $options: "i" } },
             ];
         }
-        if (filter.status)
+        if (status)
             filter.status = status;
         if (audience)
             filter.audience = audience;
@@ -167,6 +167,7 @@ class AnnouncementService {
         const skip = (Number(page) - 1) * Number(limit);
         const [announcements, totalCount] = await Promise.all([
             Announcement_1.Announcement.find(filter)
+                .populate("createdBy", "firstName lastName adminLevel profilePicture")
                 .sort(sortObj)
                 .skip(skip)
                 .limit(Number(limit))
@@ -214,7 +215,8 @@ class AnnouncementService {
             audience: announcement.audience,
             createdBy: announcement.createdBy.toString(),
             specificUsers: announcement.specificUsers?.map(user => user.toString()),
-            announcementStartAt: announcement.announcementStartAt,
+            // announcementStartAt:
+            //     announcement.announcementStartAt,
         });
     }
     // DELETE

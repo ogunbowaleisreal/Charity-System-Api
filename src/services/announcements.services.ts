@@ -289,7 +289,7 @@ export class AnnouncementService {
                 { description: { $regex: search, $options: "i" } },
             ];
         }
-        if (filter.status) filter.status = status;
+        if (status) filter.status = status;
         if (audience) filter.audience = audience;
         if (channel) filter.channel = channel;
 
@@ -300,6 +300,7 @@ export class AnnouncementService {
 
         const [announcements, totalCount] = await Promise.all([
             Announcement.find(filter)
+                .populate("createdBy", "firstName lastName adminLevel profilePicture")
                 .sort(sortObj)
                 .skip(skip)
                 .limit(Number(limit))
@@ -343,7 +344,8 @@ export class AnnouncementService {
     // }
 
     async resendAnnouncement(
-        announcementId: string
+        announcementId: string,
+        //announcementStartAt:Date
     ) {
 
         const announcement =
@@ -370,8 +372,8 @@ export class AnnouncementService {
                     user => user.toString()
                 ),
 
-            announcementStartAt:
-                announcement.announcementStartAt,
+            // announcementStartAt:
+            //     announcement.announcementStartAt,
         });
     }
 

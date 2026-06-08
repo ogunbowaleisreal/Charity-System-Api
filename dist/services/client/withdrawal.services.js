@@ -106,8 +106,8 @@ class WithdrawalService {
         // return transaction
     }
     async firstTimeWalletPinSet(userId, pin) {
-        if (!/^\d{6}$/.test(pin)) {
-            throw new errorHandler_1.AppError("PIN must be exactly 6 digits", 400);
+        if (!/^\d{4}$/.test(pin)) {
+            throw new errorHandler_1.AppError("PIN must be exactly 4 digits", 400);
         }
         const hashedPin = await bcryptutils_1.default.hashPassword(pin);
         // await Wallet.updateOne(
@@ -153,8 +153,8 @@ class WithdrawalService {
         return wallet;
     }
     async setWalletPin(userId, Pin) {
-        if (!/^\d{6}$/.test(Pin)) {
-            throw new errorHandler_1.AppError("PIN must be exactly 6 digits", 400);
+        if (!/^\d{4}$/.test(Pin)) {
+            throw new errorHandler_1.AppError("PIN must be exactly 4 digits", 400);
         }
         const user = await Accounts_1.Account.findById(userId).lean();
         if (!user) {
@@ -254,11 +254,19 @@ class WithdrawalService {
     // =========================
     // 🔹 WITHDRAW FUNDS
     // =========================
-    async applyForWithdrawalToBank(userId, walletId, amount, accountName, bankCode, bank_name, accountNumber, narration) {
+    async applyForWithdrawalToBank(userId, amount, walletId, accountName, bankCode, bank_name, accountNumber, narration) {
         console.log(userId);
+        const user = await Accounts_1.Account.findById(userId);
+        if (!user)
+            throw new Error("Account not found");
+        if (user.twoFactorWithdrawalEnabled) {
+            await otpService.generateAndSendOTP(user.email, "2fa");
+            return { message: "Otp sent to email to confirm withdrawal", status: 201 };
+        }
         const wallet = await wallet_1.Wallet.findById(walletId);
         if (!wallet)
             throw new Error("Wallet not found");
+        //if(!ammount)
         if (wallet.availableBalance < amount) {
             throw new Error("Insufficient balance");
         }
@@ -266,6 +274,7 @@ class WithdrawalService {
         wallet.availableBalance -= amount;
         wallet.lockedBalance += amount;
         await wallet.save();
+        const reference = `WIT_${Date.now()}_${crypto_1.default.randomBytes(4).toString("hex")}`;
         const withdrawalRequest = await WithdrawalRequest_1.WithdrawalRequest.create({
             wallet: walletId,
             userId,
@@ -275,6 +284,7 @@ class WithdrawalService {
             availableBalanceAtRequest: wallet.availableBalance,
             narration,
             method: "bank_transfer",
+            reference,
             bankDetails: {
                 bankCode: bankCode,
                 accountNumber,
@@ -298,6 +308,58 @@ class WithdrawalService {
         // });
         // await newTransaction.save();
         return withdrawalRequest;
+    }
+    async verifyWithdrawalRequest2FA(userId, amount, otp, walletId, accountName, bankCode, bank_name, accountNumber, narration) {
+        const user = await Accounts_1.Account.findById(userId);
+        if (!user)
+            throw new Error("user account not found ");
+        const isVerified = await otpService.verifyOTP(user.email, otp, "2fa");
+        if (!isVerified)
+            throw new Error("OTP verification failed");
+        const wallet = await wallet_1.Wallet.findById(walletId);
+        if (!wallet)
+            throw new Error("Wallet not found");
+        //if(!ammount)
+        if (wallet.availableBalance < amount) {
+            throw new Error("Insufficient balance");
+        }
+        // 1. LOCK FUNDS
+        wallet.availableBalance -= amount;
+        wallet.lockedBalance += amount;
+        await wallet.save();
+        const reference = `WIT_${Date.now()}_${crypto_1.default.randomBytes(4).toString("hex")}`;
+        const withdrawalRequest = await WithdrawalRequest_1.WithdrawalRequest.create({
+            wallet: walletId,
+            userId,
+            amount,
+            type: "withdrawal",
+            status: "pending",
+            availableBalanceAtRequest: wallet.availableBalance,
+            narration,
+            method: "bank_transfer",
+            bankDetails: {
+                bankCode: bankCode,
+                accountNumber,
+                accountName: accountName,
+            },
+            reference
+        });
+        await emailService.sendNewWwithdrawalRequestNotification(withdrawalRequest);
+        //await PushNotificationService.sendToUsers()  
+        return withdrawalRequest;
+    }
+    async toggle2faWithdrawal(userId, toggle) {
+        const user = await Accounts_1.Account.findById(userId);
+        if (!user)
+            throw new Error("user account not found ");
+        if (toggle) {
+            user.twoFactorWithdrawalEnabled = true;
+            user.save();
+            return { message: "2fa has been enabled", status: 200 };
+        }
+        user.twoFactorEnabled = false;
+        user.save();
+        return { message: "2fa has been disabled", status: 200 };
     }
     async getAllBanks() {
         const banks = await flutterwave.getBanks();

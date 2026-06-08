@@ -14,6 +14,7 @@ import { PushNotificationService } from "../pushNotificationService";
 import { ResendEmailService } from "../ResesndServices";
 import CacheService from "../cacheServices";
 import bcryptUtil from "../../utils/bcryptutils";
+import { is } from "zod/locales";
 
 
 const flutterwave = new FlutterwaveService();
@@ -140,8 +141,8 @@ export class WithdrawalService {
     }
 
     async firstTimeWalletPinSet(userId: string, pin: string) {
-        if (!/^\d{6}$/.test(pin)) {
-            throw new AppError("PIN must be exactly 6 digits", 400);
+        if (!/^\d{4}$/.test(pin)) {
+            throw new AppError("PIN must be exactly 4 digits", 400);
         }
         const hashedPin = await bcryptUtil.hashPassword(pin)
 
@@ -196,8 +197,8 @@ export class WithdrawalService {
     }
 
     async setWalletPin(userId: string, Pin: string) {
-        if (!/^\d{6}$/.test(Pin)) {
-            throw new AppError("PIN must be exactly 6 digits", 400);
+        if (!/^\d{4}$/.test(Pin)) {
+            throw new AppError("PIN must be exactly 4 digits", 400);
         }
 
         const user = await Account.findById(userId).lean();
@@ -328,18 +329,26 @@ export class WithdrawalService {
     // =========================
     async applyForWithdrawalToBank(
         userId: string,
-        walletId: string,
         amount: number,
-        accountName: string,
-        bankCode: string,
-        bank_name: string,
-        accountNumber: string,
-        narration: string
+        walletId?: string,
+        accountName?: string,
+        bankCode?: string,
+        bank_name?: string,
+        accountNumber?: string,
+        narration?: string
     ) {
         console.log(userId)
+        const user = await Account.findById(userId)
+        if (!user) throw new Error("Account not found")
+
+        if (user.twoFactorWithdrawalEnabled) {
+            await otpService.generateAndSendOTP(user.email, "2fa")
+            return { message: "Otp sent to email to confirm withdrawal", status: 201 }
+        }
         const wallet = await Wallet.findById(walletId);
 
         if (!wallet) throw new Error("Wallet not found");
+        //if(!ammount)
 
         if (wallet.availableBalance < amount) {
             throw new Error("Insufficient balance");
@@ -349,6 +358,8 @@ export class WithdrawalService {
         wallet.availableBalance -= amount;
         wallet.lockedBalance += amount;
         await wallet.save();
+
+        const reference = `WIT_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
 
 
 
@@ -361,6 +372,7 @@ export class WithdrawalService {
             availableBalanceAtRequest: wallet.availableBalance,
             narration,
             method: "bank_transfer",
+            reference,
             bankDetails: {
                 bankCode: bankCode,
                 accountNumber,
@@ -388,6 +400,75 @@ export class WithdrawalService {
 
         return withdrawalRequest
 
+    }
+
+    async verifyWithdrawalRequest2FA(
+        userId: string,
+        amount: number,
+        otp: string,
+        walletId?: string,
+        accountName?: string,
+        bankCode?: string,
+        bank_name?: string,
+        accountNumber?: string,
+        narration?: string
+    ) {
+        const user = await Account.findById(userId)
+        if (!user) throw new Error("user account not found ")
+
+        const isVerified = await otpService.verifyOTP(user.email, otp, "2fa")
+        if (!isVerified) throw new Error("OTP verification failed")
+        const wallet = await Wallet.findById(walletId);
+
+        if (!wallet) throw new Error("Wallet not found");
+        //if(!ammount)
+
+        if (wallet.availableBalance < amount) {
+            throw new Error("Insufficient balance");
+        }
+
+        // 1. LOCK FUNDS
+        wallet.availableBalance -= amount;
+        wallet.lockedBalance += amount;
+        await wallet.save();
+
+        const reference = `WIT_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
+
+
+        const withdrawalRequest = await WithdrawalRequest.create({
+            wallet: walletId,
+            userId,
+            amount,
+            type: "withdrawal",
+            status: "pending",
+            availableBalanceAtRequest: wallet.availableBalance,
+            narration,
+            method: "bank_transfer",
+            bankDetails: {
+                bankCode: bankCode,
+                accountNumber,
+                accountName: accountName,
+            },
+            reference
+        });
+
+        await emailService.sendNewWwithdrawalRequestNotification(withdrawalRequest)
+        //await PushNotificationService.sendToUsers()  
+        return withdrawalRequest
+
+    }
+
+    async toggle2faWithdrawal(userId: string, toggle: boolean) {
+        const user = await Account.findById(userId)
+        if (!user) throw new Error("user account not found ")
+        if (toggle) {
+            user.twoFactorWithdrawalEnabled = true
+            user.save()
+            return { message: "2fa has been enabled", status: 200 }
+        }
+        user.twoFactorEnabled = false
+        user.save()
+        return { message: "2fa has been disabled", status: 200 }
     }
 
     async getAllBanks() {

@@ -140,11 +140,11 @@ const WithdrawalRequestSchema = new Schema<IWithdrawalRequest>(
         providerReference: String,
         providerTransactionId: String,
 
-        idempotencyKey: {
-            type: String,
-            // required: true,
-            unique: true,
-        },
+        // idempotencyKey: {
+        //     type: String,
+        //     // required: true,
+        //     unique: true,
+        // },
 
         processedAt: Date,
     },

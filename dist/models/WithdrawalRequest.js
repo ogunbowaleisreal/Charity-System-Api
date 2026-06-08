@@ -95,11 +95,11 @@ const WithdrawalRequestSchema = new mongoose_1.Schema({
     },
     providerReference: String,
     providerTransactionId: String,
-    idempotencyKey: {
-        type: String,
-        // required: true,
-        unique: true,
-    },
+    // idempotencyKey: {
+    //     type: String,
+    //     // required: true,
+    //     unique: true,
+    // },
     processedAt: Date,
 }, { timestamps: true });
 // 🔥 indexes

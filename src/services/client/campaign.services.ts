@@ -71,6 +71,7 @@ export type campaignFilter = {
     limit: number;
     category: string;
     status: string;
+    search?: string
 }
 
 
@@ -122,36 +123,86 @@ export class CampaignService {
     // =============================
 
     async getAllCampaigns(query: campaignFilter) {
-        const { page = 1, limit = 10, category, status } = query;
+        const { page = 1, limit = 10, category, status, search } = query;
 
-        const filter: any = { isDeleted: false, isActive: true };
+        const filter: any = {
+            isDeleted: false,
+            isActive: true,
+        };
 
         if (category) filter.category = category;
         if (status) filter.status = status;
 
-        const campaigns = await Campaign.find(filter)
-            .sort({ createdAt: -1 })
-            .skip((page - 1) * limit)
-            .limit(limit)
-            .populate("owner", "firstName lastName companyName logo ")
-            .populate("category", "categoryName description image status")
-            .populate("tags", "name");
+        // =========================
+        // 🔎 SEARCH LOGIC
+        // =========================
+        if (search) {
+            filter.$or = [
+                { title: { $regex: search, $options: "i" } },
+                { description: { $regex: search, $options: "i" } },
+            ];
+        }
 
-        const total = await Campaign.countDocuments(filter);
+        const skip = (page - 1) * limit;
+
+        const [campaigns, total] = await Promise.all([
+            Campaign.find(filter)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(Number(limit))
+                .populate("owner", "firstName lastName companyName logo")
+                .populate("category", "categoryName description image status")
+                .populate("tags", "name")
+                .lean(),
+
+            Campaign.countDocuments(filter),
+        ]);
+
         const totalPages = Math.ceil(total / limit);
 
         return {
             campaigns,
             pagination: {
-                current_page: page,
+                current_page: Number(page),
                 total_pages: totalPages,
-                per_page: limit,
+                per_page: Number(limit),
                 total_records: total,
                 has_next_page: page < totalPages,
                 has_prev_page: page > 1,
             },
         };
     }
+    // async getAllCampaigns(query: campaignFilter) {
+    //     const { page = 1, limit = 10, category, status } = query;
+
+    //     const filter: any = { isDeleted: false, isActive: true };
+
+    //     if (category) filter.category = category;
+    //     if (status) filter.status = status;
+
+    //     const campaigns = await Campaign.find(filter)
+    //         .sort({ createdAt: -1 })
+    //         .skip((page - 1) * limit)
+    //         .limit(limit)
+    //         .populate("owner", "firstName lastName companyName logo ")
+    //         .populate("category", "categoryName description image status")
+    //         .populate("tags", "name");
+
+    //     const total = await Campaign.countDocuments(filter);
+    //     const totalPages = Math.ceil(total / limit);
+
+    //     return {
+    //         campaigns,
+    //         pagination: {
+    //             current_page: page,
+    //             total_pages: totalPages,
+    //             per_page: limit,
+    //             total_records: total,
+    //             has_next_page: page < totalPages,
+    //             has_prev_page: page > 1,
+    //         },
+    //     };
+    // }
 
     async getCampaignById(campaignId: string) {
         const campaign = await Campaign.findById(campaignId)
@@ -316,7 +367,7 @@ export class CampaignService {
             .sort(sort)
             .skip((filter.page - 1) * filter.limit)
             .limit(filter.limit)
-            .populate("donor", "firstName lastName");
+            .populate("donor", "firstName lastName profilePicture logo country state");
 
         const total = await Donation.countDocuments({
             campaign: campaignId,

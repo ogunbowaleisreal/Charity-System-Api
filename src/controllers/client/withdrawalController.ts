@@ -17,8 +17,8 @@ export class WithdrawalController {
         try {
             const withdrawal = await withdrawalService.applyForWithdrawalToBank(
                 userId,
-                walletId,
                 req.body.amount,
+                walletId,
                 req.body.accountName,
                 req.body.bankCode,
                 req.body.bank_name,
@@ -30,6 +30,41 @@ export class WithdrawalController {
             logger.error(error);
             return sendErrorResponse(res, error);
         }
+    }
+
+    async verifyWithdrawalRequestOtp(req: AuthenticatedClientRequest, res: Response) {
+        const userId = req.user.userId
+        const walletId = req.params.walletId;
+        try {
+            const withdrawal = await withdrawalService.verifyWithdrawalRequest2FA(
+                userId,
+                req.body.amount,
+                req.body.otp,
+                walletId,
+                req.body.accountName,
+                req.body.bankCode,
+                req.body.bank_name,
+                req.body.accountNumber,
+                req.body.narration
+            );
+            return sendSuccessResponse(res, withdrawal);
+        } catch (error: any) {
+            logger.error(error);
+            return sendErrorResponse(res, error);
+        }
+    }
+
+    async toggleWithdrawal2Fa(req: AuthenticatedClientRequest, res: Response) {
+        const userId = req.user.userId
+        const toggle = req.body.toggle as boolean
+        try {
+            const response = await withdrawalService.toggle2faWithdrawal(userId, toggle)
+            sendSuccessResponse(res, response, "2fa for withdrawal has been updated")
+        } catch (error: any) {
+            logger.error(error);
+            return sendErrorResponse(res, error);
+        }
+
     }
 
 

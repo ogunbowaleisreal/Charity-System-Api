@@ -36,7 +36,7 @@ export class WithdrawalRequestsManagementController {
             const response = await withdrawalRequestsService.getWithdrawalRequests(req.query);
             return sendSuccessResponse(res, response);
         } catch (error: any) {
-            logger.error("Get transaction failed", { error });
+            logger.error("Get transactions failed", { error });
             return sendErrorResponse(res, error);
         }
     }

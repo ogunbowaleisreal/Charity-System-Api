@@ -15,8 +15,32 @@ class WithdrawalController {
         const userId = req.user.userId;
         const walletId = req.params.walletId;
         try {
-            const withdrawal = await withdrawalService.applyForWithdrawalToBank(userId, walletId, req.body.amount, req.body.accountName, req.body.bankCode, req.body.bank_name, req.body.accountNumber, req.body.narration);
+            const withdrawal = await withdrawalService.applyForWithdrawalToBank(userId, req.body.amount, walletId, req.body.accountName, req.body.bankCode, req.body.bank_name, req.body.accountNumber, req.body.narration);
             return (0, helpers_1.sendSuccessResponse)(res, withdrawal);
+        }
+        catch (error) {
+            logger_1.default.error(error);
+            return (0, helpers_1.sendErrorResponse)(res, error);
+        }
+    }
+    async verifyWithdrawalRequestOtp(req, res) {
+        const userId = req.user.userId;
+        const walletId = req.params.walletId;
+        try {
+            const withdrawal = await withdrawalService.verifyWithdrawalRequest2FA(userId, req.body.amount, req.body.otp, walletId, req.body.accountName, req.body.bankCode, req.body.bank_name, req.body.accountNumber, req.body.narration);
+            return (0, helpers_1.sendSuccessResponse)(res, withdrawal);
+        }
+        catch (error) {
+            logger_1.default.error(error);
+            return (0, helpers_1.sendErrorResponse)(res, error);
+        }
+    }
+    async toggleWithdrawal2Fa(req, res) {
+        const userId = req.user.userId;
+        const toggle = req.body.toggle;
+        try {
+            const response = await withdrawalService.toggle2faWithdrawal(userId, toggle);
+            (0, helpers_1.sendSuccessResponse)(res, response, "2fa for withdrawal has been updated");
         }
         catch (error) {
             logger_1.default.error(error);

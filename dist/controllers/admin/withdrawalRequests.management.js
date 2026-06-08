@@ -38,7 +38,7 @@ class WithdrawalRequestsManagementController {
             return (0, helpers_1.sendSuccessResponse)(res, response);
         }
         catch (error) {
-            logger_1.default.error("Get transaction failed", { error });
+            logger_1.default.error("Get transactions failed", { error });
             return (0, helpers_1.sendErrorResponse)(res, error);
         }
     }

@@ -19,7 +19,9 @@ router.post("/wallet/verify-pin", withdrawalCtrl.verifyWalletPin);
 router.post("/wallet/verify-reset-otp", withdrawalCtrl.verifyWalletPinResetOTP);
 router.post("/wallet/set-pin", withdrawalCtrl.setWalletPin);
 router.get("/wallet", withdrawalCtrl.getUserWallet);
+router.post("/toggle-withdrawal-2fa", withdrawalCtrl.toggleWithdrawal2Fa)
 router.post("/wallet/:campaignId", withdrawalCtrl.withdrawFundsToWwallet);
 router.post("/bank/:walletId", withdrawalCtrl.applyForWithdrawalToBank);
+router.post("/verify-withdrawal-2fa/:walletId", withdrawalCtrl.verifyWithdrawalRequestOtp)
 
 export default router;
