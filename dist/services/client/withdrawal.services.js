@@ -355,11 +355,11 @@ class WithdrawalService {
         if (toggle) {
             user.twoFactorWithdrawalEnabled = true;
             user.save();
-            return { message: "2fa has been enabled", status: 200 };
+            return { message: "2fa has been enabled", user, status: 200 };
         }
         user.twoFactorEnabled = false;
         user.save();
-        return { message: "2fa has been disabled", status: 200 };
+        return { message: "2fa has been disabled", user, status: 200 };
     }
     async getAllBanks() {
         const banks = await flutterwave.getBanks();

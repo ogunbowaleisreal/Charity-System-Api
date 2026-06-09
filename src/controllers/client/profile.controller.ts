@@ -192,7 +192,7 @@ export class profileController {
                 result = await clientServices.disableTwoFactorAuth(userId);
             }
 
-            sendSuccessResponse(res, { twoFactorEnabled: enabled }, result.message);
+            sendSuccessResponse(res, { twoFactorEnabled: enabled, user: result.account }, result.message);
         } catch (error: any) {
             logger.error("Toggle 2FA error", {
                 message: error.message,

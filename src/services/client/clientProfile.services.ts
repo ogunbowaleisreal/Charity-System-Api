@@ -172,7 +172,8 @@ export class clientProfileServices {
 
         return {
             twoFactorEnabled: account.twoFactorEnabled,
-            message: account.twoFactorEnabled ? "2FA toggled on" : "2FA toggled off"
+            message: account.twoFactorEnabled ? "2FA toggled on" : "2FA toggled off",
+            account
         };
     }
 
@@ -192,7 +193,8 @@ export class clientProfileServices {
 
         return {
             twoFactorEnabled: account.twoFactorEnabled,
-            message: account.twoFactorEnabled ? "2FA toggled on" : "2FA toggled off"
+            message: account.twoFactorEnabled ? "2FA toggled on" : "2FA toggled off",
+            account
         };
     }
 

@@ -168,7 +168,8 @@ class clientProfileServices {
         await account.save();
         return {
             twoFactorEnabled: account.twoFactorEnabled,
-            message: account.twoFactorEnabled ? "2FA toggled on" : "2FA toggled off"
+            message: account.twoFactorEnabled ? "2FA toggled on" : "2FA toggled off",
+            account
         };
     }
     async disableTwoFactorAuth(accountId) {
@@ -183,7 +184,8 @@ class clientProfileServices {
         await account.save();
         return {
             twoFactorEnabled: account.twoFactorEnabled,
-            message: account.twoFactorEnabled ? "2FA toggled on" : "2FA toggled off"
+            message: account.twoFactorEnabled ? "2FA toggled on" : "2FA toggled off",
+            account
         };
     }
 }

@@ -17,11 +17,13 @@ router.patch('/update',
 
 router.post("/change-password",
     //verifyJwt,
-    profileCtrl.changePassword)
+    profileCtrl.changePassword
+)
 
 router.post("/verify-password-reset-otp",
     //verifyJwt,
-    profileCtrl.verifyPasswordResetOtp)
+    profileCtrl.verifyPasswordResetOtp
+)
 
 router.post("/set-password",
     //verifyJwt,
@@ -37,7 +39,8 @@ router.delete("/delete-account-verification",
 )
 router.get("/",
     //verifyJwt,
-    profileCtrl.getClientProfile)
+    profileCtrl.getClientProfile
+)
 
 router.post(
     "/toggle-2fa",
