@@ -206,7 +206,7 @@ export class WithdrawalService {
             throw new AppError("PIN must be exactly 4 digits", 400);
         }
 
-        const user = await Account.findById(userId).lean();
+        const user = await Account.findById(userId);
         if (!user) {
             throw new Error("User not found");
         }
