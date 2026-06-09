@@ -50,6 +50,10 @@ const AccountSchema = new mongoose_1.Schema({
         type: Boolean,
         default: false,
     },
+    isWalletPinSet: {
+        type: Boolean,
+        default: false
+    },
     otp: String,
     otpExpires: Date,
     // ===== PASSWORD RESET =====

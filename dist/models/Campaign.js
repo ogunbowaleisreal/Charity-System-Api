@@ -16,6 +16,9 @@ const CampaignSchema = new mongoose_1.Schema({
         type: String,
         required: true,
     },
+    thumbnailUrl: {
+        type: String
+    },
     category: {
         type: mongoose_1.Schema.Types.ObjectId,
         required: true,

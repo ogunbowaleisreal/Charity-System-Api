@@ -7,7 +7,7 @@ const authCtrl = new authController()
 
 
 const router = Router();
-router.use(rateLimiter.auth)
+//router.use(rateLimiter.auth)
 router.post('/login', authCtrl.login)
 router.post('/register', authCtrl.register)
 router.post("/verify-otp", authCtrl.verifyOtp)

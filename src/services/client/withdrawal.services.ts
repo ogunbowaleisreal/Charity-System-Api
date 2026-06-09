@@ -154,6 +154,8 @@ export class WithdrawalService {
         //         },
         //     }
         // )
+        const user = await Account.findById(userId)
+        if (!user) throw new Error("User not found");
         const wallet = await Wallet.findOne({ userId }).select("+walletPin")
         if (!wallet) throw new Error("Wallet not found")
         if (wallet.walletPin) {
@@ -163,6 +165,9 @@ export class WithdrawalService {
         }
         wallet.walletPin = hashedPin
         await wallet.save()
+
+        user.isWalletPinSet = true
+        await user.save()
     }
 
     async resetWalletPin(userId: string) {
@@ -222,6 +227,8 @@ export class WithdrawalService {
 
         wallet.walletPin = hashedPin;
         await wallet.save();
+        user.isWalletPinSet = true
+        await user.save()
 
         await CacheService.delete(
             `wallet_pin_reset_verified:${user.email}`

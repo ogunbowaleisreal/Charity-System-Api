@@ -43,6 +43,7 @@ axiosInstance.interceptors.response.use((response) => response, (error) => {
     throw error;
 });
 class webhookServices {
+    //private flutterwave = new FlutterwaveService()
     async handleSafeHavenWebhook(payload, signature) {
         const { eventType, data } = payload;
         console.log(payload);

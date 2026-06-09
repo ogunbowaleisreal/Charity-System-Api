@@ -195,6 +195,7 @@ export interface flutterwaveWebhookPayload {
 }
 
 export class webhookServices {
+    //private flutterwave = new FlutterwaveService()
     async handleSafeHavenWebhook(payload: SafeHavenWebhookPayload, signature: string) {
 
         const { eventType, data } = payload;
@@ -245,7 +246,7 @@ export class webhookServices {
         }
     }
 
-    private async handleTransferCompleted(
+    async handleTransferCompleted(
         payload: IFlutterwaveTransferCompletedWebhook
     ) {
         const data = payload.data;

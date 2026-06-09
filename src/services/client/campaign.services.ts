@@ -30,6 +30,7 @@ export type CreateCampaignDTO = {
     // =========================
     category: string;
     image: string;
+    thumbnailUrl: string;
     title: string;
     tags: Types.ObjectId[];
     authors: string[]; // usually Account IDs or names depending on your system
@@ -59,6 +60,7 @@ export type UpdateCampaign = {
     tags: Types.ObjectId[];
     //deadline: Date;
     closing: Date;
+    thumbnailUrl: string;
     isActive: boolean;
     showDonationHistory: boolean;
     allowComments: boolean;

@@ -10,6 +10,33 @@ const errorHandler_1 = require("../middleware/errorHandler");
 const constants_1 = require("../utils/constants");
 const helpers_1 = require("../utils/helpers");
 const axios_1 = __importDefault(require("axios"));
+const wallet_1 = require("../models/wallet");
+const transaction_1 = require("../models/transaction");
+const WithdrawalRequest_1 = require("../models/WithdrawalRequest");
+const mockTransferCompletedWebhook = {
+    event: "transfer.completed",
+    "event.type": "Transfer",
+    data: {
+        id: 26251,
+        account_number: "1234567840",
+        bank_name: "ACCESS BANK NIGERIA",
+        bank_code: "044",
+        fullname: "Flutterwave Developers",
+        created_at: new Date().toISOString(),
+        currency: "NGN",
+        debit_currency: "NGN",
+        amount: 5500,
+        fee: 45,
+        status: "SUCCESSFUL",
+        reference: "akhlm-pstmnpyt-rfxx007_PMCKDU_1",
+        meta: null,
+        narration: "Withdrawal payout",
+        approver: null,
+        complete_message: "Transfer completed successfully",
+        requires_approval: 0,
+        is_approved: 1,
+    },
+};
 const mockNameEnquiryResponse = (bank_code, accountNumber) => {
     return {
         accountNumber: accountNumber,
@@ -17,9 +44,14 @@ const mockNameEnquiryResponse = (bank_code, accountNumber) => {
         bankCode: bank_code,
     };
 };
+// const webhookService = new webhookServices()
 class FlutterwaveService {
+    // private webhookService = new webhookServices()
+    // private webhookService
+    //private webhookService
     constructor() {
         this.provider = providers_1.PROVIDERS.FLUTTERWAVE;
+        // this.webhookService = new webhookServices()
         this.client = axios_1.default.create({
             baseURL: this.provider.baseUrl,
             timeout: 30000,
@@ -39,6 +71,79 @@ class FlutterwaveService {
             }
             throw error;
         });
+    }
+    async handleTransferCompleted(payload) {
+        const data = payload.data;
+        const status = data.status;
+        console.log(payload);
+        switch (status) {
+            case "SUCCESSFUL": {
+                logger_1.default.info("Transfer successful");
+                const transaction = await transaction_1.WalletTransaction.findOne({ reference: data.reference });
+                if (!transaction)
+                    throw new Error("Transaction not found");
+                if (transaction.status === "successful") {
+                    logger_1.default.info("Transaction already successful", { reference: data.reference });
+                    return;
+                }
+                if (transaction.status === "failed") {
+                    logger_1.default.info("Transaction already failed", { reference: data.reference });
+                    return;
+                }
+                transaction.status = "successful";
+                transaction.providerReference = data.reference;
+                transaction.providerTransactionId = data.id;
+                await transaction.save();
+                await wallet_1.Wallet.updateOne({ userId: transaction.userId }, { $inc: { lockedBalance: -data.amount } });
+                // const userWallet = await Wallet.findOne({ userId: transaction.userId });
+                // if (!userWallet) throw new Error("Wallet not found");
+                // userWallet.lockedBalance -= data.amount;
+                // await userWallet.save();
+                const request = await WithdrawalRequest_1.WithdrawalRequest.findOne({ reference: data.reference });
+                if (!request)
+                    throw new Error("Withdrawal request not found");
+                request.status = "completed";
+                request.providerReference = data.reference;
+                request.providerTransactionId = data.id.toString();
+                await request.save();
+                logger_1.default.info("Transfer successful", { reference: data.reference });
+                return { transaction, status: "successful" };
+            }
+            case "FAILED": {
+                logger_1.default.info("Transfer failed");
+                const transaction = await transaction_1.WalletTransaction.findOne({ reference: data.reference });
+                if (!transaction)
+                    throw new Error("Transaction not found");
+                if (transaction.status === "successful") {
+                    logger_1.default.info("Transaction already successful", { reference: data.reference });
+                    return;
+                }
+                if (transaction.status === "failed") {
+                    logger_1.default.info("Transaction already failed", { reference: data.reference });
+                    return;
+                }
+                transaction.status = "failed";
+                transaction.providerReference = data.reference;
+                transaction.providerTransactionId = data.id;
+                await transaction.save();
+                await wallet_1.Wallet.updateOne({ userId: transaction.userId }, {
+                    $inc: {
+                        availableBalance: data.amount,
+                        lockedBalance: -data.amount
+                    }
+                });
+                // const userWallet = await Wallet.findOne({ userId: transaction.userId });
+                // if (!userWallet) throw new Error("Wallet not found");
+                // userWallet.availableBalance += data.amount;
+                // userWallet.lockedBalance -= data.amount;
+                // await userWallet.save();
+                return { transaction, status: "failed" };
+            }
+            default: {
+                logger_1.default.warn("Unhandled charge status", { status });
+                return null;
+            }
+        }
     }
     isSuccessResponse(status) {
         return status === "success";
@@ -348,6 +453,37 @@ class FlutterwaveService {
             // Add beneficiary name if provided
             if (data.beneficiaryName) {
                 payload.beneficiary_name = data.beneficiaryName;
+            }
+            if (process.env.NODE_ENV == "development") {
+                const date = Date().toString();
+                console.log(payload);
+                mockTransferCompletedWebhook.data.reference = payload.reference;
+                mockTransferCompletedWebhook.data.account_number = payload.account_number;
+                mockTransferCompletedWebhook.data.bank_code = payload.account_bank;
+                mockTransferCompletedWebhook.data.created_at = date;
+                mockTransferCompletedWebhook.data.fullname = "John Doe";
+                mockTransferCompletedWebhook.data.amount = payload.amount;
+                mockTransferCompletedWebhook.data.narration = payload.narration;
+                await this.handleTransferCompleted(mockTransferCompletedWebhook);
+                return {
+                    id: 26251,
+                    account_number: data.accountNumber,
+                    bank_code: data.accountBank,
+                    full_name: "John Doe",
+                    created_at: date,
+                    currency: payload.currency,
+                    debit_currency: "NGN",
+                    amount: data.amount,
+                    fee: 45,
+                    status: "NEW",
+                    reference: data.reference,
+                    meta: null,
+                    narration: payload.narration,
+                    complete_message: "",
+                    requires_approval: 0,
+                    is_approved: 1,
+                    bank_name: "ACCESS BANK NIGERIA (Mock)",
+                };
             }
             logger_1.default.info("Initiating Flutterwave transfer:", {
                 reference: data.reference,

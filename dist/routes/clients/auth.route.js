@@ -5,10 +5,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const auth_controller_1 = require("../../controllers/client/auth.controller");
-const ratelimiter_1 = require("../../middleware/ratelimiter");
 const authCtrl = new auth_controller_1.authController();
 const router = (0, express_1.default)();
-router.use(ratelimiter_1.rateLimiter.auth);
+//router.use(rateLimiter.auth)
 router.post('/login', authCtrl.login);
 router.post('/register', authCtrl.register);
 router.post("/verify-otp", authCtrl.verifyOtp);

@@ -78,6 +78,7 @@ export interface IAccount extends Document {
 
     // ===== SYSTEM =====
     status: "active" | "suspended" | "deleted";
+    isWalletPinSet: boolean
     lastLogin?: Date;
 
     createdAt: Date;
@@ -139,6 +140,10 @@ const AccountSchema = new Schema<IAccount>(
         twoFactorWithdrawalEnabled: {
             type: Boolean,
             default: false,
+        },
+        isWalletPinSet: {
+            type: Boolean,
+            default: false
         },
 
         otp: String,

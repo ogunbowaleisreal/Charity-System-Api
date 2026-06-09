@@ -4,6 +4,11 @@ import { AppError } from "../middleware/errorHandler";
 import { ERROR_CODES } from "../utils/constants";
 import { formatPhoneNumber } from "../utils/helpers";
 import axios, { AxiosInstance } from "axios";
+//import { webhookServices } from "./client/webhook.services";
+import { IFlutterwaveTransferCompletedWebhook } from "./client/webhook.services";
+import { Wallet } from "../models/wallet";
+import { WalletTransaction } from "../models/transaction";
+import { WithdrawalRequest } from "../models/WithdrawalRequest";
 
 export interface FlutterwaveAccountData {
     account_number: string;
@@ -23,10 +28,72 @@ export interface FlutterwaveAccountData {
     expiry_date?: string;
 }
 
+const mockTransferCompletedWebhook: IFlutterwaveTransferCompletedWebhook = {
+    event: "transfer.completed",
+    "event.type": "Transfer",
+
+    data: {
+        id: 26251,
+
+        account_number: "1234567840",
+        bank_name: "ACCESS BANK NIGERIA",
+        bank_code: "044",
+
+        fullname: "Flutterwave Developers",
+
+        created_at: new Date().toISOString(),
+
+        currency: "NGN",
+        debit_currency: "NGN",
+
+        amount: 5500,
+        fee: 45,
+
+        status: "SUCCESSFUL",
+
+        reference: "akhlm-pstmnpyt-rfxx007_PMCKDU_1",
+
+        meta: null,
+
+        narration: "Withdrawal payout",
+
+        approver: null,
+
+        complete_message: "Transfer completed successfully",
+
+        requires_approval: 0,
+        is_approved: 1,
+    },
+};
+
 export interface FlutterwaveCreateAccountRes {
     status: string;
     message: string;
     data: FlutterwaveAccountData;
+}
+
+export interface FlutterwaveTransferResponse {
+    status: string;
+    message: string;
+    data: {
+        id: number;
+        account_number: string;
+        bank_code: string;
+        full_name: string;
+        created_at: string;
+        currency: string;
+        debit_currency: string;
+        amount: number;
+        fee: number;
+        status: "NEW" | "PENDING" | "SUCCESSFUL" | "FAILED";
+        reference: string;
+        meta: Record<string, unknown> | null;
+        narration: string;
+        complete_message: string;
+        requires_approval: number;
+        is_approved: number;
+        bank_name: string;
+    };
 }
 
 export interface FlutterwaveBankData {
@@ -80,11 +147,17 @@ const mockNameEnquiryResponse = (bank_code: string, accountNumber: string) => {
         bankCode: bank_code,
     };
 }
+// const webhookService = new webhookServices()
 export class FlutterwaveService {
     private client: AxiosInstance;
     private provider = PROVIDERS.FLUTTERWAVE;
+    // private webhookService = new webhookServices()
+    // private webhookService
+    //private webhookService
+
 
     constructor() {
+        // this.webhookService = new webhookServices()
         this.client = axios.create({
             baseURL: this.provider.baseUrl,
             timeout: 30000,
@@ -112,6 +185,94 @@ export class FlutterwaveService {
                 throw error;
             }
         );
+    }
+    async handleTransferCompleted(
+        payload: IFlutterwaveTransferCompletedWebhook
+    ) {
+        const data = payload.data;
+        const status = data.status;
+
+        console.log(payload);
+
+        switch (status) {
+            case "SUCCESSFUL": {
+                logger.info("Transfer successful");
+
+                const transaction = await WalletTransaction.findOne({ reference: data.reference });
+                if (!transaction) throw new Error("Transaction not found");
+                if (transaction.status === "successful") { logger.info("Transaction already successful", { reference: data.reference }); return }
+                if (transaction.status === "failed") { logger.info("Transaction already failed", { reference: data.reference }); return }
+
+                transaction.status = "successful";
+                transaction.providerReference = data.reference;
+                transaction.providerTransactionId = data.id;
+
+                await transaction.save();
+
+                await Wallet.updateOne(
+                    { userId: transaction.userId },
+                    { $inc: { lockedBalance: -data.amount } }
+                );
+
+                // const userWallet = await Wallet.findOne({ userId: transaction.userId });
+                // if (!userWallet) throw new Error("Wallet not found");
+
+                // userWallet.lockedBalance -= data.amount;
+                // await userWallet.save();
+
+                const request = await WithdrawalRequest.findOne({ reference: data.reference });
+                if (!request) throw new Error("Withdrawal request not found");
+
+                request.status = "completed";
+                request.providerReference = data.reference;
+                request.providerTransactionId = data.id.toString();
+
+                await request.save();
+
+                logger.info("Transfer successful", { reference: data.reference });
+
+                return { transaction, status: "successful" };
+            }
+
+            case "FAILED": {
+                logger.info("Transfer failed");
+
+                const transaction = await WalletTransaction.findOne({ reference: data.reference });
+                if (!transaction) throw new Error("Transaction not found");
+
+                if (transaction.status === "successful") { logger.info("Transaction already successful", { reference: data.reference }); return }
+                if (transaction.status === "failed") { logger.info("Transaction already failed", { reference: data.reference }); return }
+
+                transaction.status = "failed";
+                transaction.providerReference = data.reference;
+                transaction.providerTransactionId = data.id;
+
+                await transaction.save();
+
+                await Wallet.updateOne(
+                    { userId: transaction.userId },
+                    {
+                        $inc: {
+                            availableBalance: data.amount,
+                            lockedBalance: -data.amount
+                        }
+                    }
+                );
+
+                // const userWallet = await Wallet.findOne({ userId: transaction.userId });
+                // if (!userWallet) throw new Error("Wallet not found");
+
+                // userWallet.availableBalance += data.amount;
+                // userWallet.lockedBalance -= data.amount;
+                // await userWallet.save();
+
+                return { transaction, status: "failed" };
+            }
+            default: {
+                logger.warn("Unhandled charge status", { status });
+                return null;
+            }
+        }
     }
 
     private isSuccessResponse(status: string): boolean {
@@ -612,6 +773,38 @@ export class FlutterwaveService {
             // Add beneficiary name if provided
             if (data.beneficiaryName) {
                 payload.beneficiary_name = data.beneficiaryName;
+            }
+            if (process.env.NODE_ENV == "development") {
+                const date = Date().toString()
+                console.log(payload)
+                mockTransferCompletedWebhook.data.reference = payload.reference
+                mockTransferCompletedWebhook.data.account_number = payload.account_number
+                mockTransferCompletedWebhook.data.bank_code = payload.account_bank
+                mockTransferCompletedWebhook.data.created_at = date
+                mockTransferCompletedWebhook.data.fullname = "John Doe"
+                mockTransferCompletedWebhook.data.amount = payload.amount
+                mockTransferCompletedWebhook.data.narration = payload.narration
+
+                await this.handleTransferCompleted(mockTransferCompletedWebhook)
+                return {
+                    id: 26251,
+                    account_number: data.accountNumber,
+                    bank_code: data.accountBank,
+                    full_name: "John Doe",
+                    created_at: date,
+                    currency: payload.currency,
+                    debit_currency: "NGN",
+                    amount: data.amount,
+                    fee: 45,
+                    status: "NEW",
+                    reference: data.reference,
+                    meta: null,
+                    narration: payload.narration,
+                    complete_message: "",
+                    requires_approval: 0,
+                    is_approved: 1,
+                    bank_name: "ACCESS BANK NIGERIA (Mock)",
+                }
             }
 
             logger.info("Initiating Flutterwave transfer:", {

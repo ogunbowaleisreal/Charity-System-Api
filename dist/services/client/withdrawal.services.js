@@ -118,6 +118,9 @@ class WithdrawalService {
         //         },
         //     }
         // )
+        const user = await Accounts_1.Account.findById(userId);
+        if (!user)
+            throw new Error("User not found");
         const wallet = await wallet_1.Wallet.findOne({ userId }).select("+walletPin");
         if (!wallet)
             throw new Error("Wallet not found");
@@ -126,6 +129,8 @@ class WithdrawalService {
         }
         wallet.walletPin = hashedPin;
         await wallet.save();
+        user.isWalletPinSet = true;
+        await user.save();
     }
     async resetWalletPin(userId) {
         //const userId = req.user.userId
@@ -171,6 +176,8 @@ class WithdrawalService {
         const hashedPin = await bcryptutils_1.default.hashPassword(Pin);
         wallet.walletPin = hashedPin;
         await wallet.save();
+        user.isWalletPinSet = true;
+        await user.save();
         await cacheServices_1.default.delete(`wallet_pin_reset_verified:${user.email}`);
         return true;
     }
