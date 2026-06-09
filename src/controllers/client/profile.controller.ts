@@ -84,92 +84,92 @@ export class profileController {
 
     }
 
-    // async changePassword(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
+    async changePassword(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
 
+        try {
+            const accountId = req.user.userId
+            const { oldPassword, newPassword } = req.body
+            const passwordUpdate = await authServices.changePassword(accountId, oldPassword, newPassword)
+            if (!passwordUpdate) {
+                //sendErrorResponse(res, "password change failed")
+                throw new Error("password change failed")
+            }
+            sendSuccessResponse(res, { success: true }, "password changed successfully", 200)
+        } catch (err: any) {
+            logger.error("password change failed", err.message)
+            //sendErrorResponse(res, err.message, err.statusCode)
+            next(err)
+        }
+    }
+
+    // async changePassword(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
     //     try {
-    //         const accountId = req.user.userId
-    //         const { oldPassword, newPassword } = req.body
-    //         const passwordUpdate = await authServices.changePassword(accountId, oldPassword, newPassword)
-    //         if (!passwordUpdate) {
-    //             //sendErrorResponse(res, "password change failed")
-    //             throw new Error("password change failed")
+    //         //const { email } = req.body;
+    //         const userId = req.user.userId
+    //         const account = await Account.findById(userId)
+    //         if (!account) {
+    //             throw new Error("error retrieving user account")
     //         }
-    //         sendSuccessResponse(res, { success: true }, "password changed successfully", 200)
-    //     } catch (err: any) {
-    //         logger.error("password change failed", err.message)
-    //         //sendErrorResponse(res, err.message, err.statusCode)
+
+    //         await otpService.generateAndSendOTP(account.email, "password_reset");
+    //         return res.status(200).json({ message: "OTP sent to email" });
+    //     } catch (err) {
+    //         logger.error("otp request failed")
     //         next(err)
     //     }
     // }
 
-    async changePassword(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
-        try {
-            //const { email } = req.body;
-            const userId = req.user.userId
-            const account = await Account.findById(userId)
-            if (!account) {
-                throw new Error("error retrieving user account")
-            }
+    // async verifyPasswordResetOtp(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
+    //     try {
+    //         const { otp } = req.body;
+    //         if (!otp) {
+    //             return res.status(400).json({ message: "Email and OTP are required" });
+    //         }
 
-            await otpService.generateAndSendOTP(account.email, "password_reset");
-            return res.status(200).json({ message: "OTP sent to email" });
-        } catch (err) {
-            logger.error("otp request failed")
-            next(err)
-        }
-    }
+    //         const userId = req.user.userId
+    //         const account = await Account.findById(userId)
+    //         if (!account) {
+    //             throw new Error("error retrieving user account")
+    //         }
+    //         const response = await authServices.verifyPasswordResetOTP(account.email, otp);
+    //         if (!response) {
+    //             throw new Error("Password reset failed")
+    //         }
+    //         logger.info("password reset OTP verified successfully",)
+    //         return res.status(200).json({ message: "Password reset OTP verified successfully" });
+    //     } catch (err: any) {
+    //         logger.error("password reset OTP error", err)
+    //         sendErrorResponse(res, err.message, err.statusCode)
+    //         next(err)
+    //         //return res.status(500).json({ message: "Internal Server Error", error: err })
+    //     }
+    // }
 
-    async verifyPasswordResetOtp(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
-        try {
-            const { otp } = req.body;
-            if (!otp) {
-                return res.status(400).json({ message: "Email and OTP are required" });
-            }
+    // async verifyAndResetPassword(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
+    //     try {
+    //         const { newPassword } = req.body;
+    //         if (!newPassword) {
+    //             return res.status(400).json({ message: "Email, OTP and new password are required" });
+    //         }
 
-            const userId = req.user.userId
-            const account = await Account.findById(userId)
-            if (!account) {
-                throw new Error("error retrieving user account")
-            }
-            const response = await authServices.verifyPasswordResetOTP(account.email, otp);
-            if (!response) {
-                throw new Error("Password reset failed")
-            }
-            logger.info("password reset OTP verified successfully",)
-            return res.status(200).json({ message: "Password reset OTP verified successfully" });
-        } catch (err: any) {
-            logger.error("password reset OTP error", err)
-            sendErrorResponse(res, err.message, err.statusCode)
-            next(err)
-            //return res.status(500).json({ message: "Internal Server Error", error: err })
-        }
-    }
-
-    async verifyAndResetPassword(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
-        try {
-            const { newPassword } = req.body;
-            if (!newPassword) {
-                return res.status(400).json({ message: "Email, OTP and new password are required" });
-            }
-
-            const userId = req.user.userId
-            const account = await Account.findById(userId)
-            if (!account) {
-                throw new Error("error retrieving user account")
-            }
-            const response = await authServices.verifyAndResetPassword(account.email, newPassword);
-            if (!response) {
-                throw new Error("Password reset failed")
-            }
-            logger.info("password reset successful",)
-            return res.status(200).json({ message: "Password reset successful" });
-        } catch (err: any) {
-            logger.error("password reset error", err)
-            sendErrorResponse(res, err.message, err.statusCode)
-            next(err)
-            //return res.status(500).json({ message: "Internal Server Error", error: err }) 
-        }
-    }
+    //         const userId = req.user.userId
+    //         const account = await Account.findById(userId)
+    //         if (!account) {
+    //             throw new Error("error retrieving user account")
+    //         }
+    //         const response = await authServices.verifyAndResetPassword(account.email, newPassword);
+    //         if (!response) {
+    //             throw new Error("Password reset failed")
+    //         }
+    //         logger.info("password reset successful",)
+    //         return res.status(200).json({ message: "Password reset successful" });
+    //     } catch (err: any) {
+    //         logger.error("password reset error", err)
+    //         sendErrorResponse(res, err.message, err.statusCode)
+    //         next(err)
+    //         //return res.status(500).json({ message: "Internal Server Error", error: err }) 
+    //     }
+    // }
 
     async toggle2FA(req: AuthenticatedClientRequest, res: Response) {
         try {

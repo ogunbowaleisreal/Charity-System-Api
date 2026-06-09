@@ -71,6 +71,7 @@ class authService {
                         // ===== SECURITY =====
                         twoFactorEnabled: user.twoFactorEnabled,
                         twoFactorWithdrawalEnabled: user.twoFactorWithdrawalEnabled,
+                        isWalletPinSet: user.isWalletPinSet,
                         // ===== LOGIN INFO =====
                         lastLogin: user.lastLogin,
                         // lastLoginIp: user.lastLoginIp,

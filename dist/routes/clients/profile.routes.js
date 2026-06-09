@@ -17,12 +17,14 @@ profileCtrl.updateClientProfile);
 router.post("/change-password", 
 //verifyJwt,
 profileCtrl.changePassword);
-router.post("/verify-password-reset-otp", 
-//verifyJwt,
-profileCtrl.verifyPasswordResetOtp);
-router.post("/set-password", 
-//verifyJwt,
-profileCtrl.verifyAndResetPassword);
+// router.post("/verify-password-reset-otp",
+//     //verifyJwt,
+//     profileCtrl.verifyPasswordResetOtp
+// )
+// router.post("/set-password",
+//     //verifyJwt,
+//     profileCtrl.verifyAndResetPassword
+// )
 router.post("/delete-account", 
 //verifyJwt,
 profileCtrl.deleteAccount);

@@ -116,6 +116,7 @@ export class authService {
                     twoFactorEnabled: user.twoFactorEnabled,
                     twoFactorWithdrawalEnabled:
                         user.twoFactorWithdrawalEnabled,
+                    isWalletPinSet: user.isWalletPinSet,
 
                     // ===== LOGIN INFO =====
                     lastLogin: user.lastLogin,

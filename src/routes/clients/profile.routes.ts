@@ -20,15 +20,15 @@ router.post("/change-password",
     profileCtrl.changePassword
 )
 
-router.post("/verify-password-reset-otp",
-    //verifyJwt,
-    profileCtrl.verifyPasswordResetOtp
-)
+// router.post("/verify-password-reset-otp",
+//     //verifyJwt,
+//     profileCtrl.verifyPasswordResetOtp
+// )
 
-router.post("/set-password",
-    //verifyJwt,
-    profileCtrl.verifyAndResetPassword
-)
+// router.post("/set-password",
+//     //verifyJwt,
+//     profileCtrl.verifyAndResetPassword
+// )
 router.post("/delete-account",
     //verifyJwt,
     profileCtrl.deleteAccount
