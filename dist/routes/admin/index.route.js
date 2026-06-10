@@ -31,12 +31,12 @@ const service_fee_routes_1 = __importDefault(require("./service.fee.routes"));
 //import reportRoutes from "./reports.route"
 //import subscriptionManagementRoutes from "./subscriptionManagement"
 const adminPlanManagement_1 = __importDefault(require("./adminPlanManagement"));
-// import adminDashboardRoutes from "./adminDashboard"
+const dashboardStatistics_1 = __importDefault(require("./dashboardStatistics"));
 const router = (0, express_1.Router)();
 router.use('/auth', auth_route_1.default);
 router.use('/announcement', announcement_routes_1.default);
 router.use('/management', admin_management_route_1.default);
-// router.use('/dashboard', adminDashboardRoutes)
+router.use('/dashboard', dashboardStatistics_1.default);
 router.use('/roles', rolesManagement_1.default);
 router.use('/category', category_1.default);
 router.use('/faqs', faq_1.default);

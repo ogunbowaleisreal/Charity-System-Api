@@ -364,7 +364,7 @@ class WithdrawalService {
             user.save();
             return { message: "2fa has been enabled", user, status: 200 };
         }
-        user.twoFactorEnabled = false;
+        user.twoFactorWithdrawalEnabled = false;
         user.save();
         return { message: "2fa has been disabled", user, status: 200 };
     }

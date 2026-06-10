@@ -26,14 +26,14 @@ import serviceFeeRoutes from "./service.fee.routes"
 //import reportRoutes from "./reports.route"
 //import subscriptionManagementRoutes from "./subscriptionManagement"
 import planRoutes from "./adminPlanManagement"
-// import adminDashboardRoutes from "./adminDashboard"
+import adminDashboardRoutes from "./dashboardStatistics"
 
 const router = Router();
 
 router.use('/auth', adminAuthRoute);
 router.use('/announcement', announcementRoutes)
 router.use('/management', managementRoutes);
-// router.use('/dashboard', adminDashboardRoutes)
+router.use('/dashboard', adminDashboardRoutes)
 router.use('/roles', roleRoutes)
 router.use('/category', categoryRoutes)
 router.use('/faqs', faqRoutes)

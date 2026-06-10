@@ -20,7 +20,7 @@ class WithdrawalController {
         }
         catch (error) {
             logger_1.default.error(error);
-            return (0, helpers_1.sendErrorResponse)(res, error);
+            return (0, helpers_1.sendErrorResponse)(res, error.message, error.statusCode);
         }
     }
     async verifyWithdrawalRequestOtp(req, res) {
@@ -32,7 +32,7 @@ class WithdrawalController {
         }
         catch (error) {
             logger_1.default.error(error);
-            return (0, helpers_1.sendErrorResponse)(res, error);
+            return (0, helpers_1.sendErrorResponse)(res, error.message, error.statusCode);
         }
     }
     async toggleWithdrawal2Fa(req, res) {
@@ -44,7 +44,7 @@ class WithdrawalController {
         }
         catch (error) {
             logger_1.default.error(error);
-            return (0, helpers_1.sendErrorResponse)(res, error);
+            return (0, helpers_1.sendErrorResponse)(res, error.message);
         }
     }
     async resetWalletPin(req, res) {
@@ -138,7 +138,7 @@ class WithdrawalController {
         }
         catch (error) {
             logger_1.default.error(error);
-            return (0, helpers_1.sendErrorResponse)(res, error);
+            return (0, helpers_1.sendErrorResponse)(res, error.message, error.statusCode);
         }
     }
     async verifyWitdrawal2fa(req, res) {
@@ -163,7 +163,7 @@ class WithdrawalController {
         }
         catch (error) {
             logger_1.default.error(error);
-            return (0, helpers_1.sendErrorResponse)(res, error);
+            return (0, helpers_1.sendErrorResponse)(res, error.message);
         }
     }
 }

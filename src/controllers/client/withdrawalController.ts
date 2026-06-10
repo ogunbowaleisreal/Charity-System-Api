@@ -28,7 +28,7 @@ export class WithdrawalController {
             return sendSuccessResponse(res, withdrawal);
         } catch (error: any) {
             logger.error(error);
-            return sendErrorResponse(res, error);
+            return sendErrorResponse(res, error.message, error.statusCode);
         }
     }
 
@@ -50,7 +50,7 @@ export class WithdrawalController {
             return sendSuccessResponse(res, withdrawal);
         } catch (error: any) {
             logger.error(error);
-            return sendErrorResponse(res, error);
+            return sendErrorResponse(res, error.message, error.statusCode);
         }
     }
 
@@ -62,7 +62,7 @@ export class WithdrawalController {
             sendSuccessResponse(res, response, "2fa for withdrawal has been updated")
         } catch (error: any) {
             logger.error(error);
-            return sendErrorResponse(res, error);
+            return sendErrorResponse(res, error.message);
         }
 
     }
@@ -167,7 +167,7 @@ export class WithdrawalController {
             return sendSuccessResponse(res, withdrawal, "withdrawal successful");
         } catch (error: any) {
             logger.error(error);
-            return sendErrorResponse(res, error);
+            return sendErrorResponse(res, error.message, error.statusCode);
         }
     }
 
@@ -192,7 +192,7 @@ export class WithdrawalController {
             return sendSuccessResponse(res, banks);
         } catch (error: any) {
             logger.error(error);
-            return sendErrorResponse(res, error);
+            return sendErrorResponse(res, error.message);
         }
     }
 
