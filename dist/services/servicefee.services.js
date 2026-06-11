@@ -20,6 +20,17 @@ class ServiceFeeService {
         }
         return config;
     }
+    async getAllActiveFee() {
+        const config = await ServiceFee_1.ServiceFeeConfig.find({
+            isActive: true,
+        });
+        if (!config) {
+            return {
+                message: "there are no active service charges"
+            };
+        }
+        return config;
+    }
     /**
      * Calculate fee automatically by category
      */

@@ -280,7 +280,7 @@ class DashboardService {
                             { $count: "count" },
                         ],
                         activeUsers: [
-                            { $match: { role: "user", status: "active" } },
+                            { $match: { status: "active" } },
                             { $count: "count" },
                         ],
                         totalOrganizations: [

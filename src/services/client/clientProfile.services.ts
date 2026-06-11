@@ -198,4 +198,8 @@ export class clientProfileServices {
         };
     }
 
+    async subscribeForUpdates(email: string) {
+
+    }
+
 }

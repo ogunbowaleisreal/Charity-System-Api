@@ -188,5 +188,7 @@ class clientProfileServices {
             account
         };
     }
+    async subscribeForUpdates(email) {
+    }
 }
 exports.clientProfileServices = clientProfileServices;

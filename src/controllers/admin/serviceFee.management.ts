@@ -12,7 +12,7 @@ export class ServiceFeeController {
     async getServiceFee(req: AdminAuthenticatedRequest, res: Response, next: NextFunction) {
         try {
             const category = req.body.category as ServiceFeeCategory
-            const serviceFee = await serviceFeeService.getActiveFee(category);
+            const serviceFee = await serviceFeeService.getAllActiveFee();
             return sendSuccessResponse(res, serviceFee);
         } catch (error: any) {
             logger.error(error);
