@@ -10,7 +10,7 @@ const serviceFeeCtrl = new ServiceFeeController();
 router.use(rateLimiter.general);
 router.use(verifyAdminToken);
 
-router.post("/",
+router.get("/",
     authorize([ADMIN_PERMISSIONS.SERVICE_FEE.VIEW, ADMIN_PERMISSIONS.SERVICE_FEE.UPDATE]),
     serviceFeeCtrl.getServiceFee);
 

@@ -13,7 +13,7 @@ class ServiceFeeController {
     async getServiceFee(req, res, next) {
         try {
             const category = req.body.category;
-            const serviceFee = await serviceFeeService.getActiveFee(category);
+            const serviceFee = await serviceFeeService.getAllActiveFee();
             return (0, helpers_1.sendSuccessResponse)(res, serviceFee);
         }
         catch (error) {
