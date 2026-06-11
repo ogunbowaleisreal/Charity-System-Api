@@ -271,7 +271,7 @@ export class webhookServices {
 
                 await Wallet.updateOne(
                     { userId: transaction.userId },
-                    { $inc: { lockedBalance: -data.amount } }
+                    { $inc: { lockedBalance: -transaction.amount } }
                 );
 
                 // const userWallet = await Wallet.findOne({ userId: transaction.userId });
@@ -313,8 +313,8 @@ export class webhookServices {
                     { userId: transaction.userId },
                     {
                         $inc: {
-                            availableBalance: data.amount,
-                            lockedBalance: -data.amount
+                            availableBalance: transaction.amount,
+                            lockedBalance: -transaction.amount
                         }
                     }
                 );
@@ -695,7 +695,7 @@ export class webhookServices {
     private async calculateDonation(amount: number, type: string, value: number) {
         //const config = await serviceFeeService.getActiveFee();
 
-        return serviceFeeService.calculate(amount, { type, value });
+        return serviceFeeService.calculate(amount, "donation");
     }
 
 

@@ -22,7 +22,8 @@ export interface IWithdrawalRequest extends Document {
     bankDetails: {
         bankCode: string;        // Flutterwave account_bank
         accountNumber: string;
-        accountName: string;     // beneficiary_name
+        accountName: string;
+        bank_name: string     // beneficiary_name
     };
 
     narration: string;           // transfer narration
@@ -101,6 +102,7 @@ const WithdrawalRequestSchema = new Schema<IWithdrawalRequest>(
             bankCode: { type: String, required: true },
             accountNumber: { type: String, required: true },
             accountName: { type: String, required: true },
+            bank_name: { type: String, required: true }
         },
 
         narration: {

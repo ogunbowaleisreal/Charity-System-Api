@@ -6,12 +6,14 @@ import logger from "../../logger";
 import { FlutterwaveService } from "../flutterwave.services";
 import crypto from "crypto";
 import { Wallet } from "../../models/wallet";
+import { ServiceFeeService } from "../servicefee.services";
 import { parse } from "path";
 
 const flutterwave = new FlutterwaveService();
 
 export class WithdrawalAdminService {
     // constructor(private flutterwaveService: any) { }
+    serviceFeeService = new ServiceFeeService()
 
     // =========================
     // 📊 GET ALL REQUESTS (ADMIN)
@@ -106,6 +108,8 @@ export class WithdrawalAdminService {
         await request.save();
 
         try {
+            const config = await this.serviceFeeService.getActiveFee("withdrawal")
+            const amountDetails = await this.serviceFeeService.calculate(request.amount, "withdrawal")
 
             const reference = `WIT_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`; //crypto.randomUUID();
 
@@ -118,8 +122,9 @@ export class WithdrawalAdminService {
                 amount: request.amount,
                 currency: request.currency,
                 grossAmount: request.amount,
-                netAmount: request.amount,
+                netAmount: await amountDetails.netAmount,
                 fullName: request.bankDetails.accountName,
+                serviceCharge: amountDetails.fee,
                 method: "bank_transfer",
                 provider: "flutterwave",
                 reference: reference,
@@ -142,7 +147,7 @@ export class WithdrawalAdminService {
             const transfer = await flutterwave.initiateTransfer({
                 accountBank: request.bankDetails.bankCode,
                 accountNumber: request.bankDetails.accountNumber,
-                amount: request.amount,
+                amount: amountDetails.netAmount,
                 narration: request.narration,
                 reference: reference,
                 callbackUrl: process.env.FLUTTERWAVE_WEBHOOK_URL,

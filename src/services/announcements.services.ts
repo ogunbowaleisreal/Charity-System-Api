@@ -138,6 +138,7 @@ export class AnnouncementService {
         | "normal_users"
         | "active_users"
         | "suspended_users"
+        | "subscribed_users"
         | "specific";
 
         specificUsers?: string[];
@@ -442,6 +443,8 @@ export class AnnouncementService {
 
             case "suspended_users":
                 return { status: "suspended" };
+            case "subscribed_users":
+                return { emailSubscribed: true }
             case "specific":
                 return {
                     _id: {

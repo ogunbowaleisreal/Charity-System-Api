@@ -296,6 +296,7 @@ class WithdrawalService {
                 bankCode: bankCode,
                 accountNumber,
                 accountName: accountName,
+                bank_name
             },
         });
         await emailService.sendNewWwithdrawalRequestNotification(withdrawalRequest);

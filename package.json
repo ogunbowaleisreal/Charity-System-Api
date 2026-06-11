@@ -14,7 +14,8 @@
     "move:data": "ts-node src/scripts/stagingData.ts",
     "test:push": "ts-node src/scripts/testPush.ts",
     "generate:secret": "ts-node src/scripts/generateWebhookSecret.ts",
-    "sync:banks": "ts-node src/scripts/populatebanks.ts"
+    "sync:banks": "ts-node src/scripts/populatebanks.ts",
+    "update:Withdrawals": "ts-node src/scripts/updateWithdrawal.ts"
   },
   "keywords": [],
   "author": "",

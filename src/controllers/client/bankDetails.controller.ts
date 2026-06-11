@@ -6,6 +6,7 @@ import {
 } from "../../utils/helpers";
 import { AuthenticatedClientRequest } from "../../middleware/auth";
 import { BankDetailsService } from "../../services/client/bank.details.services";
+import { HTTP_STATUS } from "../../utils/constants";
 
 const bankDetailsService = new BankDetailsService();
 
@@ -23,7 +24,7 @@ export class BankDetailsController {
             const bankDetails =
                 await bankDetailsService.createBankDetails(
                     req.body,
-                    req.user._id
+                    req.user.userId
                 );
 
             return sendSuccessResponse(res, bankDetails);
@@ -45,13 +46,18 @@ export class BankDetailsController {
         try {
             const bankDetails =
                 await bankDetailsService.getUserBankDetails(
-                    req.user._id
+                    req.user.userId
                 );
+            if (!bankDetails) {
+                return sendErrorResponse(res,
+                    "You have no bank details yet or it has been deleted , plss create a bank detail",
+                    HTTP_STATUS.NOT_FOUND);
+            }
 
             return sendSuccessResponse(res, bankDetails);
         } catch (error: any) {
             logger.error(error);
-            return sendErrorResponse(res, error);
+            return sendErrorResponse(res, error.message);
         }
     }
 
@@ -90,7 +96,7 @@ export class BankDetailsController {
             const bankDetails =
                 await bankDetailsService.updateBankDetails(
                     bankDetailsId,
-                    req.user._id,
+                    req.user.userId,
                     req.body
                 );
 
@@ -116,7 +122,7 @@ export class BankDetailsController {
             const bankDetails =
                 await bankDetailsService.deleteBankDetails(
                     bankDetailsId,
-                    req.user._id
+                    req.user.userId
                 );
             logger.info("Bank details deleted successfully");
 

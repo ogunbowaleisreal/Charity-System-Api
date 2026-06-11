@@ -101,7 +101,7 @@ class webhookServices {
                 transaction.providerReference = data.reference;
                 transaction.providerTransactionId = data.id;
                 await transaction.save();
-                await wallet_1.Wallet.updateOne({ userId: transaction.userId }, { $inc: { lockedBalance: -data.amount } });
+                await wallet_1.Wallet.updateOne({ userId: transaction.userId }, { $inc: { lockedBalance: -transaction.amount } });
                 // const userWallet = await Wallet.findOne({ userId: transaction.userId });
                 // if (!userWallet) throw new Error("Wallet not found");
                 // userWallet.lockedBalance -= data.amount;
@@ -135,8 +135,8 @@ class webhookServices {
                 await transaction.save();
                 await wallet_1.Wallet.updateOne({ userId: transaction.userId }, {
                     $inc: {
-                        availableBalance: data.amount,
-                        lockedBalance: -data.amount
+                        availableBalance: transaction.amount,
+                        lockedBalance: -transaction.amount
                     }
                 });
                 // const userWallet = await Wallet.findOne({ userId: transaction.userId });
@@ -417,7 +417,7 @@ class webhookServices {
     // }
     async calculateDonation(amount, type, value) {
         //const config = await serviceFeeService.getActiveFee();
-        return serviceFeeService.calculate(amount, { type, value });
+        return serviceFeeService.calculate(amount, "donation");
     }
     //: Validate webhook signature (if SafeHaven provides it in future)
     validateSafehavenSignature(payload, signature, secret) {

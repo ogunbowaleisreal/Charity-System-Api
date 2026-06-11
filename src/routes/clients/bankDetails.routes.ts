@@ -5,8 +5,7 @@ import { BankDetailsController } from "../../controllers/client/bankDetails.cont
 
 const router = Router();
 
-const bankCtrl =
-    new BankDetailsController();
+const bankCtrl = new BankDetailsController();
 
 router.use(rateLimiter.general);
 router.use(verifyClientToken);

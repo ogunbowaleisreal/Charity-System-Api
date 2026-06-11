@@ -11,9 +11,13 @@ const logger_1 = __importDefault(require("../../logger"));
 const flutterwave_services_1 = require("../flutterwave.services");
 const crypto_1 = __importDefault(require("crypto"));
 const wallet_1 = require("../../models/wallet");
+const servicefee_services_1 = require("../servicefee.services");
 const flutterwave = new flutterwave_services_1.FlutterwaveService();
 class WithdrawalAdminService {
-    // constructor(private flutterwaveService: any) { }
+    constructor() {
+        // constructor(private flutterwaveService: any) { }
+        this.serviceFeeService = new servicefee_services_1.ServiceFeeService();
+    }
     // =========================
     // 📊 GET ALL REQUESTS (ADMIN)
     // =========================
@@ -85,6 +89,8 @@ class WithdrawalAdminService {
         request.reviewedAt = new Date();
         await request.save();
         try {
+            const config = await this.serviceFeeService.getActiveFee("withdrawal");
+            const amountDetails = await this.serviceFeeService.calculate(request.amount, "withdrawal");
             const reference = `WIT_${Date.now()}_${crypto_1.default.randomBytes(4).toString("hex")}`; //crypto.randomUUID();
             await transaction_1.WalletTransaction.create({
                 userId: request.userId,
@@ -95,8 +101,9 @@ class WithdrawalAdminService {
                 amount: request.amount,
                 currency: request.currency,
                 grossAmount: request.amount,
-                netAmount: request.amount,
+                netAmount: await amountDetails.netAmount,
                 fullName: request.bankDetails.accountName,
+                serviceCharge: amountDetails.fee,
                 method: "bank_transfer",
                 provider: "flutterwave",
                 reference: reference,
@@ -117,7 +124,7 @@ class WithdrawalAdminService {
             const transfer = await flutterwave.initiateTransfer({
                 accountBank: request.bankDetails.bankCode,
                 accountNumber: request.bankDetails.accountNumber,
-                amount: request.amount,
+                amount: amountDetails.netAmount,
                 narration: request.narration,
                 reference: reference,
                 callbackUrl: process.env.FLUTTERWAVE_WEBHOOK_URL,

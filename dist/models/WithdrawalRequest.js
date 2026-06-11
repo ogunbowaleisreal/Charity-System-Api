@@ -63,6 +63,7 @@ const WithdrawalRequestSchema = new mongoose_1.Schema({
         bankCode: { type: String, required: true },
         accountNumber: { type: String, required: true },
         accountName: { type: String, required: true },
+        bank_name: { type: String, required: true }
     },
     narration: {
         type: String,

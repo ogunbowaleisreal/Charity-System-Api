@@ -94,7 +94,7 @@ class FlutterwaveService {
                 transaction.providerReference = data.reference;
                 transaction.providerTransactionId = data.id;
                 await transaction.save();
-                await wallet_1.Wallet.updateOne({ userId: transaction.userId }, { $inc: { lockedBalance: -data.amount } });
+                await wallet_1.Wallet.updateOne({ userId: transaction.userId }, { $inc: { lockedBalance: -transaction.amount } });
                 // const userWallet = await Wallet.findOne({ userId: transaction.userId });
                 // if (!userWallet) throw new Error("Wallet not found");
                 // userWallet.lockedBalance -= data.amount;
@@ -128,8 +128,8 @@ class FlutterwaveService {
                 await transaction.save();
                 await wallet_1.Wallet.updateOne({ userId: transaction.userId }, {
                     $inc: {
-                        availableBalance: data.amount,
-                        lockedBalance: -data.amount
+                        availableBalance: transaction.amount,
+                        lockedBalance: -transaction.amount
                     }
                 });
                 // const userWallet = await Wallet.findOne({ userId: transaction.userId });
@@ -145,6 +145,72 @@ class FlutterwaveService {
             }
         }
     }
+    // async handleTransferCompleted(
+    //     payload: IFlutterwaveTransferCompletedWebhook
+    // ) {
+    //     const data = payload.data;
+    //     const status = data.status;
+    //     console.log(payload);
+    //     switch (status) {
+    //         case "SUCCESSFUL": {
+    //             logger.info("Transfer successful");
+    //             const transaction = await WalletTransaction.findOne({ reference: data.reference });
+    //             if (!transaction) throw new Error("Transaction not found");
+    //             if (transaction.status === "successful") { logger.info("Transaction already successful", { reference: data.reference }); return }
+    //             if (transaction.status === "failed") { logger.info("Transaction already failed", { reference: data.reference }); return }
+    //             transaction.status = "successful";
+    //             transaction.providerReference = data.reference;
+    //             transaction.providerTransactionId = data.id;
+    //             await transaction.save();
+    //             await Wallet.updateOne(
+    //                 { userId: transaction.userId },
+    //                 { $inc: { lockedBalance: -data.amount } }
+    //             );
+    //             // const userWallet = await Wallet.findOne({ userId: transaction.userId });
+    //             // if (!userWallet) throw new Error("Wallet not found");
+    //             // userWallet.lockedBalance -= data.amount;
+    //             // await userWallet.save();
+    //             const request = await WithdrawalRequest.findOne({ reference: data.reference });
+    //             if (!request) throw new Error("Withdrawal request not found");
+    //             request.status = "completed";
+    //             request.providerReference = data.reference;
+    //             request.providerTransactionId = data.id.toString();
+    //             await request.save();
+    //             logger.info("Transfer successful", { reference: data.reference });
+    //             return { transaction, status: "successful" };
+    //         }
+    //         case "FAILED": {
+    //             logger.info("Transfer failed");
+    //             const transaction = await WalletTransaction.findOne({ reference: data.reference });
+    //             if (!transaction) throw new Error("Transaction not found");
+    //             if (transaction.status === "successful") { logger.info("Transaction already successful", { reference: data.reference }); return }
+    //             if (transaction.status === "failed") { logger.info("Transaction already failed", { reference: data.reference }); return }
+    //             transaction.status = "failed";
+    //             transaction.providerReference = data.reference;
+    //             transaction.providerTransactionId = data.id;
+    //             await transaction.save();
+    //             await Wallet.updateOne(
+    //                 { userId: transaction.userId },
+    //                 {
+    //                     $inc: {
+    //                         availableBalance: data.amount,
+    //                         lockedBalance: -data.amount
+    //                     }
+    //                 }
+    //             );
+    //             // const userWallet = await Wallet.findOne({ userId: transaction.userId });
+    //             // if (!userWallet) throw new Error("Wallet not found");
+    //             // userWallet.availableBalance += data.amount;
+    //             // userWallet.lockedBalance -= data.amount;
+    //             // await userWallet.save();
+    //             return { transaction, status: "failed" };
+    //         }
+    //         default: {
+    //             logger.warn("Unhandled charge status", { status });
+    //             return null;
+    //         }
+    //     }
+    // }
     isSuccessResponse(status) {
         return status === "success";
     }

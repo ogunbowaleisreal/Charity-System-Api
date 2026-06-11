@@ -258,6 +258,8 @@ class AnnouncementService {
                 return { status: "active" };
             case "suspended_users":
                 return { status: "suspended" };
+            case "subscribed_users":
+                return { emailSubscribed: true };
             case "specific":
                 return {
                     _id: {

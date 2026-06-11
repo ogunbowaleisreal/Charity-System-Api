@@ -12,7 +12,8 @@ const serviceFeeService = new servicefee_services_1.ServiceFeeService();
 class ServiceFeeController {
     async getServiceFee(req, res, next) {
         try {
-            const serviceFee = await serviceFeeService.getActiveFee();
+            const category = req.body.category;
+            const serviceFee = await serviceFeeService.getActiveFee(category);
             return (0, helpers_1.sendSuccessResponse)(res, serviceFee);
         }
         catch (error) {
@@ -25,7 +26,8 @@ class ServiceFeeController {
             const adminId = req.admin?.adminId;
             const type = req.body.type;
             const value = req.body.value;
-            const serviceFee = await serviceFeeService.updateServiceFee(type, value, adminId);
+            const category = req.body.category;
+            const serviceFee = await serviceFeeService.updateServiceFee(category, type, value, adminId);
             return (0, helpers_1.sendSuccessResponse)(res, serviceFee);
         }
         catch (error) {

@@ -384,6 +384,7 @@ export class WithdrawalService {
                 bankCode: bankCode,
                 accountNumber,
                 accountName: accountName,
+                bank_name
             },
         });
 
