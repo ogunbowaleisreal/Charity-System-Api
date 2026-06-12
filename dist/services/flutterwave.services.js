@@ -10,7 +10,7 @@ const errorHandler_1 = require("../middleware/errorHandler");
 const constants_1 = require("../utils/constants");
 const helpers_1 = require("../utils/helpers");
 const axios_1 = __importDefault(require("axios"));
-const wallet_1 = require("../models/wallet");
+const Wallet_1 = require("../models/Wallet");
 const transaction_1 = require("../models/transaction");
 const WithdrawalRequest_1 = require("../models/WithdrawalRequest");
 const mockTransferCompletedWebhook = {
@@ -94,7 +94,7 @@ class FlutterwaveService {
                 transaction.providerReference = data.reference;
                 transaction.providerTransactionId = data.id;
                 await transaction.save();
-                await wallet_1.Wallet.updateOne({ userId: transaction.userId }, { $inc: { lockedBalance: -transaction.amount } });
+                await Wallet_1.Wallet.updateOne({ userId: transaction.userId }, { $inc: { lockedBalance: -transaction.amount } });
                 // const userWallet = await Wallet.findOne({ userId: transaction.userId });
                 // if (!userWallet) throw new Error("Wallet not found");
                 // userWallet.lockedBalance -= data.amount;
@@ -126,7 +126,7 @@ class FlutterwaveService {
                 transaction.providerReference = data.reference;
                 transaction.providerTransactionId = data.id;
                 await transaction.save();
-                await wallet_1.Wallet.updateOne({ userId: transaction.userId }, {
+                await Wallet_1.Wallet.updateOne({ userId: transaction.userId }, {
                     $inc: {
                         availableBalance: transaction.amount,
                         lockedBalance: -transaction.amount

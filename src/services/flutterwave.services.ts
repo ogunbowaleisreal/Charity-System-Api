@@ -6,7 +6,7 @@ import { formatPhoneNumber } from "../utils/helpers";
 import axios, { AxiosInstance } from "axios";
 //import { webhookServices } from "./client/webhook.services";
 import { IFlutterwaveTransferCompletedWebhook } from "./client/webhook.services";
-import { Wallet } from "../models/wallet";
+import { Wallet } from "../models/Wallet";
 import { WalletTransaction } from "../models/transaction";
 import { WithdrawalRequest } from "../models/WithdrawalRequest";
 

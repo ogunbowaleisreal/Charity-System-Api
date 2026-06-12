@@ -1,4 +1,4 @@
-import { Wallet } from "../../models/wallet";
+import { Wallet } from "../../models/Wallet";
 import { WalletTransaction } from "../../models/transaction";
 import Campaign from "../../models/Campaign";
 import { AppError } from "../../middleware/errorHandler";

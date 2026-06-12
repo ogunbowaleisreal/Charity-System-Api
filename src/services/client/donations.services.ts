@@ -5,7 +5,7 @@ import { SaveHavenService } from "../../services/safeHaven.services";
 import crypto from "crypto";
 import { AppError } from "../../middleware/errorHandler";
 import { HTTP_STATUS } from "../../utils/constants";
-import { Wallet } from "../../models/wallet";
+import { Wallet } from "../../models/Wallet";
 import { WalletTransaction } from "../../models/transaction";
 import { Account } from "../../models/Accounts";
 import { FlutterwaveService } from "../flutterwave.services";

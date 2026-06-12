@@ -14,7 +14,7 @@ const errorHandler_1 = require("../../middleware/errorHandler");
 const constants_1 = require("../../utils/constants");
 const flutterwave_services_1 = require("../flutterwave.services");
 const WithdrawalRequest_1 = require("../../models/WithdrawalRequest");
-const wallet_1 = require("../../models/wallet");
+const Wallet_1 = require("../../models/Wallet");
 const Gratuity_1 = require("../../models/Gratuity");
 const pushNotificationService_1 = require("../pushNotificationService");
 const servicefee_services_1 = require("../servicefee.services");
@@ -101,7 +101,7 @@ class webhookServices {
                 transaction.providerReference = data.reference;
                 transaction.providerTransactionId = data.id;
                 await transaction.save();
-                await wallet_1.Wallet.updateOne({ userId: transaction.userId }, { $inc: { lockedBalance: -transaction.amount } });
+                await Wallet_1.Wallet.updateOne({ userId: transaction.userId }, { $inc: { lockedBalance: -transaction.amount } });
                 // const userWallet = await Wallet.findOne({ userId: transaction.userId });
                 // if (!userWallet) throw new Error("Wallet not found");
                 // userWallet.lockedBalance -= data.amount;
@@ -133,7 +133,7 @@ class webhookServices {
                 transaction.providerReference = data.reference;
                 transaction.providerTransactionId = data.id;
                 await transaction.save();
-                await wallet_1.Wallet.updateOne({ userId: transaction.userId }, {
+                await Wallet_1.Wallet.updateOne({ userId: transaction.userId }, {
                     $inc: {
                         availableBalance: transaction.amount,
                         lockedBalance: -transaction.amount

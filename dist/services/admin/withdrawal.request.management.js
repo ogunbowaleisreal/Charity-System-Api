@@ -10,7 +10,7 @@ const transaction_1 = require("../../models/transaction");
 const logger_1 = __importDefault(require("../../logger"));
 const flutterwave_services_1 = require("../flutterwave.services");
 const crypto_1 = __importDefault(require("crypto"));
-const wallet_1 = require("../../models/wallet");
+const Wallet_1 = require("../../models/Wallet");
 const servicefee_services_1 = require("../servicefee.services");
 const flutterwave = new flutterwave_services_1.FlutterwaveService();
 class WithdrawalAdminService {
@@ -60,7 +60,7 @@ class WithdrawalAdminService {
         if (request.status !== "pending") {
             throw new Error("Only pending requests can be rejected");
         }
-        const wallet = await wallet_1.Wallet.findOne({ userId: request.userId });
+        const wallet = await Wallet_1.Wallet.findOne({ userId: request.userId });
         if (!wallet)
             throw new Error("Wallet not found");
         wallet.availableBalance += request.amount;
