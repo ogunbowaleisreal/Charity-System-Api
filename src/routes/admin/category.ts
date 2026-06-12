@@ -5,13 +5,6 @@ import { Router } from "express";
 //     validateQuery,
 // } from "@/middleware/validation";
 import { rateLimiter } from "../../middleware/ratelimiter";
-// import {
-//     createCategoryValidation,
-//     updateCategoryValidation,
-//     categoryQueryValidation,
-//     categoryIdValidation,
-//     categoryStatusValidation
-// } from "@/validations/admin/categoryValidation";
 import { ADMIN_PERMISSIONS } from "../../types/admin.management";
 import {
     authorize,
