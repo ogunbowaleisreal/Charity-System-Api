@@ -60,7 +60,7 @@ class CampaignAdminService {
             Campaign_1.default.find(query)
                 .populate("owner", "email fullName firstName lastName phoneNumber profilePicture")
                 .populate("authors", "email fullName")
-                .populate("category", "name")
+                .populate("category", "categoryName description image status")
                 .populate("tags", "name")
                 .sort({ createdAt: -1 })
                 .skip(skip)
@@ -74,9 +74,9 @@ class CampaignAdminService {
     // =========================
     async getCampaignById(campaignId) {
         return Campaign_1.default.findById(campaignId)
-            .populate("owner", "email fullName")
+            .populate("owner", "email fullName firstName lastName phoneNumber profilePicture")
             .populate("authors", "email fullName")
-            .populate("category", "name")
+            .populate("category", "categoryName description image status")
             .populate("tags", "name");
     }
     // =========================

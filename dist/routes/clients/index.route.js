@@ -22,7 +22,7 @@ const Kyc_routes_1 = __importDefault(require("./Kyc.routes"));
 const gratuity_routes_1 = __importDefault(require("./gratuity.routes"));
 const bankDetails_routes_1 = __importDefault(require("./bankDetails.routes"));
 const serviceFee_routes_1 = __importDefault(require("./serviceFee.routes"));
-// import dashBoardRoutes from "./dashboard"
+const dashboard_1 = __importDefault(require("./dashboard"));
 const notification_routes_1 = __importDefault(require("./notification.routes"));
 const withdrawal_routes_1 = __importDefault(require("./withdrawal.routes"));
 const bank_routes_1 = __importDefault(require("./bank.routes"));
@@ -48,6 +48,6 @@ router.use("/enquiries", enquiries_route_1.default);
 router.use("/plans", plan_routes_1.default);
 router.use("/withdraw", withdrawal_routes_1.default);
 router.use("/service-fee", serviceFee_routes_1.default);
-// router.use("/dashboard", dashBoardRoutes)
+router.use("/dashboard", dashboard_1.default);
 router.use("/notifications", notification_routes_1.default);
 exports.default = router;

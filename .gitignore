@@ -1,6 +1,7 @@
 node_modules
+dist
 .env
 logs
 dump
 firebase-service-account.json
-dist
+

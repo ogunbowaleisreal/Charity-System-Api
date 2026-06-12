@@ -51,6 +51,7 @@ class CampaignService {
         const filter = {
             isDeleted: false,
             isActive: true,
+            status: "ongoing",
         };
         if (category)
             filter.category = category;
@@ -136,7 +137,13 @@ class CampaignService {
             filter.category = query.category;
         if (query.status)
             filter.status = query.status;
-        const campaigns = await Campaign_1.default.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).populate("category", "name").populate("tags", "name");
+        const campaigns = await Campaign_1.default.find(filter)
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .populate("owner", "firstName lastName companyName logo")
+            .populate("category", "categoryName description image status")
+            .populate("tags", "name");
         const total = await Campaign_1.default.countDocuments({
             owner: userId,
             isDeleted: false,

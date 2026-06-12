@@ -1,31 +1,27 @@
 "use strict";
-// import { Request, Response } from "express";
-// import { sendSuccessResponse, sendErrorResponse } from "../../utils/helpers";
-// import { HTTP_STATUS } from "../../utils/constants";
-// import logger from "../../logger";
-// //import { FAQService } from "../../services/client/faqServices";
-// import { AuthenticatedClientRequest } from "../../middleware/auth";
-// import { DashboardService } from "../../services/client/dashboardStatistics";
-// import { Types } from "mongoose";
-// export class DashboardController {
-//     async getDashboard(req: AuthenticatedClientRequest, res: Response) {
-//         try {
-//             const userId = new Types.ObjectId(req.user._id);
-//             const role = req.user.role;
-//             let stats;
-//             if (role === "client") {
-//                 stats = await DashboardService.clientDashboard(userId);
-//             } else if (role === "consultant") {
-//                 stats = await DashboardService.consultantDashboard(userId);
-//             } else {
-//                 return res.status(403).json({ message: "Invalid role" });
-//             }
-//             logger.info("Dashboard statistics fetched successfully");
-//             sendSuccessResponse(res, stats, "Dashboard statistics fetched successfully", HTTP_STATUS.OK);
-//         } catch (error: any) {
-//             logger.error("Dashboard statistics fetch failed", error.message);
-//             sendErrorResponse(res, error.message, HTTP_STATUS.BAD_REQUEST);
-//         }
-//         //res.json({ role, stats });
-//     }
-// }
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DashboardController = void 0;
+const helpers_1 = require("../../utils/helpers");
+const constants_1 = require("../../utils/constants");
+const logger_1 = __importDefault(require("../../logger"));
+const dashboard_service_1 = require("../../services/client/dashboard.service");
+const dashoardService = new dashboard_service_1.ClientDashboardService();
+class DashboardController {
+    async getDashboard(req, res) {
+        try {
+            const userId = req.user.userId;
+            const stats = await dashoardService.getDashboardStats(userId);
+            logger_1.default.info("Dashboard statistics fetched successfully");
+            (0, helpers_1.sendSuccessResponse)(res, stats, "Dashboard statistics fetched successfully", constants_1.HTTP_STATUS.OK);
+        }
+        catch (error) {
+            logger_1.default.error("Dashboard statistics fetch failed", error.message);
+            (0, helpers_1.sendErrorResponse)(res, error.message, constants_1.HTTP_STATUS.BAD_REQUEST);
+        }
+        //res.json({ role, stats });
+    }
+}
+exports.DashboardController = DashboardController;
