@@ -130,6 +130,7 @@ export class CampaignService {
         const filter: any = {
             isDeleted: false,
             isActive: true,
+            status: "ongoing",
         };
 
         if (category) filter.category = category;
@@ -229,7 +230,13 @@ export class CampaignService {
         if (query.category) filter.category = query.category;
         if (query.status) filter.status = query.status;
 
-        const campaigns = await Campaign.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).populate("category", "name").populate("tags", "name");
+        const campaigns = await Campaign.find(filter)
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .populate("owner", "firstName lastName companyName logo")
+            .populate("category", "categoryName description image status")
+            .populate("tags", "name");
 
         const total = await Campaign.countDocuments({
             owner: userId,

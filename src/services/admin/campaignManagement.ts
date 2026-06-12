@@ -139,7 +139,7 @@ export class CampaignAdminService {
             Campaign.find(query)
                 .populate("owner", "email fullName firstName lastName phoneNumber profilePicture")
                 .populate("authors", "email fullName")
-                .populate("category", "name")
+                .populate("category", "categoryName description image status")
                 .populate("tags", "name")
                 .sort({ createdAt: -1 })
                 .skip(skip)
@@ -156,9 +156,9 @@ export class CampaignAdminService {
     // =========================
     async getCampaignById(campaignId: string) {
         return Campaign.findById(campaignId)
-            .populate("owner", "email fullName")
+            .populate("owner", "email fullName firstName lastName phoneNumber profilePicture")
             .populate("authors", "email fullName")
-            .populate("category", "name")
+            .populate("category", "categoryName description image status")
             .populate("tags", "name");
     }
 

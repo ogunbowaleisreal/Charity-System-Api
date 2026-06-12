@@ -17,7 +17,7 @@ import kycRoutes from "./Kyc.routes"
 import gratuityRoutes from "./gratuity.routes"
 import bankDetailsRoutes from "./bankDetails.routes"
 import serviceFeeRoutes from "./serviceFee.routes"
-// import dashBoardRoutes from "./dashboard"
+import dashBoardRoutes from "./dashboard"
 import notificationRoutes from "./notification.routes"
 import withdrawalRoutes from "./withdrawal.routes"
 import bankRoutes from "./bank.routes"
@@ -44,7 +44,7 @@ router.use("/enquiries", enquiryRoutes)
 router.use("/plans", planRoutes)
 router.use("/withdraw", withdrawalRoutes)
 router.use("/service-fee", serviceFeeRoutes)
-// router.use("/dashboard", dashBoardRoutes)
+router.use("/dashboard", dashBoardRoutes)
 router.use("/notifications", notificationRoutes)
 
 export default router;  
