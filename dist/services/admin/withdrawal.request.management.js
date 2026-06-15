@@ -7,12 +7,15 @@ exports.WithdrawalAdminService = void 0;
 const mongoose_1 = require("mongoose");
 const WithdrawalRequest_1 = require("../../models/WithdrawalRequest");
 const transaction_1 = require("../../models/transaction");
+const paginationUtills_1 = require("../../utils/admin/paginationUtills");
 const logger_1 = __importDefault(require("../../logger"));
 const flutterwave_services_1 = require("../flutterwave.services");
 const crypto_1 = __importDefault(require("crypto"));
 const Wallet_1 = require("../../models/Wallet");
 const servicefee_services_1 = require("../servicefee.services");
+const dashboardStatistics_1 = require("./dashboardStatistics");
 const flutterwave = new flutterwave_services_1.FlutterwaveService();
+const dashboard = new dashboardStatistics_1.DashboardService();
 class WithdrawalAdminService {
     constructor() {
         // constructor(private flutterwaveService: any) { }
@@ -22,13 +25,29 @@ class WithdrawalAdminService {
     // 📊 GET ALL REQUESTS (ADMIN)
     // =========================
     async getWithdrawalRequests(filters) {
-        const { status } = filters;
+        const { status, userId } = filters;
         const page = parseInt(filters.page) || 1;
         const limit = parseInt(filters.limit) || 10;
-        const skip = (page - 1) * limit;
+        // const skip = (page - 1) * limit;
+        const { skip } = (0, paginationUtills_1.buildPagination)(page, limit);
         const query = {};
         if (status)
             query.status = status;
+        if (userId) {
+            query.userId = new mongoose_1.Types.ObjectId(userId);
+            const withdrawalRequestsStats = await dashboard.getUserWithdrawalRequestStats(new mongoose_1.Types.ObjectId(userId));
+            const [data, total] = await Promise.all([
+                WithdrawalRequest_1.WithdrawalRequest.find(query)
+                    .populate("userId", "email firstName lastName role phoneNumber logo profilePicture")
+                    .populate("reviewedBy", "firstName lastName adminLevel phoneNumber")
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit),
+                WithdrawalRequest_1.WithdrawalRequest.countDocuments(query),
+            ]);
+            return (0, paginationUtills_1.formatPagination)({ data, withdrawalRequestsStats }, total, page, limit);
+        }
+        const withdrawalRequestsStats = await dashboard.getWithdrawalRequestStats();
         const [data, total] = await Promise.all([
             WithdrawalRequest_1.WithdrawalRequest.find(query)
                 .populate("userId", "email firstName lastName role phoneNumber logo profilePicture")
@@ -38,17 +57,7 @@ class WithdrawalAdminService {
                 .limit(limit),
             WithdrawalRequest_1.WithdrawalRequest.countDocuments(query),
         ]);
-        return {
-            data,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit),
-                hasNext: page * limit < total,
-                hasPrev: page > 1,
-            },
-        };
+        return (0, paginationUtills_1.formatPagination)({ data, withdrawalRequestsStats }, total, page, limit);
     }
     // =========================
     // ❌ REJECT REQUEST

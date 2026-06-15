@@ -5,15 +5,25 @@ const adminPlanManagement_1 = require("../../controllers/admin/adminPlanManageme
 const adminAuth_1 = require("../../middleware/adminAuth");
 const ratelimiter_1 = require("../../middleware/ratelimiter");
 const adminMigrationPlan_1 = require("../../controllers/admin/adminMigrationPlan");
-const admin_management_1 = require("../../types/admin.management");
 const router = (0, express_1.Router)();
 const controller = new adminPlanManagement_1.AdminPlanController();
 const migrationController = new adminMigrationPlan_1.AdminPlanMigrationController();
 router.use(ratelimiter_1.rateLimiter.general);
 router.use(adminAuth_1.verifyAdminToken);
-router.post("/", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.PLAN.CREATE]), controller.createPlan);
-router.patch("/:planId", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.PLAN.UPDATE]), controller.updatePlan);
-router.get("/:planId", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.PLAN.VIEW]), controller.getPlan);
-router.get("/", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.PLAN.VIEW]), controller.getAllPlans);
-router.post("/migrate-old-users", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.PLAN.MIGRATE]), migrationController.migratePlan);
+// router.post("/",
+//     authorize([ADMIN_PERMISSIONS.PLAN.CREATE]),
+//     controller.createPlan
+// );
+// router.patch("/:planId",
+//     authorize([ADMIN_PERMISSIONS.PLAN.UPDATE]),
+//     controller.updatePlan);
+// router.get("/:planId",
+//     authorize([ADMIN_PERMISSIONS.PLAN.VIEW]),
+//     controller.getPlan);
+// router.get("/",
+//     authorize([ADMIN_PERMISSIONS.PLAN.VIEW]),
+//     controller.getAllPlans);
+// router.post("/migrate-old-users",
+//     authorize([ADMIN_PERMISSIONS.PLAN.MIGRATE]),
+//     migrationController.migratePlan);
 exports.default = router;

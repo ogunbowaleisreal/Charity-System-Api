@@ -8,7 +8,9 @@ const mongoose_1 = require("mongoose");
 const Campaign_1 = __importDefault(require("../../models/Campaign"));
 const Comment_1 = __importDefault(require("../../models/Comment"));
 const Donations_1 = require("../../models/Donations");
+const dashboardStatistics_1 = require("./dashboardStatistics");
 const paginationUtills_1 = require("../../utils/admin/paginationUtills");
+const dashboard = new dashboardStatistics_1.DashboardService();
 class CampaignAdminService {
     // =========================
     // 📊 GET ALL CAMPAIGNS
@@ -29,8 +31,6 @@ class CampaignAdminService {
         if (typeof isFlagged === "boolean")
             query.isFlagged = isFlagged;
         // 👤 ownership
-        if (ownerId)
-            query.owner = new mongoose_1.Types.ObjectId(ownerId);
         if (ownerType)
             query.ownerType = ownerType;
         // 💰 financial filters
@@ -56,6 +56,23 @@ class CampaignAdminService {
             if (endDate)
                 query.createdAt.$lte = endDate;
         }
+        if (ownerId) {
+            query.owner = new mongoose_1.Types.ObjectId(ownerId);
+            const campaignStats = await dashboard.getUserCampaignStats(new mongoose_1.Types.ObjectId(ownerId));
+            const [campaigns, total] = await Promise.all([
+                Campaign_1.default.find(query)
+                    .populate("owner", "email fullName firstName lastName phoneNumber profilePicture")
+                    .populate("authors", "email fullName")
+                    .populate("category", "categoryName description image status")
+                    .populate("tags", "name")
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit),
+                Campaign_1.default.countDocuments(query)
+            ]);
+            return (0, paginationUtills_1.formatPagination)({ campaigns, campaignStats }, total, page, limit);
+        }
+        const campaignStats = await dashboard.getCampaignStats();
         const [campaigns, total] = await Promise.all([
             Campaign_1.default.find(query)
                 .populate("owner", "email fullName firstName lastName phoneNumber profilePicture")
@@ -67,7 +84,7 @@ class CampaignAdminService {
                 .limit(limit),
             Campaign_1.default.countDocuments(query)
         ]);
-        return (0, paginationUtills_1.formatPagination)(campaigns, total, page, limit);
+        return (0, paginationUtills_1.formatPagination)({ campaigns, campaignStats }, total, page, limit);
     }
     // =========================
     // 🎯 GET CAMPAIGN BY ID
@@ -165,6 +182,9 @@ class CampaignAdminService {
             Comment_1.default.countDocuments(query)
         ]);
         return (0, paginationUtills_1.formatPagination)(comments, total, page, limit);
+    }
+    async getUserComments(userId) {
+        return Comment_1.default.find({ user: userId }).populate("user", "email firstName lastName profilePicture logo");
     }
 }
 exports.CampaignAdminService = CampaignAdminService;

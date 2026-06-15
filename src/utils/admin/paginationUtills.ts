@@ -3,17 +3,17 @@ export interface PaginationQuery {
     limit?: number;
 }
 
-export interface PaginatedResponse<T> {
-    data: T[];
-    pagination: {
-        page: number;
-        limit: number;
-        total: number;
-        totalPages: number;
-        hasNext: boolean;
-        hasPrev: boolean;
-    };
-}
+// export interface PaginatedResponse<T> {
+//     data: T[];
+//     pagination: {
+//         page: number;
+//         limit: number;
+//         total: number;
+//         totalPages: number;
+//         hasNext: boolean;
+//         hasPrev: boolean;
+//     };
+// }
 
 export const buildPagination = (page = 1, limit = 10) => {
     const safePage = Math.max(1, page);
@@ -26,8 +26,39 @@ export const buildPagination = (page = 1, limit = 10) => {
     };
 };
 
+// export const formatPagination = <T>(
+//     data: T[],
+//     total: number,
+//     page: number,
+//     limit: number
+// ): PaginatedResponse<T> => {
+//     return {
+//         data,
+//         pagination: {
+//             page,
+//             limit,
+//             total,
+//             totalPages: Math.ceil(total / limit),
+//             hasNext: page * limit < total,
+//             hasPrev: page > 1
+//         }
+//     };
+// };
+
+export interface PaginatedResponse<T> {
+    data: T;
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+        hasNext: boolean;
+        hasPrev: boolean;
+    };
+}
+
 export const formatPagination = <T>(
-    data: T[],
+    data: T,
     total: number,
     page: number,
     limit: number

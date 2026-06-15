@@ -4,7 +4,7 @@ export interface ICampaign extends Document {
     // ===== BASIC =====
     title: string;
     description: string;
-    image: string;
+    image: string[];
     thumbnailUrl: string
 
     category: Types.ObjectId;
@@ -87,8 +87,8 @@ const CampaignSchema = new Schema<ICampaign>(
         },
 
         image: {
-            type: String,
-            required: true,
+            type: [String],
+            default: [],
         },
         thumbnailUrl: {
             type: String

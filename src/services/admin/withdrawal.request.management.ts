@@ -2,14 +2,21 @@ import { Types } from "mongoose";
 import { WithdrawalRequest } from "../../models/WithdrawalRequest";
 import { WalletTransaction } from "../../models/transaction";
 import Campaign from "../../models/Campaign";
+import {
+    buildPagination,
+    formatPagination,
+    PaginationQuery
+} from "../../utils/admin/paginationUtills";
 import logger from "../../logger";
 import { FlutterwaveService } from "../flutterwave.services";
 import crypto from "crypto";
 import { Wallet } from "../../models/Wallet";
 import { ServiceFeeService } from "../servicefee.services";
-import { parse } from "path";
+import { DashboardService } from "./dashboardStatistics";
+import { sendPaginatedResponse } from "../../utils/helpers";
 
 const flutterwave = new FlutterwaveService();
+const dashboard = new DashboardService()
 
 export class WithdrawalAdminService {
     // constructor(private flutterwaveService: any) { }
@@ -19,15 +26,35 @@ export class WithdrawalAdminService {
     // 📊 GET ALL REQUESTS (ADMIN)
     // =========================
     async getWithdrawalRequests(filters: any) {
-        const { status } = filters;
+        const { status, userId } = filters;
 
         const page = parseInt(filters.page) || 1;
         const limit = parseInt(filters.limit) || 10;
 
-        const skip = (page - 1) * limit;
+        // const skip = (page - 1) * limit;
+
+        const { skip } = buildPagination(page, limit);
 
         const query: any = {};
         if (status) query.status = status;
+        if (userId) {
+            query.userId = new Types.ObjectId(userId);
+
+            const withdrawalRequestsStats = await dashboard.getUserWithdrawalRequestStats(new Types.ObjectId(userId))
+            const [data, total] = await Promise.all([
+                WithdrawalRequest.find(query)
+                    .populate("userId", "email firstName lastName role phoneNumber logo profilePicture")
+                    .populate("reviewedBy", "firstName lastName adminLevel phoneNumber")
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit),
+
+                WithdrawalRequest.countDocuments(query),
+            ]);
+            return formatPagination({ data, withdrawalRequestsStats }, total, page, limit)
+
+        }
+        const withdrawalRequestsStats = await dashboard.getWithdrawalRequestStats()
 
         const [data, total] = await Promise.all([
             WithdrawalRequest.find(query)
@@ -40,17 +67,8 @@ export class WithdrawalAdminService {
             WithdrawalRequest.countDocuments(query),
         ]);
 
-        return {
-            data,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit),
-                hasNext: page * limit < total,
-                hasPrev: page > 1,
-            },
-        };
+        return formatPagination({ data, withdrawalRequestsStats }, total, page, limit)
+
     }
 
     // =========================

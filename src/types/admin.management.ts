@@ -187,6 +187,11 @@ export const ADMIN_PERMISSIONS = {
         APPROVE: "kyc.approve",
         REJECT: "kyc.reject",
     },
+    DONATIONS: {
+        VIEW: "donation.view",
+        // APPROVE: "donation.approve",
+        // REJECT: "donation.reject",
+    },
 
     // BIDS: {
     //     VIEW: "bids.view",
@@ -255,12 +260,12 @@ export const ADMIN_PERMISSIONS = {
         SUSPEND: "admin.suspend"
     },
 
-    NOTIFICATION: {
-        VIEW: "notification.view",
-        CREATE: "notification.create",
-        UPDATE: "notification.update",
-        DELETE: "notification.delete"
-    },
+    // NOTIFICATION: {
+    //     VIEW: "notification.view",
+    //     CREATE: "notification.create",
+    //     UPDATE: "notification.update",
+    //     DELETE: "notification.delete"
+    // },
 
     ANNOUNCEMENT: {
         VIEW: "announcement.view",
@@ -275,6 +280,12 @@ export const ADMIN_PERMISSIONS = {
         MANAGE_PAYMENTS: "transactions.manage_payments",
         REFUNDS: "transactions.refunds",
         ANALYTICS: "transactions.analytics",
+    },
+    COMMENTS: {
+        VIEW: "comments.view",
+        CREATE: "comments.create",
+        UPDATE: "comments.update",
+        DELETE: "comments.delete"
     },
 
     // Artile management permissions
@@ -304,12 +315,12 @@ export const ADMIN_PERMISSIONS = {
         CREATE: "faqs.create",
         UPDATE: "faqs.update",
         DELETE: "faqs.delete",
-        PUBLISH: "faqs.publish",
-        UNPUBLISH: "faqs.unpublish",
-        VIEW_FAQS_CATEGORIES: "faqs.view_categories",
-        CREATE_FAQS_CATEGORIES: "faqs.add_categories",
-        DELETE_FAQS_CATEGORIES: "faqs.delete_categories",
-        UPDATE_FAQS_CATEGORIES: "faqs.update_categories",
+        // PUBLISH: "faqs.publish",
+        // UNPUBLISH: "faqs.unpublish",
+        // VIEW_FAQS_CATEGORIES: "faqs.view_categories",
+        // CREATE_FAQS_CATEGORIES: "faqs.add_categories",
+        // DELETE_FAQS_CATEGORIES: "faqs.delete_categories",
+        // UPDATE_FAQS_CATEGORIES: "faqs.update_categories",
     },
 
     // SUBSCRIPTIONPLAN: {
@@ -329,12 +340,12 @@ export const ADMIN_PERMISSIONS = {
     },
 
     //Plans management permissions
-    PLAN: {
-        VIEW: "plan.view",
-        UPDATE: "plan.update",
-        CREATE: "plan.create",
-        MIGRATE: "plan.migrate",
-    },
+    // PLAN: {
+    //     VIEW: "plan.view",
+    //     UPDATE: "plan.update",
+    //     CREATE: "plan.create",
+    //     MIGRATE: "plan.migrate",
+    // },
     // REQUESTS: {
     //     VIEW: "request.view",
     //     CREATE: "request.create",
@@ -350,17 +361,17 @@ export const ADMIN_PERMISSIONS = {
 } as const;
 
 // Extract all permission values for validation
-export type AdminPermission =
-    //  | (typeof ADMIN_PERMISSIONS.ACCOUNTS)[keyof typeof ADMIN_PERMISSIONS.ACCOUNTS]
-    // | (typeof ADMIN_PERMISSIONS.LISTING)[keyof typeof ADMIN_PERMISSIONS.LISTING]
-    //  | (typeof ADMIN_PERMISSIONS.ADMIN)[keyof typeof ADMIN_PERMISSIONS.ADMIN]
-    // | (typeof ADMIN_PERMISSIONS.FAQS)[keyof typeof ADMIN_PERMISSIONS.FAQS]
-    // | (typeof ADMIN_PERMISSIONS.DASHBOARD)[keyof typeof ADMIN_PERMISSIONS.DASHBOARD]
-    // | (typeof ADMIN_PERMISSIONS.ARTICLE)[keyof typeof ADMIN_PERMISSIONS.ARTICLE]
-    // | (typeof ADMIN_PERMISSIONS.DASHBOARD)[keyof typeof ADMIN_PERMISSIONS.DASHBOARD]
-    //| (typeof ADMIN_PERMISSIONS.EVENTS)[keyof typeof ADMIN_PERMISSIONS.EVENTS]
-    // | (typeof ADMIN_PERMISSIONS.JOB)[keyof typeof ADMIN_PERMISSIONS.JOB]
-    | (typeof ADMIN_PERMISSIONS.PLAN)[keyof typeof ADMIN_PERMISSIONS.PLAN]
+export type AdminPermission = {}
+//  | (typeof ADMIN_PERMISSIONS.ACCOUNTS)[keyof typeof ADMIN_PERMISSIONS.ACCOUNTS]
+// | (typeof ADMIN_PERMISSIONS.LISTING)[keyof typeof ADMIN_PERMISSIONS.LISTING]
+//  | (typeof ADMIN_PERMISSIONS.ADMIN)[keyof typeof ADMIN_PERMISSIONS.ADMIN]
+// | (typeof ADMIN_PERMISSIONS.FAQS)[keyof typeof ADMIN_PERMISSIONS.FAQS]
+// | (typeof ADMIN_PERMISSIONS.DASHBOARD)[keyof typeof ADMIN_PERMISSIONS.DASHBOARD]
+// | (typeof ADMIN_PERMISSIONS.ARTICLE)[keyof typeof ADMIN_PERMISSIONS.ARTICLE]
+// | (typeof ADMIN_PERMISSIONS.DASHBOARD)[keyof typeof ADMIN_PERMISSIONS.DASHBOARD]
+//| (typeof ADMIN_PERMISSIONS.EVENTS)[keyof typeof ADMIN_PERMISSIONS.EVENTS]
+// | (typeof ADMIN_PERMISSIONS.JOB)[keyof typeof ADMIN_PERMISSIONS.JOB]
+//   | (typeof ADMIN_PERMISSIONS.PLAN)[keyof typeof ADMIN_PERMISSIONS.PLAN]
 // | (typeof ADMIN_PERMISSIONS.ANNOUNCEMENT)[keyof typeof ADMIN_PERMISSIONS.ANNOUNCEMENT]
 //| (typeof ADMIN_PERMISSIONS.SUPPORT)[keyof typeof ADMIN_PERMISSIONS.SUPPORT]
 // | (typeof ADMIN_PERMISSIONS.SUBSCRIPTIONPLAN)[keyof typeof ADMIN_PERMISSIONS.SUBSCRIPTIONPLAN];

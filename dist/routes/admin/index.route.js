@@ -11,11 +11,13 @@ const category_1 = __importDefault(require("./category"));
 const faq_1 = __importDefault(require("./faq"));
 const accountManagement_1 = __importDefault(require("./accountManagement"));
 const announcement_routes_1 = __importDefault(require("./announcement.routes"));
+const comments_route_1 = __importDefault(require("./comments.route"));
 //import requestRoutes from "./request.routes"
 //import bidRoutes from "./bid"
 //import assignmentRoutes from "./assignment.routes"
 const profile_routes_1 = __importDefault(require("./profile.routes"));
 const withdrawal_routes_1 = __importDefault(require("./withdrawal.routes"));
+const donations_routes_1 = __importDefault(require("./donations.routes"));
 const businessCategoryManagement_1 = __importDefault(require("./businessCategoryManagement"));
 const contact_1 = __importDefault(require("./contact"));
 const medis_1 = __importDefault(require("./medis"));
@@ -44,6 +46,8 @@ router.use("/withdrawal", withdrawal_routes_1.default);
 router.use("/gratuity", gratuity_routes_1.default);
 router.use("/kyc", kyc_routes_1.default);
 router.use("/accounts", accountManagement_1.default);
+router.use("/comments", comments_route_1.default);
+router.use("/donation", donations_routes_1.default);
 //router.use("/requests", requestRoutes)
 //router.use("/bid", bidRoutes)
 //router.use("/assignments", assignmentRoutes)

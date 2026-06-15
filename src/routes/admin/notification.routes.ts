@@ -14,14 +14,14 @@ router.use(verifyAdminToken);
 router.use(rateLimiter.general);
 
 
-router.post("/create",
-    authorize([ADMIN_PERMISSIONS.NOTIFICATION.CREATE]),
-    NotificationController.createNotification.bind(NotificationController));
-router.get("/list",
-    authorize([ADMIN_PERMISSIONS.NOTIFICATION.VIEW]),
-    NotificationController.getAllNotifications.bind(NotificationController));
-router.delete("/:notificationId",
-    authorize([ADMIN_PERMISSIONS.NOTIFICATION.DELETE]),
-    NotificationController.deleteNotification.bind(NotificationController));
+// router.post("/create",
+//     authorize([ADMIN_PERMISSIONS.NOTIFICATION.CREATE]),
+//     NotificationController.createNotification.bind(NotificationController));
+// router.get("/list",
+//     authorize([ADMIN_PERMISSIONS.NOTIFICATION.VIEW]),
+//     NotificationController.getAllNotifications.bind(NotificationController));
+// router.delete("/:notificationId",
+//     authorize([ADMIN_PERMISSIONS.NOTIFICATION.DELETE]),
+//     NotificationController.deleteNotification.bind(NotificationController));
 
 export default router;

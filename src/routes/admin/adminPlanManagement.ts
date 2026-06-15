@@ -13,21 +13,21 @@ router.use(rateLimiter.general);
 router.use(verifyAdminToken as any);
 
 
-router.post("/",
-    authorize([ADMIN_PERMISSIONS.PLAN.CREATE]),
-    controller.createPlan
-);
-router.patch("/:planId",
-    authorize([ADMIN_PERMISSIONS.PLAN.UPDATE]),
-    controller.updatePlan);
-router.get("/:planId",
-    authorize([ADMIN_PERMISSIONS.PLAN.VIEW]),
-    controller.getPlan);
-router.get("/",
-    authorize([ADMIN_PERMISSIONS.PLAN.VIEW]),
-    controller.getAllPlans);
-router.post("/migrate-old-users",
-    authorize([ADMIN_PERMISSIONS.PLAN.MIGRATE]),
-    migrationController.migratePlan);
+// router.post("/",
+//     authorize([ADMIN_PERMISSIONS.PLAN.CREATE]),
+//     controller.createPlan
+// );
+// router.patch("/:planId",
+//     authorize([ADMIN_PERMISSIONS.PLAN.UPDATE]),
+//     controller.updatePlan);
+// router.get("/:planId",
+//     authorize([ADMIN_PERMISSIONS.PLAN.VIEW]),
+//     controller.getPlan);
+// router.get("/",
+//     authorize([ADMIN_PERMISSIONS.PLAN.VIEW]),
+//     controller.getAllPlans);
+// router.post("/migrate-old-users",
+//     authorize([ADMIN_PERMISSIONS.PLAN.MIGRATE]),
+//     migrationController.migratePlan);
 
 export default router;

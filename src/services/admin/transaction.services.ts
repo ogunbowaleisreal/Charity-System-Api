@@ -6,6 +6,7 @@ import logger from "../../logger";
 //     PaginatedResponse
 // } from "../../interfaces/walletTransaction.filters";
 import { buildPagination, formatPagination } from "../../utils/admin/paginationUtills";
+import { DashboardService } from "./dashboardStatistics";
 
 
 // =========================
@@ -62,6 +63,7 @@ export interface PaginatedResponse<T> {
         hasPrev: boolean;
     };
 }
+const dashboard = new DashboardService()
 
 export class WalletTransactionServices {
 
@@ -89,7 +91,7 @@ export class WalletTransactionServices {
     async getWalletTransactionHistory(
         //userId: string | null,
         filters: WalletTransactionFilters
-    ): Promise<PaginatedResponse<IWalletTransaction>> {
+    ) {
         try {
             const {
                 userId,
@@ -112,9 +114,6 @@ export class WalletTransactionServices {
             // };
             const query: FilterQuery<IWalletTransaction> = {};
 
-            if (userId) {
-                query.userId = new Types.ObjectId(userId);
-            }
 
             // =========================
             // FILTERS
@@ -137,6 +136,22 @@ export class WalletTransactionServices {
                 if (startDate) query.createdAt.$gte = startDate;
                 if (endDate) query.createdAt.$lte = endDate;
             }
+            if (userId) {
+                query.userId = new Types.ObjectId(userId);
+                const transactionstats = await dashboard.getUserFinancialTotals(new Types.ObjectId(userId))
+
+                const [transactions, total] = await Promise.all([
+                    WalletTransaction.find(query)
+                        .sort({ createdAt: -1 })
+                        .skip(skip)
+                        .limit(limit),
+
+                    WalletTransaction.countDocuments(query)
+                ]);
+
+                return formatPagination({ transactions, transactionstats }, total, page, limit);
+            }
+            const [financialTotal, transactionstats] = await Promise.all([dashboard.getFinancialTotals(), dashboard.getTransactionCounts()])
 
             const [transactions, total] = await Promise.all([
                 WalletTransaction.find(query)
@@ -147,7 +162,7 @@ export class WalletTransactionServices {
                 WalletTransaction.countDocuments(query)
             ]);
 
-            return formatPagination(transactions, total, page, limit);
+            return formatPagination({ transactions, transactionstats, financialTotal }, total, page, limit);
 
         } catch (error: any) {
             logger.error("Get transaction history failed", { error });

@@ -29,7 +29,7 @@ export type CreateCampaignDTO = {
     // DETAILS
     // =========================
     category: string;
-    image: string;
+    image: string[];
     thumbnailUrl: string;
     title: string;
     tags: Types.ObjectId[];

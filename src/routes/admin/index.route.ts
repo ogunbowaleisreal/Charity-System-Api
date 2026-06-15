@@ -6,11 +6,13 @@ import categoryRoutes from "./category"
 import faqRoutes from "./faq"
 import accountRoutes from "./accountManagement"
 import announcementRoutes from "./announcement.routes"
+import commentRoutes from "./comments.route"
 //import requestRoutes from "./request.routes"
 //import bidRoutes from "./bid"
 //import assignmentRoutes from "./assignment.routes"
 import profileRoutes from "./profile.routes"
 import withdrawalManagementRoutes from "./withdrawal.routes"
+import donationRoutes from "./donations.routes"
 import businessCategoryRoutes from "./businessCategoryManagement"
 import contactRoutes from "./contact"
 import mediaRoute from "./medis"
@@ -41,6 +43,8 @@ router.use("/withdrawal", withdrawalManagementRoutes)
 router.use("/gratuity", gratuityRoutes)
 router.use("/kyc", kycRoutes)
 router.use("/accounts", accountRoutes)
+router.use("/comments", commentRoutes)
+router.use("/donation", donationRoutes)
 //router.use("/requests", requestRoutes)
 //router.use("/bid", bidRoutes)
 //router.use("/assignments", assignmentRoutes)

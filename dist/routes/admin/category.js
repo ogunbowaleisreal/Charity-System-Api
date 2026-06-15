@@ -7,13 +7,6 @@ const express_1 = require("express");
 //     validateQuery,
 // } from "@/middleware/validation";
 const ratelimiter_1 = require("../../middleware/ratelimiter");
-// import {
-//     createCategoryValidation,
-//     updateCategoryValidation,
-//     categoryQueryValidation,
-//     categoryIdValidation,
-//     categoryStatusValidation
-// } from "@/validations/admin/categoryValidation";
 const admin_management_1 = require("../../types/admin.management");
 const adminAuth_1 = require("../../middleware/adminAuth");
 const categoryController_1 = require("../../controllers/admin/categoryController");

@@ -12,6 +12,8 @@ const logger_1 = __importDefault(require("../../logger"));
 //     PaginatedResponse
 // } from "../../interfaces/walletTransaction.filters";
 const paginationUtills_1 = require("../../utils/admin/paginationUtills");
+const dashboardStatistics_1 = require("./dashboardStatistics");
+const dashboard = new dashboardStatistics_1.DashboardService();
 class WalletTransactionServices {
     // =========================
     // 🔍 GET SINGLE TRANSACTION
@@ -42,9 +44,6 @@ class WalletTransactionServices {
             //     userId: new Types.ObjectId(userId)
             // };
             const query = {};
-            if (userId) {
-                query.userId = new mongoose_1.Types.ObjectId(userId);
-            }
             // =========================
             // FILTERS
             // =========================
@@ -72,6 +71,19 @@ class WalletTransactionServices {
                 if (endDate)
                     query.createdAt.$lte = endDate;
             }
+            if (userId) {
+                query.userId = new mongoose_1.Types.ObjectId(userId);
+                const transactionstats = await dashboard.getUserFinancialTotals(new mongoose_1.Types.ObjectId(userId));
+                const [transactions, total] = await Promise.all([
+                    transaction_1.WalletTransaction.find(query)
+                        .sort({ createdAt: -1 })
+                        .skip(skip)
+                        .limit(limit),
+                    transaction_1.WalletTransaction.countDocuments(query)
+                ]);
+                return (0, paginationUtills_1.formatPagination)({ transactions, transactionstats }, total, page, limit);
+            }
+            const [financialTotal, transactionstats] = await Promise.all([dashboard.getFinancialTotals(), dashboard.getTransactionCounts()]);
             const [transactions, total] = await Promise.all([
                 transaction_1.WalletTransaction.find(query)
                     .sort({ createdAt: -1 })
@@ -79,7 +91,7 @@ class WalletTransactionServices {
                     .limit(limit),
                 transaction_1.WalletTransaction.countDocuments(query)
             ]);
-            return (0, paginationUtills_1.formatPagination)(transactions, total, page, limit);
+            return (0, paginationUtills_1.formatPagination)({ transactions, transactionstats, financialTotal }, total, page, limit);
         }
         catch (error) {
             logger_1.default.error("Get transaction history failed", { error });
