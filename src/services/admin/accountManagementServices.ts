@@ -5,6 +5,7 @@ import Comment from "../../models/Comment";
 import { Donation } from "../../models/Donations";
 import { WalletTransaction } from "../../models/transaction";
 import { ResendEmailService } from "../ResesndServices";
+import { DashboardService } from "./dashboardStatistics";
 
 import {
     PaginationQuery,
@@ -90,6 +91,7 @@ export interface TransactionFilters extends BaseFilter {
 }
 export class AccountAdminService {
     emailService = new ResendEmailService()
+    dashboard = new DashboardService()
     // =========================
     // 🔍 GET ALL ACCOUNTS
     // =========================
@@ -133,7 +135,7 @@ export class AccountAdminService {
             if (startDate) query.createdAt.$gte = startDate;
             if (endDate) query.createdAt.$lte = endDate;
         }
-
+        const userMetrics = await this.dashboard.getUserMetrics();
         const [accounts, total] = await Promise.all([
             Account.find(query)
                 .sort({ createdAt: -1 })
@@ -143,7 +145,7 @@ export class AccountAdminService {
             Account.countDocuments(query)
         ]);
 
-        return formatPagination(accounts, total, page, limit);
+        return formatPagination({ accounts, userMetrics }, total, page, limit);
     }
 
     // =========================

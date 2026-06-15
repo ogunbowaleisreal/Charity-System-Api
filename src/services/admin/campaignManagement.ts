@@ -153,7 +153,7 @@ export class CampaignAdminService {
 
             return formatPagination({ campaigns, campaignStats }, total, page, limit);
         }
-        const campaignStats = await dashboard.getCampaignStats();
+        const campaignStats = await dashboard.getCampaignTableStats();
 
         const [campaigns, total] = await Promise.all([
             Campaign.find(query)

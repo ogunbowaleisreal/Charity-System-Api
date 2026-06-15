@@ -151,7 +151,7 @@ export class WalletTransactionServices {
 
                 return formatPagination({ transactions, transactionstats }, total, page, limit);
             }
-            const [financialTotal, transactionstats] = await Promise.all([dashboard.getFinancialTotals(), dashboard.getTransactionCounts()])
+            const transactionStats = await dashboard.getPlatformFinancialTotals()
 
             const [transactions, total] = await Promise.all([
                 WalletTransaction.find(query)
@@ -162,7 +162,7 @@ export class WalletTransactionServices {
                 WalletTransaction.countDocuments(query)
             ]);
 
-            return formatPagination({ transactions, transactionstats, financialTotal }, total, page, limit);
+            return formatPagination({ transactions, transactionStats }, total, page, limit);
 
         } catch (error: any) {
             logger.error("Get transaction history failed", { error });

@@ -14,12 +14,14 @@ export class DashboardService {
     async getDashboardStats() {
         const [
             financialStats,
+            // platformsFinancialStats,
             transactionCounts,
             campaignStats,
             withdrawalRequestStats,
             userMetrics,
         ] = await Promise.all([
             this.getFinancialTotals(),
+            // this.getPlatformFinancialTotals(),
             this.getTransactionCounts(),
             this.getCampaignStats(),
             this.getWithdrawalRequestStats(),
@@ -28,6 +30,7 @@ export class DashboardService {
 
         return {
             financialStats,
+            //platformsFinancialStats,
             transactionCounts,
             campaignStats,
             withdrawalRequestStats,
@@ -45,12 +48,14 @@ export class DashboardService {
             financialStats,
             campaignStats,
             withdrawalRequestStats,
+            userMetrics,
             recentDonations,
             recentWithdrawals,
         ] = await Promise.all([
             this.getUserFinancialTotals(userObjectId),
             this.getUserCampaignStats(userObjectId),
             this.getUserWithdrawalRequestStats(userObjectId),
+            this.getUserMetricsByUserId(userObjectId),
             this.getUserRecentDonations(userObjectId),
             this.getUserRecentWithdrawals(userObjectId),
         ]);
@@ -59,6 +64,7 @@ export class DashboardService {
             financialStats,
             campaignStats,
             withdrawalRequestStats,
+            userMetrics,
             recentActivity: {
                 donations: recentDonations,
                 withdrawals: recentWithdrawals,
@@ -185,141 +191,113 @@ export class DashboardService {
     }
 
     // ================================================================
+    // 💰 FINANCIAL TOTALS — PLATFORM-WIDE (FLAT, ALL CATEGORIES)
+    // Same shape as getUserFinancialTotals but across ALL transactions
+    // on the platform (no userId filter, no category filter):
+    //   - totalAmount / totalCount  (every status)
+    //   - successfulAmount / successfulCount  (status === "successful")
+    //   - byStatus: { pending, processing, successful, failed, expired } -> { amount, count }
+    // ================================================================
+    async getPlatformFinancialTotals() {
+        const STATUSES = ["pending", "processing", "successful", "failed", "expired"];
+
+        const result = await WalletTransaction.aggregate([
+            {
+                $group: {
+                    _id: "$status",
+                    totalAmount: { $sum: "$amount" },
+                    count: { $sum: 1 },
+                },
+            },
+        ]);
+
+        const byStatus: Record<string, { amount: number; count: number }> = {};
+        for (const status of STATUSES) {
+            byStatus[status] = { amount: 0, count: 0 };
+        }
+
+        let totalAmount = 0;
+        let totalCount = 0;
+
+        for (const row of result) {
+            const status = row._id as string;
+            const amount = row.totalAmount ?? 0;
+            const count = row.count ?? 0;
+
+            byStatus[status] = { amount, count };
+
+            totalAmount += amount;
+            totalCount += count;
+        }
+
+        const successful = byStatus["successful"] ?? { amount: 0, count: 0 };
+
+        return {
+            totalAmount,
+            totalCount,
+            successfulAmount: successful.amount,
+            successfulCount: successful.count,
+            byStatus,
+        };
+    }
+
+    // ================================================================
     // 💰 FINANCIAL TOTALS — USER-SCOPED
-    // Credits: donation, bonus, wallet_credit, campaign_credit, refund
-    // Debits:  withdrawal, wallet_debit
-    // Excluded: adjustment
-    // Each split into successful / failed / total
+    // Status-based breakdown across ALL of the user's wallet transactions:
+    //   - totalAmount / totalCount  (every status)
+    //   - successfulAmount / successfulCount  (status === "successful")
+    //   - byStatus: { pending, processing, successful, failed, expired } -> { amount, count }
     // ================================================================
     async getUserFinancialTotals(userId: Types.ObjectId) {
-        const CREDIT_CATEGORIES = [
-            "donation",
-            "bonus",
-            "wallet_credit",
-            "campaign_credit",
-            "refund",
-        ];
-        const DEBIT_CATEGORIES = ["withdrawal", "wallet_debit"];
+        const STATUSES = ["pending", "processing", "successful", "failed", "expired"];
 
         const result = await WalletTransaction.aggregate([
             {
                 $match: {
                     userId,
-                    category: { $in: [...CREDIT_CATEGORIES, ...DEBIT_CATEGORIES] },
-                    status: { $in: ["successful", "failed"] },
                 },
             },
             {
-                // Derive credit/debit from category, keep status for bucketing
                 $group: {
-                    _id: {
-                        direction: {
-                            $cond: [
-                                { $in: ["$category", CREDIT_CATEGORIES] },
-                                "credit",
-                                "debit",
-                            ],
-                        },
-                        status: "$status",
-                    },
+                    _id: "$status",
                     totalAmount: { $sum: "$amount" },
                     count: { $sum: 1 },
                 },
             },
-            {
-                // Roll up into one document per direction (credit/debit)
-                $group: {
-                    _id: "$_id.direction",
-                    buckets: {
-                        $push: {
-                            status: "$_id.status",
-                            totalAmount: "$totalAmount",
-                            count: "$count",
-                        },
-                    },
-                },
-            },
-            {
-                // Extract successful + failed buckets cleanly
-                $project: {
-                    _id: 0,
-                    direction: "$_id",
-                    successful: {
-                        $let: {
-                            vars: {
-                                match: {
-                                    $arrayElemAt: [
-                                        {
-                                            $filter: {
-                                                input: "$buckets",
-                                                as: "b",
-                                                cond: { $eq: ["$$b.status", "successful"] },
-                                            },
-                                        },
-                                        0,
-                                    ],
-                                },
-                            },
-                            in: {
-                                amount: { $ifNull: ["$$match.totalAmount", 0] },
-                                count: { $ifNull: ["$$match.count", 0] },
-                            },
-                        },
-                    },
-                    failed: {
-                        $let: {
-                            vars: {
-                                match: {
-                                    $arrayElemAt: [
-                                        {
-                                            $filter: {
-                                                input: "$buckets",
-                                                as: "b",
-                                                cond: { $eq: ["$$b.status", "failed"] },
-                                            },
-                                        },
-                                        0,
-                                    ],
-                                },
-                            },
-                            in: {
-                                amount: { $ifNull: ["$$match.totalAmount", 0] },
-                                count: { $ifNull: ["$$match.count", 0] },
-                            },
-                        },
-                    },
-                    totalAmount: { $sum: "$buckets.totalAmount" },
-                    totalCount: { $sum: "$buckets.count" },
-                },
-            },
         ]);
 
-        const byDirection: Record<string, any> = {};
-        for (const row of result) {
-            byDirection[row.direction] = row;
+        const byStatus: Record<string, { amount: number; count: number }> = {};
+        for (const status of STATUSES) {
+            byStatus[status] = { amount: 0, count: 0 };
         }
 
-        const empty = {
-            successful: { amount: 0, count: 0 },
-            failed: { amount: 0, count: 0 },
-            totalAmount: 0,
-            totalCount: 0,
-        };
+        let totalAmount = 0;
+        let totalCount = 0;
 
-        const build = (direction: string) => {
-            const row = byDirection[direction];
-            if (!row) return empty;
-            return {
-                successful: row.successful,
-                failed: row.failed,
-                totalAmount: row.totalAmount,
-                totalCount: row.totalCount,
-            };
-        };
+        for (const row of result) {
+            const status = row._id as string;
+            const amount = row.totalAmount ?? 0;
+            const count = row.count ?? 0;
+
+            if (byStatus[status]) {
+                byStatus[status] = { amount, count };
+            } else {
+                // Any unexpected/legacy status values still get counted in totals
+                byStatus[status] = { amount, count };
+            }
+
+            totalAmount += amount;
+            totalCount += count;
+        }
+
+        const successful = byStatus["successful"] ?? { amount: 0, count: 0 };
 
         return {
-            credits: build("credit"),
-            debits: build("debit"),
+            totalAmount,
+            totalCount,
+            successfulAmount: successful.amount,
+            successfulCount: successful.count,
+            byStatus,
         };
     }
 
@@ -387,9 +365,56 @@ export class DashboardService {
         };
     }
 
+
+    async getCampaignTableStats() {
+        const result = await Campaign.aggregate([
+            { $match: { isDeleted: false } },
+            {
+                $group: {
+                    _id: "$status",
+                    count: { $sum: 1 },
+                    totalRaised: { $sum: "$totalRaised" },
+                    targetAmount: { $sum: "$targetAmount" },
+                },
+            },
+            {
+                $group: {
+                    _id: null,
+                    total: { $sum: "$count" },
+                    totalRaised: { $sum: "$totalRaised" },
+                    totalTarget: { $sum: "$targetAmount" },
+                    statuses: { $push: { k: "$_id", v: "$count" } },
+                },
+            },
+            {
+                $project: {
+                    _id: 0,
+                    total: 1,
+                    totalRaised: 1,
+                    totalTarget: 1,
+                    byStatus: { $arrayToObject: "$statuses" },
+                },
+            },
+        ]);
+
+        const data = result[0] ?? { total: 0, totalRaised: 0, totalTarget: 0, byStatus: {} };
+
+        return {
+            totalCampaigns: data.total,
+            upcoming: data.byStatus?.upcoming ?? 0,
+            ongoing: data.byStatus?.ongoing ?? 0,
+            completed: data.byStatus?.completed ?? 0,
+            totalRaised: data.totalRaised,
+            totalTarget: data.totalTarget,
+        };
+    }
+
     // ================================================================
     // 🎯 CAMPAIGN STATS — USER-SCOPED
+    // Adds: completedTotalRaised — sum of totalRaised across the user's
+    // campaigns whose status is "completed"
     // ================================================================
+
     async getUserCampaignStats(userId: Types.ObjectId) {
         const result = await Campaign.aggregate([
             { $match: { owner: userId, isDeleted: false } },
@@ -398,6 +423,7 @@ export class DashboardService {
                     _id: "$status",
                     count: { $sum: 1 },
                     totalRaised: { $sum: "$totalRaised" },
+                    targetAmount: { $sum: "$targetAmount" },
                     availableBalance: { $sum: "$availableBalance" },
                     totalWithdrawn: { $sum: "$totalWithdrawn" },
                     pendingWithdrawals: { $sum: "$pendingWithdrawals" },
@@ -408,10 +434,17 @@ export class DashboardService {
                     _id: null,
                     total: { $sum: "$count" },
                     totalRaised: { $sum: "$totalRaised" },
+                    totalTarget: { $sum: "$targetAmount" },
                     availableBalance: { $sum: "$availableBalance" },
                     totalWithdrawn: { $sum: "$totalWithdrawn" },
                     pendingWithdrawals: { $sum: "$pendingWithdrawals" },
-                    statuses: { $push: { k: "$_id", v: "$count" } },
+                    statuses: {
+                        $push: {
+                            k: "$_id",
+                            v: "$count",
+                            totalRaised: "$totalRaised",
+                        },
+                    },
                 },
             },
             {
@@ -419,10 +452,38 @@ export class DashboardService {
                     _id: 0,
                     total: 1,
                     totalRaised: 1,
+                    totalTarget: 1,
                     availableBalance: 1,
                     totalWithdrawn: 1,
                     pendingWithdrawals: 1,
-                    byStatus: { $arrayToObject: "$statuses" },
+                    byStatus: {
+                        $arrayToObject: {
+                            $map: {
+                                input: "$statuses",
+                                as: "s",
+                                in: { k: "$$s.k", v: "$$s.v" },
+                            },
+                        }
+                    },
+                    completedTotalRaised: {
+                        $let: {
+                            vars: {
+                                match: {
+                                    $arrayElemAt: [
+                                        {
+                                            $filter: {
+                                                input: "$statuses",
+                                                as: "s",
+                                                cond: { $eq: ["$$s.k", "completed"] },
+                                            },
+                                        },
+                                        0,
+                                    ],
+                                },
+                            },
+                            in: { $ifNull: ["$$match.totalRaised", 0] },
+                        },
+                    },
                 },
             },
         ]);
@@ -430,10 +491,12 @@ export class DashboardService {
         const data = result[0] ?? {
             total: 0,
             totalRaised: 0,
+            totalTarget: 0,
             availableBalance: 0,
             totalWithdrawn: 0,
             pendingWithdrawals: 0,
             byStatus: {},
+            completedTotalRaised: 0,
         };
 
         return {
@@ -442,9 +505,11 @@ export class DashboardService {
             ongoing: data.byStatus?.ongoing ?? 0,
             completed: data.byStatus?.completed ?? 0,
             totalRaised: data.totalRaised,
+            totalTarget: data.totalTarget,
             availableBalance: data.availableBalance,
             totalWithdrawn: data.totalWithdrawn,
             pendingWithdrawals: data.pendingWithdrawals,
+            completedTotalRaised: data.completedTotalRaised,
         };
     }
 
@@ -510,7 +575,7 @@ export class DashboardService {
     // ================================================================
     // 👥 USER METRICS — PLATFORM-WIDE
     // ================================================================
-    private async getUserMetrics() {
+    async getUserMetrics() {
         const [accountStats, pendingKYC] = await Promise.all([
             Account.aggregate([
                 { $match: { isDeleted: false } },
@@ -546,6 +611,33 @@ export class DashboardService {
             totalOrganizations: stats.totalOrganizations[0]?.count ?? 0,
             verifiedUsers: stats.verifiedUsers[0]?.count ?? 0,
             pendingKYCVerifications: pendingKYC,
+        };
+    }
+
+    // ================================================================
+    // 👤 USER METRICS — SINGLE USER
+    // Mirrors getUserMetrics but scoped to one account:
+    //   - kycStatus (pending | verified)
+    //   - isVerified (account email/identity verification)
+    //   - status (active | suspended | deleted)
+    //   - role (user | organization)
+    //   - pendingKYCVerification (whether this user has a pending KYC doc)
+    // totalUsers / activeUsers / totalOrganizations are not applicable per-user.
+    // ================================================================
+    private async getUserMetricsByUserId(userId: Types.ObjectId) {
+        const [account, pendingKYC] = await Promise.all([
+            Account.findOne({ _id: userId, isDeleted: false })
+                .select("kycStatus isVerified status role")
+                .lean(),
+            KYC.countDocuments({ userId, status: "pending_verification" }),
+        ]);
+
+        return {
+            kycStatus: account?.kycStatus ?? null,
+            isVerified: account?.isVerified ?? false,
+            status: account?.status ?? null,
+            role: account?.role ?? null,
+            pendingKYCVerification: pendingKYC > 0,
         };
     }
 
@@ -598,8 +690,14 @@ export class DashboardService {
 // import Campaign from "../../models/Campaign";
 // import { Account } from "../../models/Accounts";
 // import { KYC } from "../../models/KYC";
+// import { Donation } from "../../models/Donations";
+// import { Types } from "mongoose";
 
 // export class DashboardService {
+
+//     // ================================================================
+//     // 🌐 GENERAL DASHBOARD STATS (platform-wide, admin only)
+//     // ================================================================
 //     async getDashboardStats() {
 //         const [
 //             financialStats,
@@ -625,10 +723,41 @@ export class DashboardService {
 //     }
 
 //     // ================================================================
-//     // 💰 FINANCIAL TOTALS
+//     // 👤 USER-SCOPED DASHBOARD STATS (admin viewing one user)
+//     // ================================================================
+//     async getUserStatsByUserId(userId: string) {
+//         const userObjectId = new Types.ObjectId(userId);
+
+//         const [
+//             financialStats,
+//             campaignStats,
+//             withdrawalRequestStats,
+//             recentDonations,
+//             recentWithdrawals,
+//         ] = await Promise.all([
+//             this.getUserFinancialTotals(userObjectId),
+//             this.getUserCampaignStats(userObjectId),
+//             this.getUserWithdrawalRequestStats(userObjectId),
+//             this.getUserRecentDonations(userObjectId),
+//             this.getUserRecentWithdrawals(userObjectId),
+//         ]);
+
+//         return {
+//             financialStats,
+//             campaignStats,
+//             withdrawalRequestStats,
+//             recentActivity: {
+//                 donations: recentDonations,
+//                 withdrawals: recentWithdrawals,
+//             },
+//         };
+//     }
+
+//     // ================================================================
+//     // 💰 FINANCIAL TOTALS — PLATFORM-WIDE
 //     // Per category: successful amount+count, failed amount+count, combined total
 //     // ================================================================
-//     private async getFinancialTotals() {
+//     async getFinancialTotals() {
 //         const result = await WalletTransaction.aggregate([
 //             {
 //                 $match: {
@@ -637,7 +766,6 @@ export class DashboardService {
 //                 },
 //             },
 //             {
-//                 // Group by category + status to get amount and count per bucket
 //                 $group: {
 //                     _id: {
 //                         category: "$category",
@@ -648,7 +776,6 @@ export class DashboardService {
 //                 },
 //             },
 //             {
-//                 // Roll up into one document per category
 //                 $group: {
 //                     _id: "$_id.category",
 //                     buckets: {
@@ -661,7 +788,6 @@ export class DashboardService {
 //                 },
 //             },
 //             {
-//                 // Shape each category into a clean object
 //                 $project: {
 //                     _id: 0,
 //                     category: "$_id",
@@ -715,7 +841,6 @@ export class DashboardService {
 //             },
 //         ]);
 
-//         // Index results by category for easy lookup
 //         const byCategory: Record<string, any> = {};
 //         for (const row of result) {
 //             byCategory[row.category] = row;
@@ -747,10 +872,148 @@ export class DashboardService {
 //     }
 
 //     // ================================================================
-//     // 📊 TRANSACTION COUNTS
-//     // Counts by category + failed transactions across all categories
+//     // 💰 FINANCIAL TOTALS — USER-SCOPED
+//     // Credits: donation, bonus, wallet_credit, campaign_credit, refund
+//     // Debits:  withdrawal, wallet_debit
+//     // Excluded: adjustment
+//     // Each split into successful / failed / total
 //     // ================================================================
-//     private async getTransactionCounts() {
+//     async getUserFinancialTotals(userId: Types.ObjectId) {
+//         const CREDIT_CATEGORIES = [
+//             "donation",
+//             "bonus",
+//             "wallet_credit",
+//             "campaign_credit",
+//             "refund",
+//         ];
+//         const DEBIT_CATEGORIES = ["withdrawal", "wallet_debit"];
+
+//         const result = await WalletTransaction.aggregate([
+//             {
+//                 $match: {
+//                     userId,
+//                     category: { $in: [...CREDIT_CATEGORIES, ...DEBIT_CATEGORIES] },
+//                     status: { $in: ["successful", "failed"] },
+//                 },
+//             },
+//             {
+//                 // Derive credit/debit from category, keep status for bucketing
+//                 $group: {
+//                     _id: {
+//                         direction: {
+//                             $cond: [
+//                                 { $in: ["$category", CREDIT_CATEGORIES] },
+//                                 "credit",
+//                                 "debit",
+//                             ],
+//                         },
+//                         status: "$status",
+//                     },
+//                     totalAmount: { $sum: "$amount" },
+//                     count: { $sum: 1 },
+//                 },
+//             },
+//             {
+//                 // Roll up into one document per direction (credit/debit)
+//                 $group: {
+//                     _id: "$_id.direction",
+//                     buckets: {
+//                         $push: {
+//                             status: "$_id.status",
+//                             totalAmount: "$totalAmount",
+//                             count: "$count",
+//                         },
+//                     },
+//                 },
+//             },
+//             {
+//                 // Extract successful + failed buckets cleanly
+//                 $project: {
+//                     _id: 0,
+//                     direction: "$_id",
+//                     successful: {
+//                         $let: {
+//                             vars: {
+//                                 match: {
+//                                     $arrayElemAt: [
+//                                         {
+//                                             $filter: {
+//                                                 input: "$buckets",
+//                                                 as: "b",
+//                                                 cond: { $eq: ["$$b.status", "successful"] },
+//                                             },
+//                                         },
+//                                         0,
+//                                     ],
+//                                 },
+//                             },
+//                             in: {
+//                                 amount: { $ifNull: ["$$match.totalAmount", 0] },
+//                                 count: { $ifNull: ["$$match.count", 0] },
+//                             },
+//                         },
+//                     },
+//                     failed: {
+//                         $let: {
+//                             vars: {
+//                                 match: {
+//                                     $arrayElemAt: [
+//                                         {
+//                                             $filter: {
+//                                                 input: "$buckets",
+//                                                 as: "b",
+//                                                 cond: { $eq: ["$$b.status", "failed"] },
+//                                             },
+//                                         },
+//                                         0,
+//                                     ],
+//                                 },
+//                             },
+//                             in: {
+//                                 amount: { $ifNull: ["$$match.totalAmount", 0] },
+//                                 count: { $ifNull: ["$$match.count", 0] },
+//                             },
+//                         },
+//                     },
+//                     totalAmount: { $sum: "$buckets.totalAmount" },
+//                     totalCount: { $sum: "$buckets.count" },
+//                 },
+//             },
+//         ]);
+
+//         const byDirection: Record<string, any> = {};
+//         for (const row of result) {
+//             byDirection[row.direction] = row;
+//         }
+
+//         const empty = {
+//             successful: { amount: 0, count: 0 },
+//             failed: { amount: 0, count: 0 },
+//             totalAmount: 0,
+//             totalCount: 0,
+//         };
+
+//         const build = (direction: string) => {
+//             const row = byDirection[direction];
+//             if (!row) return empty;
+//             return {
+//                 successful: row.successful,
+//                 failed: row.failed,
+//                 totalAmount: row.totalAmount,
+//                 totalCount: row.totalCount,
+//             };
+//         };
+
+//         return {
+//             credits: build("credit"),
+//             debits: build("debit"),
+//         };
+//     }
+
+//     // ================================================================
+//     // 📊 TRANSACTION COUNTS — PLATFORM-WIDE
+//     // ================================================================
+//     async getTransactionCounts() {
 //         const [categoryCountsRaw, failedCount] = await Promise.all([
 //             WalletTransaction.aggregate([
 //                 {
@@ -765,8 +1028,6 @@ export class DashboardService {
 //                     },
 //                 },
 //             ]),
-
-//             // All failed transactions regardless of category
 //             WalletTransaction.countDocuments({ status: "failed" }),
 //         ]);
 
@@ -787,39 +1048,20 @@ export class DashboardService {
 //     }
 
 //     // ================================================================
-//     // 🎯 CAMPAIGN STATS
-//     // Total count + breakdown by status
+//     // 🎯 CAMPAIGN STATS — PLATFORM-WIDE
 //     // ================================================================
-//     private async getCampaignStats() {
+//     async getCampaignStats() {
 //         const result = await Campaign.aggregate([
-//             {
-//                 $match: { isDeleted: false },
-//             },
-//             {
-//                 $group: {
-//                     _id: "$status",
-//                     count: { $sum: 1 },
-//                 },
-//             },
+//             { $match: { isDeleted: false } },
+//             { $group: { _id: "$status", count: { $sum: 1 } } },
 //             {
 //                 $group: {
 //                     _id: null,
 //                     total: { $sum: "$count" },
-//                     statuses: {
-//                         $push: {
-//                             k: "$_id",
-//                             v: "$count",
-//                         },
-//                     },
+//                     statuses: { $push: { k: "$_id", v: "$count" } },
 //                 },
 //             },
-//             {
-//                 $project: {
-//                     _id: 0,
-//                     total: 1,
-//                     byStatus: { $arrayToObject: "$statuses" },
-//                 },
-//             },
+//             { $project: { _id: 0, total: 1, byStatus: { $arrayToObject: "$statuses" } } },
 //         ]);
 
 //         const data = result[0] ?? { total: 0, byStatus: {} };
@@ -833,36 +1075,80 @@ export class DashboardService {
 //     }
 
 //     // ================================================================
-//     // 🏦 WITHDRAWAL REQUEST STATS
-//     // Total count + breakdown by status
+//     // 🎯 CAMPAIGN STATS — USER-SCOPED
 //     // ================================================================
-//     private async getWithdrawalRequestStats() {
-//         const result = await WithdrawalRequest.aggregate([
+//     async getUserCampaignStats(userId: Types.ObjectId) {
+//         const result = await Campaign.aggregate([
+//             { $match: { owner: userId, isDeleted: false } },
 //             {
 //                 $group: {
 //                     _id: "$status",
 //                     count: { $sum: 1 },
+//                     totalRaised: { $sum: "$totalRaised" },
+//                     availableBalance: { $sum: "$availableBalance" },
+//                     totalWithdrawn: { $sum: "$totalWithdrawn" },
+//                     pendingWithdrawals: { $sum: "$pendingWithdrawals" },
 //                 },
 //             },
 //             {
 //                 $group: {
 //                     _id: null,
 //                     total: { $sum: "$count" },
-//                     statuses: {
-//                         $push: {
-//                             k: "$_id",
-//                             v: "$count",
-//                         },
-//                     },
+//                     totalRaised: { $sum: "$totalRaised" },
+//                     availableBalance: { $sum: "$availableBalance" },
+//                     totalWithdrawn: { $sum: "$totalWithdrawn" },
+//                     pendingWithdrawals: { $sum: "$pendingWithdrawals" },
+//                     statuses: { $push: { k: "$_id", v: "$count" } },
 //                 },
 //             },
 //             {
 //                 $project: {
 //                     _id: 0,
 //                     total: 1,
+//                     totalRaised: 1,
+//                     availableBalance: 1,
+//                     totalWithdrawn: 1,
+//                     pendingWithdrawals: 1,
 //                     byStatus: { $arrayToObject: "$statuses" },
 //                 },
 //             },
+//         ]);
+
+//         const data = result[0] ?? {
+//             total: 0,
+//             totalRaised: 0,
+//             availableBalance: 0,
+//             totalWithdrawn: 0,
+//             pendingWithdrawals: 0,
+//             byStatus: {},
+//         };
+
+//         return {
+//             totalCampaigns: data.total,
+//             upcoming: data.byStatus?.upcoming ?? 0,
+//             ongoing: data.byStatus?.ongoing ?? 0,
+//             completed: data.byStatus?.completed ?? 0,
+//             totalRaised: data.totalRaised,
+//             availableBalance: data.availableBalance,
+//             totalWithdrawn: data.totalWithdrawn,
+//             pendingWithdrawals: data.pendingWithdrawals,
+//         };
+//     }
+
+//     // ================================================================
+//     // 🏦 WITHDRAWAL REQUEST STATS — PLATFORM-WIDE
+//     // ================================================================
+//     async getWithdrawalRequestStats() {
+//         const result = await WithdrawalRequest.aggregate([
+//             { $group: { _id: "$status", count: { $sum: 1 } } },
+//             {
+//                 $group: {
+//                     _id: null,
+//                     total: { $sum: "$count" },
+//                     statuses: { $push: { k: "$_id", v: "$count" } },
+//                 },
+//             },
+//             { $project: { _id: 0, total: 1, byStatus: { $arrayToObject: "$statuses" } } },
 //         ]);
 
 //         const data = result[0] ?? { total: 0, byStatus: {} };
@@ -879,15 +1165,42 @@ export class DashboardService {
 //     }
 
 //     // ================================================================
-//     // 👥 USER METRICS
-//     // Counts from Account + KYC models
+//     // 🏦 WITHDRAWAL REQUEST STATS — USER-SCOPED
+//     // ================================================================
+//     async getUserWithdrawalRequestStats(userId: Types.ObjectId) {
+//         const result = await WithdrawalRequest.aggregate([
+//             { $match: { userId } },
+//             { $group: { _id: "$status", count: { $sum: 1 } } },
+//             {
+//                 $group: {
+//                     _id: null,
+//                     total: { $sum: "$count" },
+//                     statuses: { $push: { k: "$_id", v: "$count" } },
+//                 },
+//             },
+//             { $project: { _id: 0, total: 1, byStatus: { $arrayToObject: "$statuses" } } },
+//         ]);
+
+//         const data = result[0] ?? { total: 0, byStatus: {} };
+
+//         return {
+//             totalWithdrawalRequests: data.total,
+//             pending: data.byStatus?.pending ?? 0,
+//             approved: data.byStatus?.approved ?? 0,
+//             processing: data.byStatus?.processing ?? 0,
+//             completed: data.byStatus?.completed ?? 0,
+//             rejected: data.byStatus?.rejected ?? 0,
+//             failed: data.byStatus?.failed ?? 0,
+//         };
+//     }
+
+//     // ================================================================
+//     // 👥 USER METRICS — PLATFORM-WIDE
 //     // ================================================================
 //     private async getUserMetrics() {
 //         const [accountStats, pendingKYC] = await Promise.all([
 //             Account.aggregate([
-//                 {
-//                     $match: { isDeleted: false },
-//                 },
+//                 { $match: { isDeleted: false } },
 //                 {
 //                     $facet: {
 //                         totalUsers: [
@@ -895,7 +1208,7 @@ export class DashboardService {
 //                             { $count: "count" },
 //                         ],
 //                         activeUsers: [
-//                             { $match: { status: "active" } },
+//                             { $match: { role: "user", status: "active" } },
 //                             { $count: "count" },
 //                         ],
 //                         totalOrganizations: [
@@ -909,7 +1222,6 @@ export class DashboardService {
 //                     },
 //                 },
 //             ]),
-
 //             KYC.countDocuments({ status: "pending_verification" }),
 //         ]);
 
@@ -922,5 +1234,49 @@ export class DashboardService {
 //             verifiedUsers: stats.verifiedUsers[0]?.count ?? 0,
 //             pendingKYCVerifications: pendingKYC,
 //         };
+//     }
+
+//     // ================================================================
+//     // 🕒 RECENT DONATIONS — USER-SCOPED (last 5)
+//     // ================================================================
+//     private async getUserRecentDonations(userId: Types.ObjectId) {
+//         const donations = await Donation.find({
+//             donor: userId,
+//             isDeleted: false,
+//         })
+//             .sort({ createdAt: -1 })
+//             .limit(5)
+//             .select("amount paymentStatus campaign createdAt isAnonymous")
+//             .populate("campaign", "title")
+//             .lean();
+
+//         return donations.map((d: any) => ({
+//             id: d._id,
+//             amount: d.amount,
+//             status: d.paymentStatus,
+//             campaignId: d.campaign?._id ?? d.campaign,
+//             campaignTitle: d.campaign?.title ?? null,
+//             isAnonymous: d.isAnonymous,
+//             createdAt: d.createdAt,
+//         }));
+//     }
+
+//     // ================================================================
+//     // 🕒 RECENT WITHDRAWALS — USER-SCOPED (last 5)
+//     // ================================================================
+//     private async getUserRecentWithdrawals(userId: Types.ObjectId) {
+//         const withdrawals = await WithdrawalRequest.find({ userId })
+//             .sort({ createdAt: -1 })
+//             .limit(5)
+//             .select("amount status campaignId createdAt")
+//             .lean();
+
+//         return withdrawals.map((w: any) => ({
+//             id: w._id,
+//             amount: w.amount,
+//             status: w.status,
+//             campaignId: w.campaignId ?? null,
+//             createdAt: w.createdAt,
+//         }));
 //     }
 // }
