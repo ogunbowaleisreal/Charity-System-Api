@@ -3,6 +3,8 @@ import Campaign from "../../models/Campaign";
 import { Donation } from "../../models/Donations";
 import Comment from "../../models/Comment";
 import { Account } from "../../models/Accounts";
+import { formatPagination } from "../../utils/admin/paginationUtills";
+import { FilterQuery } from "mongoose";
 
 // type createCampaign = {
 //     title: string;
@@ -29,10 +31,15 @@ export type CreateCampaignDTO = {
     // DETAILS
     // =========================
     category: string;
+    search?: string
     image: {
         imageUrl: string,
         thumbnailUrl: string
     }[];
+    firstName?: string;
+    lastName?: string;
+    companyName?: string;
+    userName?: string;
     thumbnailUrl: string;
     title: string;
     tags: Types.ObjectId[];
@@ -90,12 +97,20 @@ export class CampaignService {
         if (!user) throw new Error("User not found");
         payload.owner = user._id as string;
         payload.ownerType = user.role;
+        if (user.role === "user") {
+            payload.firstName = user.firstName;
+            payload.lastName = user.lastName;
+        }
+        payload.userName = user.userName;
+        payload.companyName = user.companyName;
         if (payload.startImmediately) payload.startDate = new Date();
+        console.log(payload)
 
         return await Campaign.create({
             ...payload,
             owner: userId,
         });
+
     }
 
     async updateCampaign(campaignId: string, userId: string, payload: UpdateCampaign) {
@@ -178,6 +193,7 @@ export class CampaignService {
             },
         };
     }
+
 
     // async getAllCampaigns(query: campaignFilter) {
     //     const { page = 1, limit = 10, category, status } = query;

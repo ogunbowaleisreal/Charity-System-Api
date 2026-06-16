@@ -217,10 +217,17 @@ export class authService {
         }
 
         if (client.isVerified === false) {
+            otpService.generateAndSendOTP(email, "registration");
             throw {
-                message: "Account has not been verified",
-                statusCode: HTTP_STATUS.FORBIDDEN,
+                success: false,
+                message:
+                    "Just one more step! We've sent a verification code to your email. Please check your inbox and enter the code to complete your login.",
+                statusCode: HTTP_STATUS.LOCKED,
             };
+            // throw {
+            //     message: "Account has not been verified",
+            //     statusCode: HTTP_STATUS.FORBIDDEN,
+            // };
         }
 
         // // Check if account is locked

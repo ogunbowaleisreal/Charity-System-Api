@@ -925,20 +925,102 @@ export class DashboardService {
     //   - pendingKYCVerification (whether this user has a pending KYC doc)
     // totalUsers / activeUsers / totalOrganizations are not applicable per-user.
     // ================================================================
-    private async getUserMetricsByUserId(userId: Types.ObjectId) {
-        const [account, pendingKYC] = await Promise.all([
-            Account.findOne({ _id: userId, isDeleted: false })
-                .select("kycStatus isVerified status role")
-                .lean(),
-            KYC.countDocuments({ userId, status: "pending_verification" }),
+    // private async getUserMetricsByUserId(userId: Types.ObjectId) {
+    //     const [account, pendingKYC] = await Promise.all([
+    //         Account.findOne({ _id: userId, isDeleted: false })
+    //             .select("kycStatus isVerified status role")
+    //             .lean(),
+    //         KYC.countDocuments({ userId, status: "pending_verification" }),
+    //     ]);
+
+    //     return {
+    //         kycStatus: account?.kycStatus ?? null,
+    //         isVerified: account?.isVerified ?? false,
+    //         status: account?.status ?? null,
+    //         role: account?.role ?? null,
+    //         pendingKYCVerification: pendingKYC > 0,
+    //     };
+    // }
+
+    async getUserMetricsByUserId(userId: Types.ObjectId) {
+        const result = await Account.aggregate([
+            {
+                $match: { _id: userId, isDeleted: false },
+            },
+            {
+                // Pull in campaign count for this user
+                $lookup: {
+                    from: "campaigns",
+                    let: { ownerId: "$_id" },
+                    pipeline: [
+                        { $match: { $expr: { $eq: ["$owner", "$$ownerId"] } } },
+                        { $count: "count" },
+                    ],
+                    as: "campaignData",
+                },
+            },
+            {
+                // Pull in wallet balance for this user
+                $lookup: {
+                    from: "wallets",
+                    let: { userId: "$_id" },
+                    pipeline: [
+                        { $match: { $expr: { $eq: ["$userId", "$$userId"] } } },
+                        { $project: { availableBalance: 1, _id: 0 } },
+                    ],
+                    as: "walletData",
+                },
+            },
+            {
+                // Pull in pending KYC count for this user
+                $lookup: {
+                    from: "kycs",
+                    let: { userId: "$_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: { $eq: ["$userId", "$$userId"] },
+                                status: "pending_verification",
+                            },
+                        },
+                        { $count: "count" },
+                    ],
+                    as: "kycData",
+                },
+            },
+            {
+                $project: {
+                    _id: 0,
+                    kycStatus: 1,
+                    isVerified: 1,
+                    status: 1,
+                    role: 1,
+                    totalCampaignsOwned: {
+                        $ifNull: [{ $arrayElemAt: ["$campaignData.count", 0] }, 0],
+                    },
+                    walletBalance: {
+                        $ifNull: [{ $arrayElemAt: ["$walletData.availableBalance", 0] }, 0],
+                    },
+                    pendingKYCVerification: {
+                        $gt: [
+                            { $ifNull: [{ $arrayElemAt: ["$kycData.count", 0] }, 0] },
+                            0,
+                        ],
+                    },
+                },
+            },
         ]);
 
+        const data = result[0];
+
         return {
-            kycStatus: account?.kycStatus ?? null,
-            isVerified: account?.isVerified ?? false,
-            status: account?.status ?? null,
-            role: account?.role ?? null,
-            pendingKYCVerification: pendingKYC > 0,
+            kycStatus: data?.kycStatus ?? null,
+            isVerified: data?.isVerified ?? false,
+            status: data?.status ?? null,
+            role: data?.role ?? null,
+            pendingKYCVerification: data?.pendingKYCVerification ?? false,
+            totalCampaignsOwned: data?.totalCampaignsOwned ?? 0,
+            walletBalance: data?.walletBalance ?? 0,
         };
     }
 

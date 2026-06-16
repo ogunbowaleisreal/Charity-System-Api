@@ -8,6 +8,7 @@ import {
     formatPagination,
     PaginationQuery
 } from "../../utils/admin/paginationUtills";
+import { CampaignPipelineBuilder } from "../campaignPipelineBuilder";
 
 // import {
 //     CampaignFilters,
@@ -33,6 +34,7 @@ export interface BaseFilter extends PaginationQuery {
 // CAMPAIGN FILTERS
 // =========================
 export interface CampaignFilters extends BaseFilter {
+    search?: string;
     status?: "upcoming" | "ongoing" | "completed";
     isActive?: boolean;
     isDeleted?: boolean;
@@ -82,8 +84,98 @@ export class CampaignAdminService {
     // =========================
     // 📊 GET ALL CAMPAIGNS
     // =========================
+    // async getAllCampaigns(filters: CampaignFilters) {
+    //     const {
+    //         status,
+    //         isActive,
+    //         isDeleted,
+    //         riskLevel,
+    //         isFlagged,
+    //         ownerId,
+    //         ownerType,
+    //         minTargetAmount,
+    //         maxTargetAmount,
+    //         minRaised,
+    //         maxRaised,
+    //         startDate,
+    //         endDate,
+    //         page = 1,
+    //         limit = 10
+    //     } = filters;
+
+    //     const { skip } = buildPagination(page, limit);
+
+    //     const query: FilterQuery<ICampaign> = {};
+
+    //     // 🎯 basic filters
+    //     if (status) query.status = status;
+    //     if (typeof isActive === "boolean") query.isActive = isActive;
+    //     if (typeof isDeleted === "boolean") query.isDeleted = isDeleted;
+    //     if (riskLevel) query.riskLevel = riskLevel;
+    //     if (typeof isFlagged === "boolean") query.isFlagged = isFlagged;
+
+    //     // 👤 ownership
+
+    //     if (ownerType) query.ownerType = ownerType;
+
+    //     // 💰 financial filters
+    //     if (minTargetAmount || maxTargetAmount) {
+    //         query.targetAmount = {};
+    //         if (minTargetAmount) query.targetAmount.$gte = minTargetAmount;
+    //         if (maxTargetAmount) query.targetAmount.$lte = maxTargetAmount;
+    //     }
+
+    //     if (minRaised || maxRaised) {
+    //         query.totalRaised = {};
+    //         if (minRaised) query.totalRaised.$gte = minRaised;
+    //         if (maxRaised) query.totalRaised.$lte = maxRaised;
+    //     }
+
+    //     // 📅 date range
+    //     if (startDate || endDate) {
+    //         query.createdAt = {};
+    //         if (startDate) query.createdAt.$gte = startDate;
+    //         if (endDate) query.createdAt.$lte = endDate;
+    //     }
+    //     if (ownerId) {
+    //         query.owner = new Types.ObjectId(ownerId);
+    //         const campaignStats = await dashboard.getUserCampaignStats(new Types.ObjectId(ownerId));
+    //         const [campaigns, total] = await Promise.all([
+    //             Campaign.find(query)
+    //                 .populate("owner", "email fullName firstName lastName phoneNumber profilePicture")
+    //                 .populate("authors", "email fullName")
+    //                 .populate("category", "categoryName description image status")
+    //                 .populate("tags", "name")
+    //                 .sort({ createdAt: -1 })
+    //                 .skip(skip)
+    //                 .limit(limit),
+
+    //             Campaign.countDocuments(query)
+    //         ]);
+
+    //         return formatPagination({ campaigns, campaignStats }, total, page, limit);
+    //     }
+    //     const campaignStats = await dashboard.getCampaignTableStats();
+
+    //     const [campaigns, total] = await Promise.all([
+    //         Campaign.find(query)
+    //             .populate("owner", "email fullName firstName lastName phoneNumber profilePicture")
+    //             .populate("authors", "email fullName")
+    //             .populate("category", "categoryName description image status")
+    //             .populate("tags", "name")
+    //             .sort({ createdAt: -1 })
+    //             .skip(skip)
+    //             .limit(limit),
+
+    //         Campaign.countDocuments(query)
+    //     ]);
+
+    //     return formatPagination({ campaigns, campaignStats }, total, page, limit);
+    // }
+
     async getAllCampaigns(filters: CampaignFilters) {
         const {
+            search,           // 👈 add this
             status,
             isActive,
             isDeleted,
@@ -111,10 +203,20 @@ export class CampaignAdminService {
         if (typeof isDeleted === "boolean") query.isDeleted = isDeleted;
         if (riskLevel) query.riskLevel = riskLevel;
         if (typeof isFlagged === "boolean") query.isFlagged = isFlagged;
-
-        // 👤 ownership
-
         if (ownerType) query.ownerType = ownerType;
+
+        // 🔍 search
+        if (search) {
+            const regex = { $regex: search, $options: "i" };
+            query.$or = [
+                { title: regex },
+                { description: regex },
+                { firstName: regex },
+                { lastName: regex },
+                { userName: regex },
+                { companyName: regex },
+            ];
+        }
 
         // 💰 financial filters
         if (minTargetAmount || maxTargetAmount) {
@@ -135,6 +237,7 @@ export class CampaignAdminService {
             if (startDate) query.createdAt.$gte = startDate;
             if (endDate) query.createdAt.$lte = endDate;
         }
+
         if (ownerId) {
             query.owner = new Types.ObjectId(ownerId);
             const campaignStats = await dashboard.getUserCampaignStats(new Types.ObjectId(ownerId));
@@ -147,12 +250,12 @@ export class CampaignAdminService {
                     .sort({ createdAt: -1 })
                     .skip(skip)
                     .limit(limit),
-
                 Campaign.countDocuments(query)
             ]);
 
             return formatPagination({ campaigns, campaignStats }, total, page, limit);
         }
+
         const campaignStats = await dashboard.getCampaignTableStats();
 
         const [campaigns, total] = await Promise.all([
@@ -164,12 +267,34 @@ export class CampaignAdminService {
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
-
             Campaign.countDocuments(query)
         ]);
 
         return formatPagination({ campaigns, campaignStats }, total, page, limit);
     }
+
+    // async getAllCampaigns(filters: CampaignFilters) {
+    //     const { page = 1, limit = 10, ownerId } = filters;
+
+    //     const builder = new CampaignPipelineBuilder(filters);
+
+    //     const [campaignStats, campaignsRaw, countRaw] = await Promise.all([
+    //         ownerId
+    //             ? dashboard.getUserCampaignStats(new Types.ObjectId(ownerId))
+    //             : dashboard.getCampaignTableStats(),
+    //         Campaign.aggregate(builder.build()),
+    //         Campaign.aggregate(builder.buildCount()),
+    //     ]);
+
+    //     const total = countRaw[0]?.total ?? 0;
+
+    //     return formatPagination(
+    //         { campaigns: campaignsRaw, campaignStats },
+    //         total,
+    //         page,
+    //         limit
+    //     );
+    // }
 
     // =========================
     // 🎯 GET CAMPAIGN BY ID

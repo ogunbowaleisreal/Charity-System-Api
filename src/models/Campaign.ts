@@ -8,7 +8,11 @@ export interface ICampaign extends Document {
         imageUrl: string,
         thumbnailUrl: string
     }[];
-    thumbnailUrl: string
+    thumbnailUrl: string,
+    firstName: string,
+    lastName: string,
+    userName: string
+    companyName: string
 
     category: Types.ObjectId;
     tags: string[];
@@ -82,6 +86,19 @@ const CampaignSchema = new Schema<ICampaign>(
             type: String,
             required: true,
             trim: true,
+        },
+        firstName: {
+            type: String,
+            //default: null
+        },
+        lastName: {
+            type: String
+        },
+        companyName: {
+            type: String
+        },
+        userName: {
+            type: String
         },
 
         description: {

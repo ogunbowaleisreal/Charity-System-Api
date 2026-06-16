@@ -373,6 +373,10 @@ export class WithdrawalService {
         const withdrawalRequest = await WithdrawalRequest.create({
             wallet: walletId,
             userId,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            userName: user.userName,
+            companyName: user.companyName,
             amount,
             type: "withdrawal",
             status: "pending",

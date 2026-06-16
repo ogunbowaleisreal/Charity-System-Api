@@ -6,6 +6,11 @@ export interface IWithdrawalRequest extends Document {
     // =========================
     userId: Types.ObjectId;
     campaignId?: Types.ObjectId;
+    firstName: string;
+    lastName: string;
+    userName: string;
+    companyName: string;
+    //phoneNumber: string;
 
     // =========================
     // 💰 FINANCIAL
@@ -81,6 +86,19 @@ const WithdrawalRequestSchema = new Schema<IWithdrawalRequest>(
             type: Schema.Types.ObjectId,
             ref: "Campaign",
             index: true,
+        },
+
+        firstName: {
+            type: String
+        },
+        lastName: {
+            type: String
+        },
+        userName: {
+            type: String
+        },
+        companyName: {
+            type: String
         },
 
         amount: {
