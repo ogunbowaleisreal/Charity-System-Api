@@ -138,7 +138,7 @@ export class WalletTransactionServices {
             }
             if (userId) {
                 query.userId = new Types.ObjectId(userId);
-                const transactionstats = await dashboard.getUserFinancialTotals(new Types.ObjectId(userId))
+                const transactionStats = await dashboard.getUserFinancialTotals(new Types.ObjectId(userId))
 
                 const [transactions, total] = await Promise.all([
                     WalletTransaction.find(query)
@@ -149,7 +149,7 @@ export class WalletTransactionServices {
                     WalletTransaction.countDocuments(query)
                 ]);
 
-                return formatPagination({ transactions, transactionstats }, total, page, limit);
+                return formatPagination({ transactions, transactionStats }, total, page, limit);
             }
             const transactionStats = await dashboard.getPlatformFinancialTotals()
 

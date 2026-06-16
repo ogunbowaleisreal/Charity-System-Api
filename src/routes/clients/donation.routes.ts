@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { DonationController } from "../../controllers/client/donation.controller";
-import { verifyClientToken } from "../../middleware/auth";
+import { verifyClientToken, optionalClientAuth } from "../../middleware/auth";
 import { rateLimiter } from "../../middleware/ratelimiter";
 
 const router = Router();
@@ -10,6 +10,7 @@ const donationCtrl = new DonationController();
 // 🔒 GLOBAL
 // =============================
 router.use(rateLimiter.general);
+router.use(optionalClientAuth);
 
 // =============================
 // 🔹 PUBLIC WEBHOOK (NO AUTH)

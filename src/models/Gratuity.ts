@@ -5,6 +5,7 @@ export interface IGratuity extends Document {
     percentage: number;
 
     userId?: Types.ObjectId;
+    fullName: string
 
     // Link to original payment
     transactionReference: string;
@@ -43,6 +44,9 @@ const GratuitySchema = new Schema<IGratuity>(
             type: String,
             required: true,
             index: true,
+        },
+        fullName: {
+            type: String
         },
 
         campaign: {

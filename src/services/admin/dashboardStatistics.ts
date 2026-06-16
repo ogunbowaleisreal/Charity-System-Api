@@ -339,6 +339,181 @@ export class DashboardService {
     }
 
     // ================================================================
+    // 🎁 DONATION STATS — PLATFORM-WIDE
+    // Covers:
+    //   - totalCount + totalAmount (all donations)
+    //   - byPaymentStatus: { pending, success, failed } -> { count, amount }
+    //   - byType: { user, guest } -> { count, amount }
+    //   - anonymous: { count, amount } — donor is "Anonymous" (isAnonymous: true)
+    //   - nonAnonymous: { count, amount } — named donors
+    //   - registered: { count, amount } — donor field is not null
+    //   - unregistered: { count, amount } — donor field is null (guest/unregistered)
+    // ================================================================
+    async getDonationStats() {
+        const [statusBreakdown, typeBreakdown, anonymousBreakdown, registrationBreakdown] =
+            await Promise.all([
+                // 1. By paymentStatus
+                Donation.aggregate([
+                    {
+                        $group: {
+                            _id: "$paymentStatus",
+                            totalAmount: { $sum: "$amount" },
+                            count: { $sum: 1 },
+                        },
+                    },
+                ]),
+
+                // 2. By type (user | guest)
+                Donation.aggregate([
+                    {
+                        $group: {
+                            _id: "$type",
+                            totalAmount: { $sum: "$amount" },
+                            count: { $sum: 1 },
+                        },
+                    },
+                ]),
+
+                // 3. Anonymous vs non-anonymous (isAnonymous flag)
+                Donation.aggregate([
+                    {
+                        $group: {
+                            _id: "$isAnonymous",
+                            totalAmount: { $sum: "$amount" },
+                            count: { $sum: 1 },
+                        },
+                    },
+                ]),
+
+                // 4. Registered (donor != null) vs unregistered (donor == null)
+                Donation.aggregate([
+                    {
+                        $group: {
+                            _id: { $cond: [{ $ifNull: ["$donor", false] }, "registered", "unregistered"] },
+                            totalAmount: { $sum: "$amount" },
+                            count: { $sum: 1 },
+                        },
+                    },
+                ]),
+            ]);
+
+        // --- helpers ---
+        const emptyBucket = { count: 0, amount: 0 };
+
+        const pickBucket = (rows: any[], id: any) => {
+            const row = rows.find((r) => r._id === id);
+            return row ? { count: row.count, amount: row.totalAmount } : { ...emptyBucket };
+        };
+
+        const pending = pickBucket(statusBreakdown, "pending");
+        const success = pickBucket(statusBreakdown, "success");
+        const failed = pickBucket(statusBreakdown, "failed");
+
+        const userType = pickBucket(typeBreakdown, "user");
+        const guestType = pickBucket(typeBreakdown, "guest");
+
+        const anonymous = pickBucket(anonymousBreakdown, true);
+        const nonAnonymous = pickBucket(anonymousBreakdown, false);
+
+        const registered = pickBucket(registrationBreakdown, "registered");
+        const unregistered = pickBucket(registrationBreakdown, "unregistered");
+
+        const totalCount = pending.count + success.count + failed.count;
+        const totalAmount = pending.amount + success.amount + failed.amount;
+
+        return {
+            totalCount,
+            totalAmount,
+            byPaymentStatus: { pending, success, failed },
+            byType: { user: userType, guest: guestType },
+            byAnonymity: { anonymous, nonAnonymous },
+            byRegistration: { registered, unregistered },
+        };
+    }
+
+    // ================================================================
+    // 🎁 DONATION STATS — USER-SCOPED
+    // For a registered user (donor = userId):
+    //   - totalCount + totalAmount (all statuses)
+    //   - successfulAmount + successfulCount (paymentStatus === "success")
+    //   - byPaymentStatus: { pending, success, failed } -> { count, amount }
+    //   - byAnonymity: { anonymous, nonAnonymous } -> { count, amount }
+    //   - byRegistration: always registered for this user, but guest
+    //     donations they made while unregistered won't appear here since
+    //     those have donor: null — so we track by type instead
+    //   - byType: { user, guest } -> { count, amount }
+    // ================================================================
+    async getUserDonationStats(userId: Types.ObjectId) {
+        const [statusBreakdown, typeBreakdown, anonymousBreakdown] = await Promise.all([
+            // 1. By paymentStatus
+            Donation.aggregate([
+                { $match: { donor: userId } },
+                {
+                    $group: {
+                        _id: "$paymentStatus",
+                        totalAmount: { $sum: "$amount" },
+                        count: { $sum: 1 },
+                    },
+                },
+            ]),
+
+            // 2. By type (user | guest)
+            Donation.aggregate([
+                { $match: { donor: userId } },
+                {
+                    $group: {
+                        _id: "$type",
+                        totalAmount: { $sum: "$amount" },
+                        count: { $sum: 1 },
+                    },
+                },
+            ]),
+
+            // 3. Anonymous vs non-anonymous
+            Donation.aggregate([
+                { $match: { donor: userId } },
+                {
+                    $group: {
+                        _id: "$isAnonymous",
+                        totalAmount: { $sum: "$amount" },
+                        count: { $sum: 1 },
+                    },
+                },
+            ]),
+        ]);
+
+        const emptyBucket = { count: 0, amount: 0 };
+
+        const pickBucket = (rows: any[], id: any) => {
+            const row = rows.find((r) => r._id === id);
+            return row ? { count: row.count, amount: row.totalAmount } : { ...emptyBucket };
+        };
+
+        const pending = pickBucket(statusBreakdown, "pending");
+        const success = pickBucket(statusBreakdown, "success");
+        const failed = pickBucket(statusBreakdown, "failed");
+
+        const userType = pickBucket(typeBreakdown, "user");
+        const guestType = pickBucket(typeBreakdown, "guest");
+
+        const anonymous = pickBucket(anonymousBreakdown, true);
+        const nonAnonymous = pickBucket(anonymousBreakdown, false);
+
+        const totalCount = pending.count + success.count + failed.count;
+        const totalAmount = pending.amount + success.amount + failed.amount;
+
+        return {
+            totalCount,
+            totalAmount,
+            successfulAmount: success.amount,
+            successfulCount: success.count,
+            byPaymentStatus: { pending, success, failed },
+            byType: { user: userType, guest: guestType },
+            byAnonymity: { anonymous, nonAnonymous },
+        };
+    }
+
+    // ================================================================
     // 🎯 CAMPAIGN STATS — PLATFORM-WIDE
     // ================================================================
     async getCampaignStats() {
@@ -586,7 +761,7 @@ export class DashboardService {
                             { $count: "count" },
                         ],
                         activeUsers: [
-                            { $match: { role: "user", status: "active" } },
+                            { $match: { status: "active" } },
                             { $count: "count" },
                         ],
                         totalOrganizations: [

@@ -97,7 +97,7 @@ export class profileController {
             sendSuccessResponse(res, { success: true }, "password changed successfully", 200)
         } catch (err: any) {
             logger.error("password change failed", err.message)
-            //sendErrorResponse(res, err.message, err.statusCode)
+            sendErrorResponse(res, err.message, err.statusCode)
             next(err)
         }
     }

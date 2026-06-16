@@ -4,6 +4,7 @@ export interface IAccount extends Document {
     // ===== BASIC AUTH =====
     firstName: string;
     lastName: string;
+    userName: string;
     email: string;
     phoneNumber: string;
     password: string;
@@ -90,6 +91,9 @@ const AccountSchema = new Schema<IAccount>(
         // ===== BASIC AUTH =====
         firstName: { type: String },
         lastName: { type: String },
+        userName: {
+            type: String,
+        },
 
         email: {
             type: String,

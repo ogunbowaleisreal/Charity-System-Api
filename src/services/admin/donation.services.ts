@@ -1,5 +1,7 @@
 import { Donation } from "../../models/Donations";
 import { Types } from "mongoose";
+import { DashboardService } from "./dashboardStatistics";
+import { formatPagination } from "../../utils/admin/paginationUtills";
 
 
 
@@ -9,6 +11,7 @@ export type donationFilter = {
 }
 
 export class DonationService {
+    dashboard = new DashboardService()
     async getDonationById(donationId: string) {
         const donation = await Donation.findById(donationId)
             .populate("campaign")
@@ -22,6 +25,7 @@ export class DonationService {
 
     async getUserDonations(userId: string, query: donationFilter) {
         const { page, limit } = query
+        const donationStats = await this.dashboard.getUserDonationStats(new Types.ObjectId(userId));
         const donations = await Donation.find({ donor: userId })
             .populate("donor", "firstName lastName profilePicture logo country state")
             .populate("campaign", "title image description")
@@ -29,16 +33,8 @@ export class DonationService {
             .skip((page - 1) * limit)
             .limit(limit)
         const total = await Donation.countDocuments({ donor: userId });
-        const totalPages = Math.ceil(total / limit);
-        return {
-            donations, pagination: {
-                current_page: page,
-                total_pages: totalPages,
-                per_page: limit,
-                total_records: total,
-                has_next_page: page < totalPages,
-                has_prev_page: page > 1
-            }
-        };
+        //const totalPages = Math.ceil(total / limit);
+        return formatPagination({ donations, donationStats }, total, page, limit)
+
     }
 }

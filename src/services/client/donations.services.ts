@@ -32,19 +32,19 @@ export class DonationService {
     // =========================
     // 🔹 INITIATE DONATION
     // =========================
-    async initiateDonation(data: {
+    async initiateDonation(userId: string, data: {
         campaignId: string;
         email: string;
-        firstname: string;
-        lastname: string;
+        firstname?: string;
+        lastname?: string;
         amount: number;
         gratuityPercentage?: number
+        donateAnonymously?: boolean
         // paymentMethod: "card" | "bank_transfer";
     }) {
         //const reference = `don_${Date.now()}`;
         const reference = `DON_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`; //crypto.randomUUID();
-
-        const user = await Account.findOne({ email: data.email }) as any
+        const user = await Account.findById(userId) as any
         if (!user) {
             logger.info("User not found, Creating donation for guest user", { email: data.email });
             // throw new AppError("User not found, Creating donation for guest user", 400);
@@ -76,7 +76,7 @@ export class DonationService {
             grossAmount: amountData.totalAmount,
             reference: reference,
             idempotencyKey: reference,
-            fullName: `${data.firstname} ${data.lastname}`,
+            fullName: data.donateAnonymously ? "Anonymous" : `${data.firstname} ${data.lastname}`,
             type: user ? "user" : "guest",
             serviceCharge: serviceFee ? serviceFee.value : 0,
             userId: user ? user._id : null, //user._id,
@@ -102,7 +102,7 @@ export class DonationService {
             currency: "NGN",
             redirectUrl: `${process.env.REDIRECT_URL}`,
             customerEmail: data.email,
-            customerName: `${data.firstname} ${data.lastname}`,
+            customerName: data.donateAnonymously ? "Anonymous" : `${data.firstname} ${data.lastname}`,
             link_expiration: linkExpiration
             // customerPhone: data.phone,
             //lastname: data.lastname,

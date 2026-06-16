@@ -39,7 +39,7 @@ export class DonationController {
     ) {
         try {
             const donation = await donationService.initiateDonation(
-                // req.user?._id,
+                req.user?.userId,
                 req.body as initiateDonation
             );
 

@@ -21,22 +21,28 @@ export class authController {
         try {
             // Registration logic here
             //const { username, password, email } = req.body;
-            const { firstName, lastName, password, email, phoneNumber, role, companyName, organizationType } = req.body
-            if (!firstName || !lastName || !password || !email || !phoneNumber || !role) {
-                return res.status(400).json({ message: "username, password and email are required" })
+            const { firstName, lastName, userName, password, gender, email, phoneNumber, role, companyName, organizationType } = req.body
+            if (!password || !email || !phoneNumber || !role) {
+                return res.status(400).json({ message: " password and email are required" })
             }
             const user = await Account.findOne({ email, isDeleted: false })
             if (!user) {
+                if (role == "organization") {
+                    if (!userName) {
+                        return res.status(400).json({ message: "user name is required" })
+                    }
+                }
                 const hashedPassword = await bcryptUtil.hashPassword(password);
                 const newUser = new Account({
                     firstName,
                     lastName,
+                    userName,
                     role: role,
                     password: hashedPassword,
                     email,
                     phoneNumber,
+                    gender,
                     //phoneCountryCode,
-                    //gender,
                     //companyName,
                     //businessCategory,
                     isVerified: false
@@ -44,6 +50,9 @@ export class authController {
 
 
                 if (role == "organization") {
+                    if (!companyName || !organizationType) {
+                        return res.status(400).json({ message: "company name and organization type are required" })
+                    }
                     newUser.companyName = companyName
                     newUser.organizationType = organizationType
                     //newUser.role = role

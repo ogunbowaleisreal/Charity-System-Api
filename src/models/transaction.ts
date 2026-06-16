@@ -91,7 +91,7 @@ const WalletTransactionSchema = new Schema<IWalletTransaction>(
 
         userId: {
             type: Schema.Types.ObjectId,
-            ref: "User",
+            ref: "Account",
             //required: true,
         },
         campaignId: {
