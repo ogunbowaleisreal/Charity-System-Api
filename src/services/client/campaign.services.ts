@@ -178,6 +178,7 @@ export class CampaignService {
             },
         };
     }
+
     // async getAllCampaigns(query: campaignFilter) {
     //     const { page = 1, limit = 10, category, status } = query;
 

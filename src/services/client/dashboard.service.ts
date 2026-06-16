@@ -230,6 +230,8 @@ export class ClientDashboardService {
     // 🏦 WITHDRAWAL REQUEST STATS (this account's requests)
     // Total count + breakdown by status
     // ================================================================
+
+
     private async getWithdrawalRequestStats(userId: Types.ObjectId) {
         const result = await WithdrawalRequest.aggregate([
             {
@@ -239,16 +241,19 @@ export class ClientDashboardService {
                 $group: {
                     _id: "$status",
                     count: { $sum: 1 },
+                    totalAmount: { $sum: "$amount" },
                 },
             },
             {
                 $group: {
                     _id: null,
                     total: { $sum: "$count" },
+                    totalAmount: { $sum: "$totalAmount" },
                     statuses: {
                         $push: {
                             k: "$_id",
                             v: "$count",
+                            totalAmount: "$totalAmount",
                         },
                     },
                 },
@@ -257,15 +262,45 @@ export class ClientDashboardService {
                 $project: {
                     _id: 0,
                     total: 1,
-                    byStatus: { $arrayToObject: "$statuses" },
+                    totalAmount: 1,
+                    completedTotalAmount: {
+                        $let: {
+                            vars: {
+                                match: {
+                                    $arrayElemAt: [
+                                        {
+                                            $filter: {
+                                                input: "$statuses",
+                                                as: "s",
+                                                cond: { $eq: ["$$s.k", "completed"] },
+                                            },
+                                        },
+                                        0,
+                                    ],
+                                },
+                            },
+                            in: { $ifNull: ["$$match.totalAmount", 0] },
+                        },
+                    },
+                    byStatus: {
+                        $arrayToObject: {
+                            $map: {
+                                input: "$statuses",
+                                as: "s",
+                                in: { k: "$$s.k", v: "$$s.v" },
+                            },
+                        }
+                    },
                 },
             },
         ]);
 
-        const data = result[0] ?? { total: 0, byStatus: {} };
+        const data = result[0] ?? { total: 0, totalAmount: 0, completedTotalAmount: 0, byStatus: {} };
 
         return {
             totalWithdrawalRequests: data.total,
+            totalAmount: data.totalAmount,
+            completedTotalAmount: data.completedTotalAmount,
             pending: data.byStatus?.pending ?? 0,
             approved: data.byStatus?.approved ?? 0,
             processing: data.byStatus?.processing ?? 0,
@@ -274,6 +309,50 @@ export class ClientDashboardService {
             failed: data.byStatus?.failed ?? 0,
         };
     }
+    // private async getWithdrawalRequestStats(userId: Types.ObjectId) {
+    //     const result = await WithdrawalRequest.aggregate([
+    //         {
+    //             $match: { userId: userId },
+    //         },
+    //         {
+    //             $group: {
+    //                 _id: "$status",
+    //                 count: { $sum: 1 },
+    //             },
+    //         },
+    //         {
+    //             $group: {
+    //                 _id: null,
+    //                 total: { $sum: "$count" },
+    //                 statuses: {
+    //                     $push: {
+    //                         k: "$_id",
+    //                         v: "$count",
+    //                     },
+    //                 },
+    //             },
+    //         },
+    //         {
+    //             $project: {
+    //                 _id: 0,
+    //                 total: 1,
+    //                 byStatus: { $arrayToObject: "$statuses" },
+    //             },
+    //         },
+    //     ]);
+
+    //     const data = result[0] ?? { total: 0, byStatus: {} };
+
+    //     return {
+    //         totalWithdrawalRequests: data.total,
+    //         pending: data.byStatus?.pending ?? 0,
+    //         approved: data.byStatus?.approved ?? 0,
+    //         processing: data.byStatus?.processing ?? 0,
+    //         completed: data.byStatus?.completed ?? 0,
+    //         rejected: data.byStatus?.rejected ?? 0,
+    //         failed: data.byStatus?.failed ?? 0,
+    //     };
+    // }
 
     // ================================================================
     // 👤 ACCOUNT STATUS

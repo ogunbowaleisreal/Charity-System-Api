@@ -691,23 +691,73 @@ export class DashboardService {
     // ================================================================
     // 🏦 WITHDRAWAL REQUEST STATS — PLATFORM-WIDE
     // ================================================================
+
     async getWithdrawalRequestStats() {
         const result = await WithdrawalRequest.aggregate([
-            { $group: { _id: "$status", count: { $sum: 1 } } },
+            {
+                $group: {
+                    _id: "$status",
+                    count: { $sum: 1 },
+                    totalAmount: { $sum: "$amount" },
+                },
+            },
             {
                 $group: {
                     _id: null,
                     total: { $sum: "$count" },
-                    statuses: { $push: { k: "$_id", v: "$count" } },
+                    totalAmount: { $sum: "$totalAmount" },
+                    statuses: {
+                        $push: {
+                            k: "$_id",
+                            v: "$count",
+                            totalAmount: "$totalAmount",
+                        },
+                    },
                 },
             },
-            { $project: { _id: 0, total: 1, byStatus: { $arrayToObject: "$statuses" } } },
+            {
+                $project: {
+                    _id: 0,
+                    total: 1,
+                    totalAmount: 1,
+                    completedTotalAmount: {
+                        $let: {
+                            vars: {
+                                match: {
+                                    $arrayElemAt: [
+                                        {
+                                            $filter: {
+                                                input: "$statuses",
+                                                as: "s",
+                                                cond: { $eq: ["$$s.k", "completed"] },
+                                            },
+                                        },
+                                        0,
+                                    ],
+                                },
+                            },
+                            in: { $ifNull: ["$$match.totalAmount", 0] },
+                        },
+                    },
+                    byStatus: {
+                        $arrayToObject: {
+                            $map: {
+                                input: "$statuses",
+                                as: "s",
+                                in: { k: "$$s.k", v: "$$s.v" },
+                            },
+                        }
+                    },
+                },
+            },
         ]);
 
-        const data = result[0] ?? { total: 0, byStatus: {} };
+        const data = result[0] ?? { total: 0, totalAmount: 0, completedTotalAmount: 0, byStatus: {} };
 
         return {
             totalWithdrawalRequests: data.total,
+            totalAmount: data.totalAmount,
+            completedTotalAmount: data.completedTotalAmount,
             pending: data.byStatus?.pending ?? 0,
             approved: data.byStatus?.approved ?? 0,
             processing: data.byStatus?.processing ?? 0,
@@ -720,24 +770,74 @@ export class DashboardService {
     // ================================================================
     // 🏦 WITHDRAWAL REQUEST STATS — USER-SCOPED
     // ================================================================
+
     async getUserWithdrawalRequestStats(userId: Types.ObjectId) {
         const result = await WithdrawalRequest.aggregate([
             { $match: { userId } },
-            { $group: { _id: "$status", count: { $sum: 1 } } },
+            {
+                $group: {
+                    _id: "$status",
+                    count: { $sum: 1 },
+                    totalAmount: { $sum: "$amount" },
+                },
+            },
             {
                 $group: {
                     _id: null,
                     total: { $sum: "$count" },
-                    statuses: { $push: { k: "$_id", v: "$count" } },
+                    totalAmount: { $sum: "$totalAmount" },
+                    statuses: {
+                        $push: {
+                            k: "$_id",
+                            v: "$count",
+                            totalAmount: "$totalAmount",
+                        },
+                    },
                 },
             },
-            { $project: { _id: 0, total: 1, byStatus: { $arrayToObject: "$statuses" } } },
+            {
+                $project: {
+                    _id: 0,
+                    total: 1,
+                    totalAmount: 1,
+                    completedTotalAmount: {
+                        $let: {
+                            vars: {
+                                match: {
+                                    $arrayElemAt: [
+                                        {
+                                            $filter: {
+                                                input: "$statuses",
+                                                as: "s",
+                                                cond: { $eq: ["$$s.k", "completed"] },
+                                            },
+                                        },
+                                        0,
+                                    ],
+                                },
+                            },
+                            in: { $ifNull: ["$$match.totalAmount", 0] },
+                        },
+                    },
+                    byStatus: {
+                        $arrayToObject: {
+                            $map: {
+                                input: "$statuses",
+                                as: "s",
+                                in: { k: "$$s.k", v: "$$s.v" },
+                            },
+                        }
+                    },
+                },
+            },
         ]);
 
-        const data = result[0] ?? { total: 0, byStatus: {} };
+        const data = result[0] ?? { total: 0, totalAmount: 0, completedTotalAmount: 0, byStatus: {} };
 
         return {
             totalWithdrawalRequests: data.total,
+            totalAmount: data.totalAmount,
+            completedTotalAmount: data.completedTotalAmount,
             pending: data.byStatus?.pending ?? 0,
             approved: data.byStatus?.approved ?? 0,
             processing: data.byStatus?.processing ?? 0,
@@ -746,6 +846,32 @@ export class DashboardService {
             failed: data.byStatus?.failed ?? 0,
         };
     }
+    // async getUserWithdrawalRequestStats(userId: Types.ObjectId) {
+    //     const result = await WithdrawalRequest.aggregate([
+    //         { $match: { userId } },
+    //         { $group: { _id: "$status", count: { $sum: 1 } } },
+    //         {
+    //             $group: {
+    //                 _id: null,
+    //                 total: { $sum: "$count" },
+    //                 statuses: { $push: { k: "$_id", v: "$count" } },
+    //             },
+    //         },
+    //         { $project: { _id: 0, total: 1, byStatus: { $arrayToObject: "$statuses" } } },
+    //     ]);
+
+    //     const data = result[0] ?? { total: 0, byStatus: {} };
+
+    //     return {
+    //         totalWithdrawalRequests: data.total,
+    //         pending: data.byStatus?.pending ?? 0,
+    //         approved: data.byStatus?.approved ?? 0,
+    //         processing: data.byStatus?.processing ?? 0,
+    //         completed: data.byStatus?.completed ?? 0,
+    //         rejected: data.byStatus?.rejected ?? 0,
+    //         failed: data.byStatus?.failed ?? 0,
+    //     };
+    // }
 
     // ================================================================
     // 👥 USER METRICS — PLATFORM-WIDE
