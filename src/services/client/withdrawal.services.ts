@@ -209,7 +209,7 @@ export class WithdrawalService {
             `wallet_pin_reset_verified:${user.email}`
         );
 
-        return true;
+        return user;
     }
 
 
