@@ -46,6 +46,10 @@ export class NotificationService {
         return await Notification.insertMany(notifications);
     }
 
+    // async subscribeForUpdates(email: string) {
+
+    // }
+
     static async getAllNotifications(filter: {
         type: "DONATION" | "WITHDRAWAL" | "GENERAL",
         segment: "allUsers" | "verifiedUsers",

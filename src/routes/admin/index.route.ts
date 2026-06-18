@@ -25,6 +25,7 @@ import withdrawalRoutes from "./withdrawal.routes"
 import transactionRoutes from "./transaction.management"
 import kycRoutes from "./kyc.routes"
 import serviceFeeRoutes from "./service.fee.routes"
+import bannerRoutes from "./banner.routes"
 //import reportRoutes from "./reports.route"
 //import subscriptionManagementRoutes from "./subscriptionManagement"
 import planRoutes from "./adminPlanManagement"
@@ -45,6 +46,7 @@ router.use("/kyc", kycRoutes)
 router.use("/accounts", accountRoutes)
 router.use("/comments", commentRoutes)
 router.use("/donation", donationRoutes)
+router.use("/banner", bannerRoutes)
 //router.use("/requests", requestRoutes)
 //router.use("/bid", bidRoutes)
 //router.use("/assignments", assignmentRoutes)

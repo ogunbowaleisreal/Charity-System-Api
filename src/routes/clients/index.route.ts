@@ -20,7 +20,9 @@ import serviceFeeRoutes from "./serviceFee.routes"
 import dashBoardRoutes from "./dashboard"
 import notificationRoutes from "./notification.routes"
 import withdrawalRoutes from "./withdrawal.routes"
+import bannerRoutes from "./banner.routes"
 import bankRoutes from "./bank.routes"
+import subscriberRoutes from "./subscriber.routes"
 const router = Router();
 
 router.use('/oauth', oauthRoutes)
@@ -37,10 +39,12 @@ router.use("/faq", faqRoutes)
 router.use("/gratuity", gratuityRoutes)
 router.use("/kyc", kycRoutes)
 router.use('/tags', tagRoutes)
+router.use("/banner", bannerRoutes)
 router.use("/contact", contactRoutes)
 router.use("/campaign-category", businessCategoryRoutes)
 router.use("/transactions", transactionRoutes)
 router.use("/enquiries", enquiryRoutes)
+router.use("/updates", subscriberRoutes)
 router.use("/plans", planRoutes)
 router.use("/withdraw", withdrawalRoutes)
 router.use("/service-fee", serviceFeeRoutes)

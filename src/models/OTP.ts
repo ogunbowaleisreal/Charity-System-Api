@@ -50,7 +50,7 @@ const otpSchema = new Schema<IOTP>(
         expiresAt: {
             type: Date,
             required: true,
-            index: { expireAfterSeconds: 0 },
+            //  index: { expireAfterSeconds: 0 },
         },
     },
     {

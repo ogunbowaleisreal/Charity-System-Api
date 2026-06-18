@@ -59,7 +59,6 @@ const bankSchema = new Schema<IBank>(
     }
 );
 
-bankSchema.index({ code: 1 });
 bankSchema.index({ name: 1 });
 
 export const Bank = mongoose.model<IBank>("Bank", bankSchema);

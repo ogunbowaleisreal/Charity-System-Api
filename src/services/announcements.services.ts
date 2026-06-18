@@ -4,6 +4,7 @@ import { PushNotificationService } from "./pushNotificationService";
 import { ResendEmailService } from "./ResesndServices";
 import { EmailService } from "./ResesndServices";
 import { AnnouncementTemplates } from "./ResesndServices";
+import Subscriber from "../models/Subscriber";
 
 export interface AnnouncementFilter {
     audience:
@@ -61,6 +62,11 @@ export class AnnouncementService {
             throw new Error(
                 "specificUsers is required when audience is specific"
             );
+        }
+        if (data.audience === "subscribed_users" && data.channel == "push") {
+            throw new Error(
+                "Only Email channel is allowed for subscribed users"
+            )
         }
 
         const announcement = await Announcement.create({
@@ -312,11 +318,15 @@ export class AnnouncementService {
 
         if (audience === "specific") {
 
-            return Account.find({
+            return await Account.find({
                 _id: {
                     $in: specificUsers || [],
                 },
             }).lean();
+        }
+
+        if (audience == "subscribed_users") {
+            return await Subscriber.find({ isSubscribed: true }).lean();
         }
 
         const query =
@@ -349,8 +359,7 @@ export class AnnouncementService {
 
             case "suspended_users":
                 return { status: "suspended" };
-            case "subscribed_users":
-                return { emailSubscribed: true }
+
             case "specific":
                 return {
                     _id: {
