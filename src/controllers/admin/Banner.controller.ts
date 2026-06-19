@@ -13,7 +13,8 @@ export class BannerAdminController {
         next: NextFunction
     ) {
         try {
-            const banner = await bannerService.createBanner(req.body);
+            const adminId = req.admin?.adminId
+            const banner = await bannerService.createBanner({ createdBy: adminId, ...req.body });
 
             return sendSuccessResponse(
                 res,

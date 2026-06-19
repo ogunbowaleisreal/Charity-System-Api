@@ -25,7 +25,7 @@ export class WithdrawalService {
         campaignId: string,
         walletPin: string,
         amount: number,
-        narration: string
+        narration?: string
     ) {
         try {
 

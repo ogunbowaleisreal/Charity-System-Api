@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
 
 export interface IBanner extends Document {
     image: string;
@@ -6,6 +6,7 @@ export interface IBanner extends Document {
     isActive: boolean;
     order: number;
     link: string
+    createdBy: Types.ObjectId
 }
 
 const bannerSchema = new Schema<IBanner>(
@@ -36,6 +37,11 @@ const bannerSchema = new Schema<IBanner>(
         isActive: {
             type: Boolean,
             default: true,
+        },
+        createdBy: {
+            type: Schema.Types.ObjectId,
+            ref: "Admin",
+            required: true,
         },
 
         order: {

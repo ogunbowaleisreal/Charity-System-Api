@@ -7,6 +7,7 @@ class BannerService {
      */
     async createBanner(payload: {
         image: string;
+        createdBy: string
         category?: string;
         order?: number;
         link?: string
@@ -46,6 +47,7 @@ class BannerService {
             (Number(page) - 1) * Number(limit);
 
         const banners = await Banner.find(filter)
+            .populate("createdBy", "firstName lastName adminLevel profilePicture")
             .sort({
                 order: 1,
                 createdAt: -1,
