@@ -138,6 +138,7 @@ export class AccountAdminService {
         const userMetrics = await this.dashboard.getUserMetrics();
         const [accounts, total] = await Promise.all([
             Account.find(query)
+                .populate("wallet", "availableBalance currency")
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
@@ -152,7 +153,7 @@ export class AccountAdminService {
     // 👤 GET ACCOUNT BY ID
     // =========================
     async getAccountById(accountId: string) {
-        return Account.findById(accountId);
+        return Account.findById(accountId).populate("wallet", "availableBalance currency");
     }
 
     // =========================

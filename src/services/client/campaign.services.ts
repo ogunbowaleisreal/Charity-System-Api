@@ -105,6 +105,8 @@ export class CampaignService {
         payload.companyName = user.companyName;
         if (payload.startImmediately) payload.startDate = new Date();
         console.log(payload)
+        user.noOfCampaigns += 1
+        await user.save()
 
         return await Campaign.create({
             ...payload,
@@ -171,7 +173,7 @@ export class CampaignService {
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(Number(limit))
-                .populate("owner", "firstName lastName companyName logo")
+                .populate("owner", "firstName lastName companyName logo profilePicture")
                 .populate("category", "categoryName description image status")
                 .populate("tags", "name")
                 .lean(),

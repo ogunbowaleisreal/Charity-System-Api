@@ -84,8 +84,8 @@ export class WithdrawalController {
         const userId = req.user.userId
         console.log("goit here ")
         try {
-            await withdrawalService.firstTimeWalletPinSet(userId, req.body.walletPin)
-            return sendSuccessResponse(res, "wallet pin set successfully")
+            const data = await withdrawalService.firstTimeWalletPinSet(userId, req.body.walletPin)
+            return sendSuccessResponse(res, data, "wallet pin set successfully")
         } catch (err: any) {
             logger.error(err);
             return sendErrorResponse(res, err.message, err.statusCode, err);
@@ -145,7 +145,7 @@ export class WithdrawalController {
         try {
             const isVerified = await withdrawalService.verifyWalletPin(userId, req.body.walletPin)
             logger.info("wallet pin verified successfully")
-            return sendSuccessResponse(res, "wallet pin verified successfully")
+            return sendSuccessResponse(res, { isVerified }, "wallet pin verified successfully")
         } catch (err: any) {
             logger.error(err);
             return sendErrorResponse(res, err.message, err.statusCode);

@@ -15,6 +15,8 @@
     "generate:secret": "ts-node src/scripts/generateWebhookSecret.ts",
     "sync:banks": "ts-node src/scripts/populatebanks.ts",
     "update:Withdrawals": "ts-node src/scripts/updateWithdrawal.ts",
+    "update:Campaigns": "ts-node src/scripts/noOfcampaignsCount.ts",
+    "update:Wallet": "ts-node src/scripts/walletMigrationScript.ts",
     "test": "jest",
     "test:watch": "jest --watch"
   },

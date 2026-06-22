@@ -1,4 +1,4 @@
-import mongoose, { Schema, model, Document } from "mongoose";
+import mongoose, { Schema, model, Document, Types } from "mongoose";
 
 export interface IAccount extends Document {
     // ===== BASIC AUTH =====
@@ -14,6 +14,7 @@ export interface IAccount extends Document {
     provider: "local" | "google" | "apple";
     googleId?: string;
     appleId?: string;
+    noOfCampaigns: number
 
     // ===== VERIFICATION =====
     isVerified: boolean;
@@ -40,6 +41,7 @@ export interface IAccount extends Document {
     logo?: string;
     about?: string;
     businessAddress?: string;
+    wallet: Types.ObjectId
 
     // ===== SOCIALS =====
     website?: string;
@@ -104,7 +106,7 @@ const AccountSchema = new Schema<IAccount>(
         phoneNumber: {
             type: String,
             required: true,
-            unique: true,
+            // unique: true,
         },
 
         password: {
@@ -125,6 +127,14 @@ const AccountSchema = new Schema<IAccount>(
             type: String,
             enum: ["local", "google", "apple"],
             default: "local",
+        },
+        noOfCampaigns: {
+            type: Number,
+            default: 0
+        },
+        wallet: {
+            type: Schema.Types.ObjectId,
+            ref: "Wallet"
         },
 
         googleId: {

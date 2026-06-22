@@ -27,11 +27,11 @@ export class authController {
             }
             const user = await Account.findOne({ email, isDeleted: false })
             if (!user) {
-                if (role == "organization") {
-                    if (!userName) {
-                        return res.status(400).json({ message: "user name is required" })
-                    }
-                }
+                // if (role == "organization") {
+                //     if (!userName) {
+                //         return res.status(400).json({ message: "user name is required" })
+                //     }
+                // }
                 const hashedPassword = await bcryptUtil.hashPassword(password);
                 const newUser = new Account({
                     firstName,
@@ -102,10 +102,13 @@ export class authController {
                 return res.status(404).json({ "message": "user not registered" })
             }
             registeredUser.isVerified = true
-            await registeredUser.save()
+
 
             const kyc = await KYC.create({ userId: registeredUser._id, status: "not_started", level: 0, type: registeredUser.role })
             const newWallet = await Wallet.create({ userId: registeredUser._id })
+            registeredUser.wallet = newWallet._id as any
+            await registeredUser.save()
+
             return res.status(200).json({ "message": "otp verification and registration completed" })
         } catch (err: any) {
             logger.error("verificaion failed", err)
@@ -244,6 +247,22 @@ export class authController {
                 return res.status(400).json({ message: "Email is required" });
             }
             await otpService.generateAndSendOTP(email, "registration");
+            return res.status(200).json({ message: "OTP resent to email" });
+        } catch (err) {
+            logger.error("otp request failed")
+            next(err)
+        }
+    }
+    async resend2FAOtp(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { email } = req.body;
+            if (!email) {
+                return res.status(400).json({ message: "Email is required" });
+            }
+            const user = await Account.find({ email })
+            if (!user) throw new Error("Account not found")
+
+            await otpService.generateAndSendOTP(email, "2fa");
             return res.status(200).json({ message: "OTP resent to email" });
         } catch (err) {
             logger.error("otp request failed")

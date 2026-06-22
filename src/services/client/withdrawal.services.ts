@@ -143,6 +143,7 @@ export class WithdrawalService {
 
         user.isWalletPinSet = true
         await user.save()
+        return user
     }
 
     async resetWalletPin(userId: string) {
