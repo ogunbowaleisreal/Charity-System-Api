@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import { GoogleAuthService } from "../../services/client/googleAuth.service";
 import { authService } from "../../services/client/Auth.services";
+import logger from "../../logger";
+import { sendSuccessResponse, sendErrorResponse } from "../../utils/helpers";
 
 const googleAuthService = new GoogleAuthService();
 const authservice = new authService();
@@ -36,8 +38,10 @@ export class GoogleAuthController {
                 message: "Google login successful",
                 response,
             });
-        } catch (err) {
-            next(err);
+        } catch (err: any) {
+            logger.error(err.message)
+            sendErrorResponse(res, err.message, err.statusCode)
+            //  next(err);
         }
     }
 }

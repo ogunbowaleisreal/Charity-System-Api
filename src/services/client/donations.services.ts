@@ -37,6 +37,7 @@ export class DonationService {
         email: string;
         firstname?: string;
         lastname?: string;
+        phoneNumber?: string
         amount: number;
         gratuityPercentage?: number
         donateAnonymously?: boolean
@@ -72,6 +73,7 @@ export class DonationService {
             gratuityPercentage: amountData.gratuityPercentage,
             campaignId: campaign._id,
             provider: "flutterwave",
+            phoneNumber: data.phoneNumber,
             netAmount: amountData.donationAmount,
             grossAmount: amountData.totalAmount,
             reference: reference,
@@ -103,8 +105,8 @@ export class DonationService {
             redirectUrl: `${process.env.REDIRECT_URL}`,
             customerEmail: data.email,
             customerName: data.donateAnonymously ? "Anonymous" : `${data.firstname} ${data.lastname}`,
-            link_expiration: linkExpiration
-            // customerPhone: data.phone,
+            link_expiration: linkExpiration,
+            customerPhone: data.phoneNumber,
             //lastname: data.lastname,
             //  reference,
         });

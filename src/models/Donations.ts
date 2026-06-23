@@ -13,6 +13,7 @@ export interface IDonation extends Document {
     netAmount: number;
 
     currency: string;
+    donorPhoneNumber: string
 
     // ===== PAYMENT =====
     paymentProvider: "flutterwave" | "google pay" | "manual";
@@ -121,6 +122,9 @@ const DonationSchema = new Schema<IDonation>(
         amount: {
             type: Number,
             required: true,
+        },
+        donorPhoneNumber: {
+            type: String,
         },
 
         serviceFee: {

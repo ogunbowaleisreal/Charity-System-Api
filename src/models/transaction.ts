@@ -15,6 +15,7 @@ export interface IWalletTransaction extends Document {
 
     amount: number;
     userId: Types.ObjectId
+    phoneNumber: string
 
     currency: string;
     campaignId?: Types.ObjectId
@@ -99,6 +100,9 @@ const WalletTransactionSchema = new Schema<IWalletTransaction>(
             ref: "Campaign",
             required: false,
             index: true,
+        },
+        phoneNumber: {
+            type: String
         },
 
         status: {

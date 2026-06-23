@@ -421,6 +421,7 @@ export class webhookServices {
                                 currency: "NGN",
                                 paymentProvider: "flutterwave",
                                 reference: transaction.reference,
+                                donorPhoneNumber: transaction.phoneNumber,
                                 //providerR
                                 paymentStatus: "success",
                                 paymentStatusExtended: "initialized",

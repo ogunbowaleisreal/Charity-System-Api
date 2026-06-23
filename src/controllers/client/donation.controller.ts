@@ -46,7 +46,7 @@ export class DonationController {
             return sendSuccessResponse(res, donation);
         } catch (error: any) {
             logger.error("Initiate donation error:", error);
-            return sendErrorResponse(res, error);
+            return sendErrorResponse(res, error.message);
         }
     }
 
