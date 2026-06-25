@@ -2,6 +2,10 @@ import { Router } from "express";
 import { DonationController } from "../../controllers/client/donation.controller";
 import { verifyClientToken, optionalClientAuth } from "../../middleware/auth";
 import { rateLimiter } from "../../middleware/ratelimiter";
+import { validate } from "../../middleware/validator";
+import {
+    initiateDonationSchema,
+} from "../../validators/donation.validation";
 
 const router = Router();
 const donationCtrl = new DonationController();
@@ -33,7 +37,9 @@ router.post(
 // =============================
 // 🔹 DONATION FLOW
 // =============================
-router.post("/initiate", donationCtrl.initiateDonation);
+router.post("/initiate",
+    validate(initiateDonationSchema),
+    donationCtrl.initiateDonation);
 
 // router.post("/pay/virtual-account", donationCtrl.createVirtualAccount);
 

@@ -2,12 +2,21 @@ import { Router } from "express";
 import { CampaignController } from "../../controllers/client/campaign.controller";
 import { verifyClientToken } from "../../middleware/auth";
 import { rateLimiter } from "../../middleware/ratelimiter";
+import { validate } from "../../middleware/validator";
+import {
+    createCampaignSchema,
+    updateCampaignSchema,
+    campaignFilterSchema,
+    campaignParamsSchema
+} from "../../validators/campaign.validators";
 
 const router = Router();
 
 const campaignCtrl = new CampaignController();
 
-router.get("/", campaignCtrl.getAllCampaigns);
+router.get("/",
+    validate(campaignFilterSchema, "query"),
+    campaignCtrl.getAllCampaigns);
 
 router.get("/:campaignId", campaignCtrl.getCampaignById);
 
@@ -32,11 +41,17 @@ router.use(verifyClientToken);
 // =============================
 // 🔹 CAMPAIGNS
 // =============================
-router.post("/create", campaignCtrl.createCampaign);
+router.post("/create",
+    validate(createCampaignSchema),
+    campaignCtrl.createCampaign);
 
-router.patch("/update/:campaignId", campaignCtrl.updateCampaign);
+router.patch("/update/:campaignId",
+    validate(updateCampaignSchema),
+    campaignCtrl.updateCampaign);
 
-router.delete("/delete/:campaignId", campaignCtrl.deleteCampaign);
+router.delete("/delete/:campaignId",
+    validate(campaignParamsSchema, "params"),
+    campaignCtrl.deleteCampaign);
 
 
 // =============================

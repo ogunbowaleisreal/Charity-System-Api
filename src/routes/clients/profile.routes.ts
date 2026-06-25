@@ -4,6 +4,8 @@ import { profileController } from "../../controllers/client/profile.controller";
 import { verifyJwt } from "../../middleware/verifyClients";
 import { verifyClientToken } from "../../middleware/auth";
 import { rateLimiter } from "../../middleware/ratelimiter";
+import { updateProfileSchema, changePasswordSchema } from "../../validators/user.validation";
+import { validate } from "../../middleware/validator";
 
 const router = Router()
 const profileCtrl = new profileController()
@@ -12,11 +14,11 @@ router.use(rateLimiter.general)
 router.use(verifyClientToken)
 
 router.patch('/update',
-    //verifyJwt,
+    validate(updateProfileSchema),
     profileCtrl.updateClientProfile)
 
 router.post("/change-password",
-    //verifyJwt,
+    validate(changePasswordSchema),
     profileCtrl.changePassword
 )
 
