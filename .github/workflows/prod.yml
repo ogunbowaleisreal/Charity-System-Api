@@ -32,18 +32,18 @@ jobs:
       - name: Deploy to DigitalOcean
         run: |
           rsync -avz --delete ./dist \
-            ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/home/deploy/apps/help-me-nigeria-backend/
+            ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/var/www/help-me-nigeria-backend/
 
           rsync -avz package.json package-lock.json \
-            ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/home/deploy/apps/help-me-nigeria-backend/
+            ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/var/www/help-me-nigeria-backend/
 
           rsync -avz ecosystem.config.js \
-            ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/home/deploy/apps/help-me-nigeria-backend/
+            ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/var/www/help-me-nigeria-backend/
 
           ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
             ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }} << 'EOF'
 
-            cd /home/deploy/apps/help-me-nigeria-backend
+            cd /var/www/help-me-nigeria-backend
 
             # Load NVM
             export NVM_DIR="$HOME/.nvm"
@@ -98,17 +98,17 @@ jobs:
 #       - name: Deploy to DigitalOcean
 #         run: |
 #           # Upload prebuilt dist folder
-#           rsync -avz --delete ./dist ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/home/deploy/apps/help-me-nigeria-backend/
+#           rsync -avz --delete ./dist ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/var/www/help-me-nigeria-backend/
 
 #           # Upload package files
-#           rsync -avz package.json package-lock.json ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/home/deploy/apps/help-me-nigeria-backend/
+#           rsync -avz package.json package-lock.json ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/var/www/help-me-nigeria-backend/
 
 #           # Upload PM2 config
-#           rsync -avz ecosystem.config.js ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/home/deploy/apps/help-me-nigeria-backend/
+#           rsync -avz ecosystem.config.js ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/var/www/help-me-nigeria-backend/
           
 #           # Reload PM2
 #           ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }} << 'EOF'
-#             cd /home/deploy/apps/help-me-nigeria-backend
+#             cd /var/www/help-me-nigeria-backend
 
 #             # Load NVM
 #             export NVM_DIR="$HOME/.nvm"
@@ -160,17 +160,17 @@ jobs:
 #       - name: Deploy to DigitalOcean
 #         run: |
 #           # ✅ Updated: Upload prebuilt dist folder, not building on the server
-#           rsync -avz --delete ./dist ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/home/deploy/apps/help-me-nigeria-backend/
+#           rsync -avz --delete ./dist ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/var/www/help-me-nigeria-backend/
 
 #           # Upload package files (for production dependencies)
-#           rsync -avz package.json package-lock.json ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/home/deploy/apps/help-me-nigeria-backend/
+#           rsync -avz package.json package-lock.json ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/var/www/help-me-nigeria-backend/
 
 #           # ✅ Upload ecosystem.config.js so PM2 can reload
-#           rsync -avz ecosystem.config.js ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/home/deploy/apps/help-me-nigeria-backend/
+#           rsync -avz ecosystem.config.js ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/var/www/help-me-nigeria-backend/
 
 #           # Install production dependencies and reload PM2
 #           ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }} << 'EOF'
-#             cd /home/deploy/apps/help-me-nigeria-backend
+#             cd /var/www/help-me-nigeria-backend
 
 #             # Reload PM2 with new prebuilt code
 #             pm2 reload ecosystem.config.js --env production 
