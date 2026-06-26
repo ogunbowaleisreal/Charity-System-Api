@@ -283,18 +283,38 @@ export class CampaignService {
     // 🔹 STATS
     // =============================
 
+    // async getCampaignStats(campaignId: string) {
+    //     console.log(campaignId)
+    //     const campaign = await Campaign.findById(campaignId);
+
+    //     if (!campaign) throw new Error("Campaign not found");
+
+    //     return {
+    //         target: campaign.targetAmount,
+    //         totalRaised: campaign.totalRaised,
+    //         donationCount: campaign.donationCount,
+    //         progress:
+    //             (campaign.totalRaised / campaign.targetAmount) * 100 || 0,
+    //     };
+    // }
+
     async getCampaignStats(campaignId: string) {
-        console.log(campaignId)
+        // console.log(campaignId)
         const campaign = await Campaign.findById(campaignId);
 
         if (!campaign) throw new Error("Campaign not found");
+
+        const commentCount = await Comment.countDocuments({
+            campaign: campaignId,
+            isDeleted: false,
+        });
 
         return {
             target: campaign.targetAmount,
             totalRaised: campaign.totalRaised,
             donationCount: campaign.donationCount,
-            progress:
-                (campaign.totalRaised / campaign.targetAmount) * 100 || 0,
+            progress: (campaign.totalRaised / campaign.targetAmount) * 100 || 0,
+            commentCount,
         };
     }
 
