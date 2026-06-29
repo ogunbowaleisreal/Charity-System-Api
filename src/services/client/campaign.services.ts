@@ -61,6 +61,28 @@ export type CreateCampaignDTO = {
     owner: string; // Account ID
     ownerType: "user" | "organization";
 };
+interface RecentDonation {
+    _id: Types.ObjectId;
+    amount: number;
+    currency: string;
+    message?: string;
+    isAnonymous: boolean;
+    createdAt: Date;
+    donorName: string | null;          // masked to null when anonymous
+    donor: DonorSnapshot | null;       // masked to null when anonymous
+    paymentMethod?: string;
+    paymentStatus: string;
+}
+
+interface DonorSnapshot {
+    _id: Types.ObjectId;
+    firstName?: string;
+    lastName?: string;
+    profilePicture?: string;
+    role?: string;
+    logo?: string;
+}
+
 
 export type UpdateCampaign = {
     title: string;
@@ -91,6 +113,69 @@ export class CampaignService {
     // =============================
     // 🔹 CREATE / UPDATE / DELETE
     // =============================
+
+    private async getRecentDonationsForCampaigns(
+        campaignIds: Types.ObjectId[]
+    ): Promise<Map<string, RecentDonation[]>> {
+
+        if (!campaignIds.length) return new Map();
+
+        // Single DB round-trip: fetch up to 3 successful donations per campaign.
+        // We over-fetch slightly (3 × N) then slice in memory — still one query.
+        const rawDonations = await Donation.find({
+            campaign: { $in: campaignIds },
+            paymentStatus: "success",
+            isDeleted: false,
+        })
+            .sort({ createdAt: -1 })
+            .limit(campaignIds.length * 3)           // 3 per campaign max
+            .populate<{ donor: DonorSnapshot | null }>(
+                "donor",
+                "firstName lastName profilePicture role logo"
+            )
+            .select(
+                "campaign amount currency message isAnonymous createdAt " +
+                "donorName donor paymentMethod paymentStatus"
+            )
+            .lean();
+
+        // Group in-memory — O(n) single pass
+        const grouped = new Map<string, RecentDonation[]>();
+
+        for (const donation of rawDonations) {
+            const key = (donation.campaign as Types.ObjectId).toString();
+
+            if (!grouped.has(key)) grouped.set(key, []);
+
+            const bucket = grouped.get(key)!;
+            if (bucket.length >= 3) continue;       // already have 3 for this campaign
+
+            bucket.push({
+                _id: donation._id as Types.ObjectId,
+                amount: donation.amount,
+                currency: donation.currency,
+                message: donation.message,
+                isAnonymous: donation.isAnonymous,
+                createdAt: donation.createdAt,
+                paymentMethod: donation.paymentMethod,
+                paymentStatus: donation.paymentStatus,
+
+                // ── Anonymity masking ──────────────────────────────────────────
+                // Strip donor identity when isAnonymous is true.
+                // We never expose the donor ObjectId either — that alone could be
+                // used to correlate across requests.
+                donorName: donation.isAnonymous
+                    ? null
+                    : (donation.donorName ?? null),
+
+                donor: donation.isAnonymous
+                    ? null
+                    : (donation.donor as DonorSnapshot | null),
+            });
+        }
+
+        return grouped;
+    }
 
     async createCampaign(payload: CreateCampaignDTO, userId: string) {
         const user = await Account.findById(userId);
@@ -144,6 +229,58 @@ export class CampaignService {
     // 🔹 FETCH CAMPAIGNS
     // =============================
 
+    // async getAllCampaigns(query: campaignFilter) {
+    //     const { page = 1, limit = 10, category, status, search } = query;
+
+    //     const filter: any = {
+    //         isDeleted: false,
+    //         isActive: true,
+    //         status: "ongoing",
+    //     };
+
+    //     if (category) filter.category = category;
+    //     if (status) filter.status = status;
+
+    //     // =========================
+    //     // 🔎 SEARCH LOGIC
+    //     // =========================
+    //     if (search) {
+    //         filter.$or = [
+    //             { title: { $regex: search, $options: "i" } },
+    //             { description: { $regex: search, $options: "i" } },
+    //         ];
+    //     }
+
+    //     const skip = (page - 1) * limit;
+
+    //     const [campaigns, total] = await Promise.all([
+    //         Campaign.find(filter)
+    //             .sort({ createdAt: -1 })
+    //             .skip(skip)
+    //             .limit(Number(limit))
+    //             .populate("owner", "firstName lastName companyName logo profilePicture")
+    //             .populate("category", "categoryName description image status")
+    //             .populate("tags", "name")
+    //             .lean(),
+
+    //         Campaign.countDocuments(filter),
+    //     ]);
+
+    //     const totalPages = Math.ceil(total / limit);
+
+    //     return {
+    //         campaigns,
+    //         pagination: {
+    //             current_page: Number(page),
+    //             total_pages: totalPages,
+    //             per_page: Number(limit),
+    //             total_records: total,
+    //             has_next_page: page < totalPages,
+    //             has_prev_page: page > 1,
+    //         },
+    //     };
+    // }
+
     async getAllCampaigns(query: campaignFilter) {
         const { page = 1, limit = 10, category, status, search } = query;
 
@@ -156,9 +293,6 @@ export class CampaignService {
         if (category) filter.category = category;
         if (status) filter.status = status;
 
-        // =========================
-        // 🔎 SEARCH LOGIC
-        // =========================
         if (search) {
             filter.$or = [
                 { title: { $regex: search, $options: "i" } },
@@ -167,6 +301,19 @@ export class CampaignService {
         }
 
         const skip = (page - 1) * limit;
+
+        // ── DB call #1 + #2 run concurrently ────────────────────────────────────
+        // countDocuments was already parallel with find() in your original code.
+        // We keep that pattern and add the donations fetch to the same Promise.all.
+        //
+        // Execution timeline:
+        //   t=0  ──┬── Campaign.find()           (query 1)
+        //          ├── Campaign.countDocuments()  (query 2)
+        //          └── (donations fetched AFTER campaigns resolve — see note below)
+        //
+        // Note: we need the campaign IDs before we can query donations, so the
+        // donations query is sequential to the Campaign.find(), but it's still
+        // just 2 total DB round-trips.  countDocuments remains concurrent.
 
         const [campaigns, total] = await Promise.all([
             Campaign.find(filter)
@@ -181,10 +328,20 @@ export class CampaignService {
             Campaign.countDocuments(filter),
         ]);
 
+        // ── DB call #2: one batched donation lookup for the whole page ───────────
+        const campaignIds = campaigns.map((c) => c._id as Types.ObjectId);
+        const donationsMap = await this.getRecentDonationsForCampaigns(campaignIds);
+
+        // ── Merge in-memory — no DB work here ────────────────────────────────────
+        const campaignsWithDonations = campaigns.map((campaign) => ({
+            ...campaign,
+            recentDonations: donationsMap.get(campaign._id.toString()) ?? [],
+        }));
+
         const totalPages = Math.ceil(total / limit);
 
         return {
-            campaigns,
+            campaigns: campaignsWithDonations,
             pagination: {
                 current_page: Number(page),
                 total_pages: totalPages,
@@ -194,6 +351,7 @@ export class CampaignService {
                 has_prev_page: page > 1,
             },
         };
+
     }
 
 
