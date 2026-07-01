@@ -13,7 +13,7 @@ import commentRoutes from "./comments.route"
 import profileRoutes from "./profile.routes"
 import withdrawalManagementRoutes from "./withdrawal.routes"
 import donationRoutes from "./donations.routes"
-import businessCategoryRoutes from "./businessCategoryManagement"
+import campaignCategoryRoutes from "./campaignCategoryManagement"
 import contactRoutes from "./contact"
 import mediaRoute from "./medis"
 import enquiryRoutes from "./enquiries.routes"
@@ -50,7 +50,7 @@ router.use("/banner", bannerRoutes)
 //router.use("/requests", requestRoutes)
 //router.use("/bid", bidRoutes)
 //router.use("/assignments", assignmentRoutes)
-router.use("/business-category", businessCategoryRoutes)
+router.use("/campaign-category", campaignCategoryRoutes)
 router.use("/service-fee", serviceFeeRoutes)
 router.use("/transactions", transactionRoutes)
 router.use("/tags", tagRoutes)

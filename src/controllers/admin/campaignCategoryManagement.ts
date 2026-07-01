@@ -5,15 +5,15 @@ import logger from "../../logger";
 //import { AdminAuthenticatedRequest } from "../../middleware/verify.admin";
 import { AdminAuthenticatedRequest } from "../../types/admin.management";
 
-import { BusinessCategoryService } from "../../services/admin/businessCategoryManagement";
+import { CampaignCategoryService } from "../../services/admin/campaignCategoryManagement";
 
-export class BusinessCategoryController {
-    private categoryService = new BusinessCategoryService();
+export class CampaignCategoryController {
+    private categoryService = new CampaignCategoryService();
 
     // -------------------------------------------
     // CREATE CATEGORY
     // -------------------------------------------
-    createBusinessCategory = async (req: AdminAuthenticatedRequest, res: Response): Promise<void> => {
+    createCampaignCategory = async (req: AdminAuthenticatedRequest, res: Response): Promise<void> => {
         try {
             const adminId = req.admin?.adminId;
 
@@ -54,7 +54,7 @@ export class BusinessCategoryController {
     // -------------------------------------------
     // GET ALL CATEGORIES
     // -------------------------------------------
-    getAllBusinessCategories = async (req: Request, res: Response): Promise<void> => {
+    getAllCampaignCategories = async (req: Request, res: Response): Promise<void> => {
         try {
             const categories = await this.categoryService.getAllCategories(req.query);
 
@@ -79,7 +79,7 @@ export class BusinessCategoryController {
     // -------------------------------------------
     // GET CATEGORY BY ID
     // -------------------------------------------
-    getBusinessCategoryById = async (req: Request, res: Response): Promise<void> => {
+    getCampaignCategoryById = async (req: Request, res: Response): Promise<void> => {
         try {
             const { categoryId } = req.params;
 
@@ -107,7 +107,7 @@ export class BusinessCategoryController {
     // -------------------------------------------
     // UPDATE CATEGORY
     // -------------------------------------------
-    updateBusinessCategory = async (req: AdminAuthenticatedRequest, res: Response): Promise<void> => {
+    updateCampaignCategory = async (req: AdminAuthenticatedRequest, res: Response): Promise<void> => {
         try {
             const adminId = req.admin?.adminId;
 
@@ -152,7 +152,7 @@ export class BusinessCategoryController {
     // -------------------------------------------
     // DELETE CATEGORY
     // -------------------------------------------
-    deleteBusinessCategory = async (req: AdminAuthenticatedRequest, res: Response): Promise<void> => {
+    deleteCampaignCategory = async (req: AdminAuthenticatedRequest, res: Response): Promise<void> => {
         try {
             const adminId = req.admin?.adminId;
 
@@ -189,7 +189,7 @@ export class BusinessCategoryController {
     // -------------------------------------------
     // UPDATE STATUS (active / inactive / restricted)
     // -------------------------------------------
-    updateBusinessCategoryStatus = async (
+    updateCampaignCategoryStatus = async (
         req: AdminAuthenticatedRequest,
         res: Response
     ): Promise<void> => {

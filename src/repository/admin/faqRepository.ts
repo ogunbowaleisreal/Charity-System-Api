@@ -1,5 +1,6 @@
 import { FAQ } from "../../models/FAQ";
 import { Types } from "mongoose";
+import { Category } from "../../models/Category";
 //import { SubcategoryRepository } from "./subCategoryRepository";
 
 export interface CreateFAQData {
@@ -154,6 +155,14 @@ export class FAQRepository {
         // if (!subcategoryExists) {
         //   throw { message: "Category not found", statusCode: 404 };
         // }
+        const existingFAQ = await FAQ.findOne({ question: data.question });
+        if (existingFAQ) {
+            throw { message: "FAQ already exists", statusCode: 400 };
+        }
+        const isValidCategory = await Category.exists({ categoryName: data.category });
+        if (!isValidCategory) {
+            throw { message: "Category not found", statusCode: 404 };
+        }
         const faq = new FAQ(data);
         return await faq.save();
     }

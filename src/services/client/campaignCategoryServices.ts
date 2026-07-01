@@ -1,4 +1,4 @@
-import { CampaignCategory } from "../../models/campaignCategory";
+import { CampaignCategory, } from "../../models/campaignCategory";
 import { Category, ICategory } from "../../models/Category";
 
 interface QueryOptions {
@@ -41,7 +41,7 @@ export class CampaignCategoryServices {
         const skip = (Number(page) - 1) * Number(limit);
 
         const [categories, totalCount] = await Promise.all([
-            Category.find(filter)
+            CampaignCategory.find(filter)
                 .sort(sortObj)
                 .skip(skip)
                 .limit(Number(limit))
@@ -54,7 +54,7 @@ export class CampaignCategoryServices {
         const hasPrev = Number(page) > 1;
 
         return {
-            data: categories as ICategory[],
+            data: categories,
             pagination: {
                 currentPage: Number(page),
                 totalPages,

@@ -5,23 +5,23 @@ import {
     requireRole,
     verifyAdminToken,
 } from "../../middleware/adminAuth";
-import { BusinessCategoryController } from "../../controllers/admin/businessCategoryManagement";
+import { CampaignCategoryController } from "../../controllers/admin/campaignCategoryManagement";
 import { ADMIN_PERMISSIONS } from "../../types/admin.management";
 
 const router = Router();
-const businessCategoryController = new BusinessCategoryController();
+const campaignCategoryController = new CampaignCategoryController();
 
 // Apply token verification + rate limiter globally
 router.use(verifyAdminToken as any);
 router.use(rateLimiter.general);
 
 // -------------------------------------------
-// GET ALL BUSINESS CATEGORIES
+// GET ALL Campaign CATEGORIES
 // -------------------------------------------
 router.get(
     "/",
     authorize([ADMIN_PERMISSIONS.CONTENT.VIEW]) as any,
-    businessCategoryController.getAllBusinessCategories as any
+    campaignCategoryController.getAllCampaignCategories as any
 );
 
 // -------------------------------------------
@@ -31,7 +31,7 @@ router.get(
     "/:categoryId",
     //requireRole(["admin", "super_admin"]) as any,
     authorize([ADMIN_PERMISSIONS.CONTENT.VIEW]) as any,
-    businessCategoryController.getBusinessCategoryById as any
+    campaignCategoryController.getCampaignCategoryById as any
 );
 
 // -------------------------------------------
@@ -41,7 +41,7 @@ router.post(
     "/create",
     // requireRole(["admin", "super_admin"]) as any,
     authorize([ADMIN_PERMISSIONS.CONTENT.CREATE]) as any,
-    businessCategoryController.createBusinessCategory as any
+    campaignCategoryController.createCampaignCategory as any
 );
 
 // -------------------------------------------
@@ -51,7 +51,7 @@ router.put(
     "/:categoryId",
     //requireRole(["admin", "super_admin"]) as any,
     authorize([ADMIN_PERMISSIONS.CONTENT.UPDATE]) as any,
-    businessCategoryController.updateBusinessCategory as any
+    campaignCategoryController.updateCampaignCategory as any
 );
 
 // -------------------------------------------
@@ -61,7 +61,7 @@ router.delete(
     "/:categoryId",
     //requireRole(["admin", "super_admin"]) as any,
     authorize([ADMIN_PERMISSIONS.CONTENT.DELETE]) as any,
-    businessCategoryController.deleteBusinessCategory as any
+    campaignCategoryController.deleteCampaignCategory as any
 );
 
 // -------------------------------------------
@@ -71,7 +71,7 @@ router.patch(
     "/:categoryId/status",
     // requireRole(["admin", "super_admin"]) as any,
     authorize([ADMIN_PERMISSIONS.CONTENT.UPDATE]) as any,
-    businessCategoryController.updateBusinessCategoryStatus as any
+    campaignCategoryController.updateCampaignCategoryStatus as any
 );
 
 export default router;

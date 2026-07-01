@@ -11,7 +11,7 @@ export type categoryFilter = {
     isDeleted?: boolean
 }
 
-export class BusinessCategoryService {
+export class CampaignCategoryService {
     // -------------------------
     // GET ALL (with optional filters)
     // -------------------------
@@ -69,7 +69,7 @@ export class BusinessCategoryService {
     async createCategory(data: Partial<CampaignCategoryDocument>) {
         // Check name conflict
         const exists = await CampaignCategory.findOne({
-            name: data.name,
+            name: data.categoryName,
             isDeleted: false,
         });
 
@@ -106,9 +106,9 @@ export class BusinessCategoryService {
         }
 
         // Check for conflicting category name
-        if (updateData.name) {
+        if (updateData.categoryName) {
             const conflict = await CampaignCategory.findOne({
-                name: updateData.name,
+                name: updateData.categoryName,
                 _id: { $ne: id },
                 isDeleted: false,
             });

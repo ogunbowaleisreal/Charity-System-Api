@@ -63,7 +63,8 @@ const AnnouncementSchema = new Schema<IAnnouncement>(
                 "normal_users",
                 "active_users",
                 "suspended_users",
-                "specific"
+                "specific",
+                "subscribed_users"
             ],
             required: true,
         },

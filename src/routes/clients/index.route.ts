@@ -8,7 +8,7 @@ import campaignRoutes from "./campaign.routes"
 import donationRoutes from "./donation.routes"
 import faqRoutes from './faq.routes'
 import contactRoutes from "./contact"
-import businessCategoryRoutes from "./campaignCategory"
+import campaignCategoryRoutes from "./campaignCategory"
 import enquiryRoutes from "./enquiries.route"
 import transactionRoutes from "./transactions.route"
 import tagRoutes from "./tags.route"
@@ -41,7 +41,7 @@ router.use("/kyc", kycRoutes)
 router.use('/tags', tagRoutes)
 router.use("/banner", bannerRoutes)
 router.use("/contact", contactRoutes)
-router.use("/campaign-category", businessCategoryRoutes)
+router.use("/campaign-category", campaignCategoryRoutes)
 router.use("/transactions", transactionRoutes)
 router.use("/enquiries", enquiryRoutes)
 router.use("/updates", subscriberRoutes)
