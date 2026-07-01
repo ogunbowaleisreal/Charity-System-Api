@@ -110,7 +110,7 @@ export class CampaignCategoryService {
     ): Promise<Lean<CampaignCategoryDocument>> {
         const existing = await CampaignCategory.findOne({
             _id: id,
-            isDeleted: false,
+            // statu: false,
         });
 
         if (!existing) {
@@ -147,20 +147,18 @@ export class CampaignCategoryService {
     // SOFT DELETE
     // -------------------------
     async deleteCategory(id: string): Promise<void> {
-        const category = await CampaignCategory.findOne({
+        const category = await CampaignCategory.findByIdAndDelete({
             _id: id,
-            isDeleted: false,
+            //  isDeleted: false,
         });
 
-        if (!category) {
-            throw {
-                message: "Category not found",
-                statusCode: HTTP_STATUS.NOT_FOUND,
-            };
-        }
+        // if (!category) {
+        //     throw {
+        //         message: "Category not found",
+        //         statusCode: HTTP_STATUS.NOT_FOUND,
+        //     };
+        // }
 
-        category.isDeleted = true;
-        await category.save();
     }
 
     // -------------------------
@@ -172,7 +170,7 @@ export class CampaignCategoryService {
     ): Promise<Lean<CampaignCategoryDocument>> {
         const category = await CampaignCategory.findOne({
             _id: id,
-            isDeleted: false,
+            //  isDeleted: false,
         });
 
         if (!category) {
