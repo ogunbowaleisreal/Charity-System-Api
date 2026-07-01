@@ -12,35 +12,50 @@ export type categoryFilter = {
 }
 
 export class CampaignCategoryService {
-    // -------------------------
-    // GET ALL (with optional filters)
-    // -------------------------
-    // async getAllCategories(query: any) {
-    //     const filter: any = { isDeleted: false };
 
-    //     if (query.status) filter.status = query.status;
 
-    //     return await BusinessCategory.find(filter)
-    //         .sort({ createdAt: -1 })
-    //         .lean();
-    // }
     async getAllCategories(query: any) {
         const filter: categoryFilter = { status: "active" };
 
-        if (query.status) filter.status = query.status;
+        if (query.status) {
+            filter.status = query.status;
+        }
 
-        /* ====== SEARCH ADDITION ====== */
+        // Search
         if (query.search) {
             filter.name = {
                 $regex: query.search,
-                $options: "i", // case-insensitive
+                $options: "i",
             };
         }
-        /* ============================= */
 
-        return await CampaignCategory.find(filter)
-            .sort({ createdAt: -1 })
-            .lean();
+        // Pagination
+        const page = Math.max(parseInt(query.page) || 1, 1);
+        const limit = Math.max(parseInt(query.limit) || 10, 1);
+        const skip = (page - 1) * limit;
+
+        // Execute both queries in parallel
+        const [categories, total] = await Promise.all([
+            CampaignCategory.find(filter)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+
+            CampaignCategory.countDocuments(filter),
+        ]);
+
+        return {
+            data: categories,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+                hasNextPage: page < Math.ceil(total / limit),
+                hasPreviousPage: page > 1,
+            },
+        };
     }
 
 
