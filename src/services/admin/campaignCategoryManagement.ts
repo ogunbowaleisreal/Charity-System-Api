@@ -25,7 +25,7 @@ export class CampaignCategoryService {
     //         .lean();
     // }
     async getAllCategories(query: any) {
-        const filter: categoryFilter = { isDeleted: false };
+        const filter: categoryFilter = { status: "active" };
 
         if (query.status) filter.status = query.status;
 

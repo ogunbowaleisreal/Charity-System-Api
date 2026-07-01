@@ -54,7 +54,7 @@ export class CampaignCategoryController {
     // -------------------------------------------
     // GET ALL CATEGORIES
     // -------------------------------------------
-    getAllCampaignCategories = async (req: Request, res: Response): Promise<void> => {
+    getAllCampaignCategories = async (req: AdminAuthenticatedRequest, res: Response): Promise<void> => {
         try {
             const categories = await this.categoryService.getAllCategories(req.query);
 
