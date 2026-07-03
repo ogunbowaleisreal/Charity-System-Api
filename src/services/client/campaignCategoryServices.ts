@@ -14,7 +14,6 @@ export class CampaignCategoryServices {
         return await Category.find({ status: "active" });
     }
 
-
     async getAllCategories(query: QueryOptions = {}) {
         const {
             page = 1,
@@ -33,6 +32,8 @@ export class CampaignCategoryServices {
                 { description: { $regex: search, $options: "i" } },
             ];
         }
+
+
         filter.status = "active";
 
         const sortObj: any = {};

@@ -1,4 +1,3 @@
-import { url } from "inspector";
 import { messaging } from "../config/firebase";
 import { NotificationToken } from "../models/NotificationToken";
 import { Account } from "../models/Accounts";
@@ -44,38 +43,61 @@ export class PushNotificationService {
 
     // Send to topic (BEST for your use case)
     static async sendToTopic(topic: string, title: string, body: string) {
-        await messaging.send({
-            topic,
-            notification: { title, body },
-            data: {
-                url: process.env.FRONTEND_URL as string
-            }
-        });
+        try {
+            await messaging.send({
+                topic,
+                notification: { title, body },
+                data: {
+                    url: process.env.FRONTEND_URL ?? ""
+                }
+            });
+        } catch (error) {
+            console.error("Push notification error (sendToTopic):", error);
+        }
     }
 
     // Send to specific users (optional)
 
     static async sendToUsers(payload: any) {
-        const tokens = await this.getAllVerifiedUserTokens();
-
-        //    const tokenList = tokens.map(t => t.token);
+        const tokens = [...new Set(await this.getAllVerifiedUserTokens())];
 
         if (!tokens.length) throw new Error("No tokens found");
 
-        const response = await messaging.sendEachForMulticast({
-            tokens: tokens,
-            notification: payload,
-        });
+        // FCM allows a max of 500 tokens per multicast call, so we chunk
+        const chunkSize = 500;
+        const failedTokens: string[] = [];
 
-        // cleanup invalid tokens
-        response.responses.forEach((res, index) => {
-            if (!res.success) {
-                const errorCode = res.error?.code;
-                if (errorCode === "messaging/registration-token-not-registered") {
-                    NotificationToken.deleteOne({ token: tokens[index] });
-                }
+        try {
+            for (let i = 0; i < tokens.length; i += chunkSize) {
+                const chunk = tokens.slice(i, i + chunkSize);
+
+                const response = await messaging.sendEachForMulticast({
+                    tokens: chunk,
+                    notification: payload,
+                });
+
+                // cleanup invalid tokens
+                response.responses.forEach((res, index) => {
+                    if (!res.success) {
+                        const errorCode = res.error?.code;
+                        if (
+                            errorCode === "messaging/registration-token-not-registered" ||
+                            errorCode === "messaging/invalid-registration-token"
+                        ) {
+                            failedTokens.push(chunk[index]);
+                        }
+                    }
+                });
             }
-        });
+
+            if (failedTokens.length) {
+                await NotificationToken.deleteMany({
+                    token: { $in: failedTokens }
+                });
+            }
+        } catch (error) {
+            console.error("Push notification error (sendToUsers):", error);
+        }
     }
 
     // send to single User 
@@ -100,7 +122,10 @@ export class PushNotificationService {
                 if (!res.success) {
                     const errorCode = res.error?.code;
 
-                    if (errorCode === "messaging/registration-token-not-registered") {
+                    if (
+                        errorCode === "messaging/registration-token-not-registered" ||
+                        errorCode === "messaging/invalid-registration-token"
+                    ) {
                         failedTokens.push(tokens[index]);
                     }
                 }

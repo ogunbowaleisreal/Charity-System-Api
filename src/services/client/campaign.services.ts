@@ -1,11 +1,12 @@
-import { Types } from "mongoose";
+import { ObjectId, Types } from "mongoose";
 import Campaign from "../../models/Campaign";
 import { Donation } from "../../models/Donations";
 import Comment from "../../models/Comment";
 import { Account } from "../../models/Accounts";
 import { formatPagination } from "../../utils/admin/paginationUtills";
 import { FilterQuery } from "mongoose";
-
+import { PushNotificationService } from "../pushNotificationService";
+import { NotificationService } from "../notification.Services";
 // type createCampaign = {
 //     title: string;
 //     description: string;
@@ -110,6 +111,8 @@ export type campaignFilter = {
 
 
 export class CampaignService {
+    private pushNotification = new PushNotificationService()
+    notification = new NotificationService()
     // =============================
     // 🔹 CREATE / UPDATE / DELETE
     // =============================
@@ -182,10 +185,8 @@ export class CampaignService {
         if (!user) throw new Error("User not found");
         payload.owner = user._id as string;
         payload.ownerType = user.role;
-        if (user.role === "user") {
-            payload.firstName = user.firstName;
-            payload.lastName = user.lastName;
-        }
+        payload.firstName = user.firstName;
+        payload.lastName = user.lastName;
         payload.userName = user.userName;
         payload.companyName = user.companyName;
         if (payload.startImmediately) payload.startDate = new Date();
@@ -193,10 +194,18 @@ export class CampaignService {
         user.noOfCampaigns += 1
         await user.save()
 
-        return await Campaign.create({
+
+        const campaign = await Campaign.create({
             ...payload,
             owner: userId,
         });
+
+        await NotificationService.createForUser({
+            userId: user._id as any,
+            title: "Campaign Creation",
+            message: `A new campaign '${campaign.title}' has been created`
+        })
+
 
     }
 
@@ -281,7 +290,7 @@ export class CampaignService {
     //     };
     // }
 
-    async getAllCampaigns(query: campaignFilter) {
+    async getAllCampaigns(query: any) {
         const { page = 1, limit = 10, category, status, search } = query;
 
         const filter: any = {
@@ -293,10 +302,22 @@ export class CampaignService {
         if (category) filter.category = category;
         if (status) filter.status = status;
 
+        // if (search) {
+        //     filter.$or = [
+        //         { title: { $regex: search, $options: "i" } },
+        //         { description: { $regex: search, $options: "i" } },
+        //     ];
+        // }
+
         if (search) {
-            filter.$or = [
-                { title: { $regex: search, $options: "i" } },
-                { description: { $regex: search, $options: "i" } },
+            const regex = { $regex: search, $options: "i" };
+            query.$or = [
+                { title: regex },
+                { description: regex },
+                { firstName: regex },
+                { lastName: regex },
+                { userName: regex },
+                { companyName: regex },
             ];
         }
 
