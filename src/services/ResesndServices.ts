@@ -264,7 +264,7 @@ export class ResendEmailService {
         password: string
     ): Promise<void> {
         try {
-            const subject = "Welcome to Help me Nigeria Admin Team";
+            const subject = "Welcome to Help Me Nigeria Admin Team";
 
             const html = this.getAdminWelcomeTemplate(
                 firstName,
