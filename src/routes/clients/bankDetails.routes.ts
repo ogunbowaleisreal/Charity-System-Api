@@ -21,13 +21,23 @@ router.get(
 );
 
 router.patch(
-    "/update/:bankDetailsId",
+    "/update",
     bankCtrl.updateBankDetails
 );
 
+router.patch(
+    "/update/confirm",
+    bankCtrl.confirmUpdateBankDetails
+);
+
 router.delete(
-    "/delete/:bankDetailsId",
+    "/delete",
     bankCtrl.deleteBankDetails
+);
+
+router.delete(
+    "/delete/confirm",
+    bankCtrl.confirmDeleteBankDetails
 );
 
 export default router;

@@ -61,28 +61,8 @@ export class BankDetailsController {
         }
     }
 
-    // async getBankDetailsById(
-    //     req: Request,
-    //     res: Response,
-    //     next: NextFunction
-    // ) {
-    //     try {
-    //         const { bankDetailsId } = req.params;
-
-    //         const bankDetails =
-    //             await bankDetailsService.getBankDetailsById(
-    //                 bankDetailsId
-    //             );
-
-    //         return sendSuccessResponse(res, bankDetails);
-    //     } catch (error: any) {
-    //         logger.error(error);
-    //         return sendErrorResponse(res, error);
-    //     }
-    // }
-
     // =============================
-    // 🔹 UPDATE
+    // 🔹 UPDATE (request otp -> confirm)
     // =============================
 
     async updateBankDetails(
@@ -91,24 +71,48 @@ export class BankDetailsController {
         next: NextFunction
     ) {
         try {
-            const { bankDetailsId } = req.params;
+            await bankDetailsService.requestUpdateOTP(
+                req.user.userId,
+                req.body
+            );
 
-            const bankDetails =
-                await bankDetailsService.updateBankDetails(
-                    bankDetailsId,
-                    req.user.userId,
-                    req.body
-                );
-
-            return sendSuccessResponse(res, bankDetails);
+            return sendSuccessResponse(
+                res,
+                null,
+                "OTP sent to your registered email, please confirm to complete the update"
+            );
         } catch (error: any) {
             logger.error(error);
-            return sendErrorResponse(res, error);
+            return sendErrorResponse(res, error.message, error.statusCode);
+        }
+    }
+
+    async confirmUpdateBankDetails(
+        req: AuthenticatedClientRequest,
+        res: Response,
+        next: NextFunction
+    ) {
+        try {
+            const { otp } = req.body;
+
+            const bankDetails = await bankDetailsService.confirmUpdate(
+                req.user.userId,
+                otp
+            );
+
+            return sendSuccessResponse(
+                res,
+                bankDetails,
+                "Bank details updated successfully"
+            );
+        } catch (error: any) {
+            logger.error(error);
+            return sendErrorResponse(res, error.message, error.statusCode);
         }
     }
 
     // =============================
-    // 🔹 DELETE
+    // 🔹 DELETE (request otp -> confirm)
     // =============================
 
     async deleteBankDetails(
@@ -117,16 +121,36 @@ export class BankDetailsController {
         next: NextFunction
     ) {
         try {
-            const { bankDetailsId } = req.params;
+            await bankDetailsService.requestDeleteOTP(req.user.userId);
 
-            const bankDetails =
-                await bankDetailsService.deleteBankDetails(
-                    bankDetailsId,
-                    req.user.userId
-                );
+            return sendSuccessResponse(
+                res,
+                null,
+                "OTP sent to your registered email, please confirm to complete the deletion"
+            );
+        } catch (error: any) {
+            logger.error(error);
+            return sendErrorResponse(res, error.message, error.statusCode);
+        }
+    }
+
+    async confirmDeleteBankDetails(
+        req: AuthenticatedClientRequest,
+        res: Response,
+        next: NextFunction
+    ) {
+        try {
+            const { otp } = req.body;
+
+            await bankDetailsService.confirmDelete(req.user.userId, otp);
+
             logger.info("Bank details deleted successfully");
 
-            return sendSuccessResponse(res, bankDetails, "bank details deleted successfully");
+            return sendSuccessResponse(
+                res,
+                null,
+                "Bank details deleted successfully"
+            );
         } catch (error: any) {
             logger.error(error);
             return sendErrorResponse(res, error.message, error.statusCode);
