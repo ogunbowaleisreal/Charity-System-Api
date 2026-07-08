@@ -22,6 +22,7 @@ export interface ICampaign extends Document {
     ownerType: "user" | "organization";
 
     authors: Types.ObjectId[];
+    favoritesCount: number;
 
     // ===== FUNDING =====
     targetAmount: number;
@@ -43,6 +44,8 @@ export interface ICampaign extends Document {
     // ===== SETTINGS =====
     allowComments: boolean;
     showDonations: boolean;
+
+    isFeatured: boolean; // NEW
 
     // ===== META =====
     views: number;
@@ -152,6 +155,11 @@ const CampaignSchema = new Schema<ICampaign>(
             required: true,
         },
 
+        favoritesCount: {
+            type: Number,
+            default: 0,
+        },
+
         // ===== FUNDING =====
         targetAmount: {
             type: Number,
@@ -193,6 +201,11 @@ const CampaignSchema = new Schema<ICampaign>(
         isActive: {
             type: Boolean,
             default: true,
+        },
+        // in CampaignSchema
+        isFeatured: {
+            type: Boolean,
+            default: false,
         },
 
         // ===== SETTINGS =====

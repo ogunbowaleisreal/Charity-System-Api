@@ -74,7 +74,7 @@ export class DonationController {
     ) {
         try {
             const donations = await donationService.getUserDonations(
-                req.user?._id,
+                req.user?.userId,
                 req.query as any
             );
 

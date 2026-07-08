@@ -7,6 +7,7 @@ import {
 import { CampaignService } from "../../services/client/campaign.services";
 import { AuthenticatedClientRequest } from "../../middleware/auth";
 import { strictEqual } from "assert";
+import favouriteService from "../../services/client/favourite.service";
 
 const campaignServices = new CampaignService();
 
@@ -47,6 +48,20 @@ export class CampaignController {
                 req.body
             );
 
+            return sendSuccessResponse(res, campaign);
+        } catch (error: any) {
+            logger.error(error);
+            return sendErrorResponse(res, error);
+        }
+    }
+
+    async getFeaturedCampaign(
+        req: AuthenticatedClientRequest,
+        res: Response,
+        next: NextFunction
+    ) {
+        try {
+            const campaign = await campaignServices.getFeaturedCampaigns(req.query);
             return sendSuccessResponse(res, campaign);
         } catch (error: any) {
             logger.error(error);
@@ -121,7 +136,7 @@ export class CampaignController {
     ) {
         try {
             const campaigns = await campaignServices.getUserCampaigns(
-                req.user._id,
+                req.user.userId,
                 req.query as any
             );
 
@@ -130,6 +145,47 @@ export class CampaignController {
             logger.error(error);
             return sendErrorResponse(res, error);
         }
+    }
+
+    async toggleCampaignFavourite(
+        req: AuthenticatedClientRequest,
+        res: Response,
+        next: NextFunction
+    ) {
+        try {
+            const { campaignId } = req.params;
+
+            const campaign = await favouriteService.toggleFavorite(
+                req.user.userId,
+                campaignId
+            );
+
+            return sendSuccessResponse(res, campaign);
+        } catch (error: any) {
+            logger.error(error);
+            return sendErrorResponse(res, error);
+        }
+    }
+
+    async getUserFavouriteCampaign(
+        req: AuthenticatedClientRequest,
+        res: Response,
+        next: NextFunction
+    ) {
+        try {
+            // const { campaignId } = req.params;
+
+            const campaign = await favouriteService.getUserFavoriteCampaigns(
+                req.user.userId,
+                req.query
+            );
+
+            return sendSuccessResponse(res, campaign);
+        } catch (error: any) {
+            logger.error(error);
+            return sendErrorResponse(res, error.message);
+        }
+
     }
 
     // =============================

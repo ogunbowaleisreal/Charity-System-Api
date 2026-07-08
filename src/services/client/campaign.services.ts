@@ -7,6 +7,7 @@ import { formatPagination } from "../../utils/admin/paginationUtills";
 import { FilterQuery } from "mongoose";
 import { PushNotificationService } from "../pushNotificationService";
 import { NotificationService } from "../notification.Services";
+import favouriteService from "./favourite.service";
 // type createCampaign = {
 //     title: string;
 //     description: string;
@@ -111,8 +112,8 @@ export type campaignFilter = {
 
 
 export class CampaignService {
-    private pushNotification = new PushNotificationService()
-    notification = new NotificationService()
+    // private pushNotification = new PushNotificationService()
+    // notification = new NotificationService()
     // =============================
     // 🔹 CREATE / UPDATE / DELETE
     // =============================
@@ -205,8 +206,51 @@ export class CampaignService {
             title: "Campaign Creation",
             message: `A new campaign '${campaign.title}' has been created`
         })
+        await PushNotificationService.sendToUser(user._id as any, {
+            title: "Campaign Creation",
+            body: "`A new campaign '${campaign.title}' has been created`",
+        })
 
 
+    }
+
+    async getFeaturedCampaigns(query: any) {
+        const { page = 1, limit = 10 } = query;
+        const skip = (page - 1) * limit;
+
+        const filter = {
+            isFeatured: true,
+            isDeleted: false,
+            isActive: true,
+            status: "ongoing",
+        };
+
+        const [campaigns, total] = await Promise.all([
+            Campaign.find(filter)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(Number(limit))
+                .populate("owner", "firstName lastName companyName logo profilePicture")
+                .populate("category", "categoryName description image status")
+                .populate("tags", "name")
+                .lean(),
+
+            Campaign.countDocuments(filter),
+        ]);
+
+        const totalPages = Math.ceil(total / limit);
+
+        return {
+            campaigns,
+            pagination: {
+                current_page: Number(page),
+                total_pages: totalPages,
+                per_page: Number(limit),
+                total_records: total,
+                has_next_page: page < totalPages,
+                has_prev_page: page > 1,
+            },
+        };
     }
 
     async updateCampaign(campaignId: string, userId: string, payload: UpdateCampaign) {
@@ -234,63 +278,7 @@ export class CampaignService {
         return campaign;
     }
 
-    // =============================
-    // 🔹 FETCH CAMPAIGNS
-    // =============================
-
-    // async getAllCampaigns(query: campaignFilter) {
-    //     const { page = 1, limit = 10, category, status, search } = query;
-
-    //     const filter: any = {
-    //         isDeleted: false,
-    //         isActive: true,
-    //         status: "ongoing",
-    //     };
-
-    //     if (category) filter.category = category;
-    //     if (status) filter.status = status;
-
-    //     // =========================
-    //     // 🔎 SEARCH LOGIC
-    //     // =========================
-    //     if (search) {
-    //         filter.$or = [
-    //             { title: { $regex: search, $options: "i" } },
-    //             { description: { $regex: search, $options: "i" } },
-    //         ];
-    //     }
-
-    //     const skip = (page - 1) * limit;
-
-    //     const [campaigns, total] = await Promise.all([
-    //         Campaign.find(filter)
-    //             .sort({ createdAt: -1 })
-    //             .skip(skip)
-    //             .limit(Number(limit))
-    //             .populate("owner", "firstName lastName companyName logo profilePicture")
-    //             .populate("category", "categoryName description image status")
-    //             .populate("tags", "name")
-    //             .lean(),
-
-    //         Campaign.countDocuments(filter),
-    //     ]);
-
-    //     const totalPages = Math.ceil(total / limit);
-
-    //     return {
-    //         campaigns,
-    //         pagination: {
-    //             current_page: Number(page),
-    //             total_pages: totalPages,
-    //             per_page: Number(limit),
-    //             total_records: total,
-    //             has_next_page: page < totalPages,
-    //             has_prev_page: page > 1,
-    //         },
-    //     };
-    // }
-
-    async getAllCampaigns(query: any) {
+    async getAllCampaigns(query: any, userId?: string) {
         const { page = 1, limit = 10, category, status, search } = query;
 
         const filter: any = {
@@ -302,16 +290,9 @@ export class CampaignService {
         if (category) filter.category = category;
         if (status) filter.status = status;
 
-        // if (search) {
-        //     filter.$or = [
-        //         { title: { $regex: search, $options: "i" } },
-        //         { description: { $regex: search, $options: "i" } },
-        //     ];
-        // }
-
         if (search) {
             const regex = { $regex: search, $options: "i" };
-            query.$or = [
+            filter.$or = [
                 { title: regex },
                 { description: regex },
                 { firstName: regex },
@@ -322,19 +303,6 @@ export class CampaignService {
         }
 
         const skip = (page - 1) * limit;
-
-        // ── DB call #1 + #2 run concurrently ────────────────────────────────────
-        // countDocuments was already parallel with find() in your original code.
-        // We keep that pattern and add the donations fetch to the same Promise.all.
-        //
-        // Execution timeline:
-        //   t=0  ──┬── Campaign.find()           (query 1)
-        //          ├── Campaign.countDocuments()  (query 2)
-        //          └── (donations fetched AFTER campaigns resolve — see note below)
-        //
-        // Note: we need the campaign IDs before we can query donations, so the
-        // donations query is sequential to the Campaign.find(), but it's still
-        // just 2 total DB round-trips.  countDocuments remains concurrent.
 
         const [campaigns, total] = await Promise.all([
             Campaign.find(filter)
@@ -349,20 +317,24 @@ export class CampaignService {
             Campaign.countDocuments(filter),
         ]);
 
-        // ── DB call #2: one batched donation lookup for the whole page ───────────
         const campaignIds = campaigns.map((c) => c._id as Types.ObjectId);
-        const donationsMap = await this.getRecentDonationsForCampaigns(campaignIds);
 
-        // ── Merge in-memory — no DB work here ────────────────────────────────────
-        const campaignsWithDonations = campaigns.map((campaign) => ({
+        // ── these two run concurrently, same pattern as before ──
+        const [donationsMap, favoritesSet] = await Promise.all([
+            this.getRecentDonationsForCampaigns(campaignIds),
+            favouriteService.getUserFavoritesForCampaigns(userId, campaignIds),
+        ]);
+
+        const campaignsWithExtras = campaigns.map((campaign) => ({
             ...campaign,
             recentDonations: donationsMap.get(campaign._id.toString()) ?? [],
+            isFavorited: favoritesSet.has(campaign._id.toString()),
         }));
 
         const totalPages = Math.ceil(total / limit);
 
         return {
-            campaigns: campaignsWithDonations,
+            campaigns: campaignsWithExtras,
             pagination: {
                 current_page: Number(page),
                 total_pages: totalPages,
@@ -372,41 +344,94 @@ export class CampaignService {
                 has_prev_page: page > 1,
             },
         };
-
     }
 
 
-    // async getAllCampaigns(query: campaignFilter) {
-    //     const { page = 1, limit = 10, category, status } = query;
+    // async getAllCampaigns(query: any) {
+    //     const { page = 1, limit = 10, category, status, search } = query;
 
-    //     const filter: any = { isDeleted: false, isActive: true };
+    //     const filter: any = {
+    //         isDeleted: false,
+    //         isActive: true,
+    //         status: "ongoing",
+    //     };
 
     //     if (category) filter.category = category;
     //     if (status) filter.status = status;
 
-    //     const campaigns = await Campaign.find(filter)
-    //         .sort({ createdAt: -1 })
-    //         .skip((page - 1) * limit)
-    //         .limit(limit)
-    //         .populate("owner", "firstName lastName companyName logo ")
-    //         .populate("category", "categoryName description image status")
-    //         .populate("tags", "name");
+    //     // if (search) {
+    //     //     filter.$or = [
+    //     //         { title: { $regex: search, $options: "i" } },
+    //     //         { description: { $regex: search, $options: "i" } },
+    //     //     ];
+    //     // }
 
-    //     const total = await Campaign.countDocuments(filter);
+    //     if (search) {
+    //         const regex = { $regex: search, $options: "i" };
+    //         filter.$or = [
+    //             { title: regex },
+    //             { description: regex },
+    //             { firstName: regex },
+    //             { lastName: regex },
+    //             { userName: regex },
+    //             { companyName: regex },
+    //         ];
+    //     }
+
+    //     const skip = (page - 1) * limit;
+
+    //     // ── DB call #1 + #2 run concurrently ────────────────────────────────────
+    //     // countDocuments was already parallel with find() in your original code.
+    //     // We keep that pattern and add the donations fetch to the same Promise.all.
+    //     //
+    //     // Execution timeline:
+    //     //   t=0  ──┬── Campaign.find()           (query 1)
+    //     //          ├── Campaign.countDocuments()  (query 2)
+    //     //          └── (donations fetched AFTER campaigns resolve — see note below)
+    //     //
+    //     // Note: we need the campaign IDs before we can query donations, so the
+    //     // donations query is sequential to the Campaign.find(), but it's still
+    //     // just 2 total DB round-trips.  countDocuments remains concurrent.
+
+    //     const [campaigns, total] = await Promise.all([
+    //         Campaign.find(filter)
+    //             .sort({ createdAt: -1 })
+    //             .skip(skip)
+    //             .limit(Number(limit))
+    //             .populate("owner", "firstName lastName companyName logo profilePicture")
+    //             .populate("category", "categoryName description image status")
+    //             .populate("tags", "name")
+    //             .lean(),
+
+    //         Campaign.countDocuments(filter),
+    //     ]);
+
+    //     // ── DB call #2: one batched donation lookup for the whole page ───────────
+    //     const campaignIds = campaigns.map((c) => c._id as Types.ObjectId);
+    //     const donationsMap = await this.getRecentDonationsForCampaigns(campaignIds);
+
+    //     // ── Merge in-memory — no DB work here ────────────────────────────────────
+    //     const campaignsWithDonations = campaigns.map((campaign) => ({
+    //         ...campaign,
+    //         recentDonations: donationsMap.get(campaign._id.toString()) ?? [],
+    //     }));
+
     //     const totalPages = Math.ceil(total / limit);
 
     //     return {
-    //         campaigns,
+    //         campaigns: campaignsWithDonations,
     //         pagination: {
-    //             current_page: page,
+    //             current_page: Number(page),
     //             total_pages: totalPages,
-    //             per_page: limit,
+    //             per_page: Number(limit),
     //             total_records: total,
     //             has_next_page: page < totalPages,
     //             has_prev_page: page > 1,
     //         },
     //     };
+
     // }
+
 
     async getCampaignById(campaignId: string) {
         const campaign = await Campaign.findById(campaignId)
@@ -458,24 +483,6 @@ export class CampaignService {
         };
     }
 
-    // =============================
-    // 🔹 STATS
-    // =============================
-
-    // async getCampaignStats(campaignId: string) {
-    //     console.log(campaignId)
-    //     const campaign = await Campaign.findById(campaignId);
-
-    //     if (!campaign) throw new Error("Campaign not found");
-
-    //     return {
-    //         target: campaign.targetAmount,
-    //         totalRaised: campaign.totalRaised,
-    //         donationCount: campaign.donationCount,
-    //         progress:
-    //             (campaign.totalRaised / campaign.targetAmount) * 100 || 0,
-    //     };
-    // }
 
     async getCampaignStats(campaignId: string) {
         // console.log(campaignId)

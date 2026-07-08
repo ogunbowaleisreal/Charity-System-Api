@@ -59,6 +59,12 @@ router.get(
     campaignCtrl.unsuspendCampaign
 )
 
+router.post(
+    "/set-featured/:campaignId",
+    authorize([ADMIN_PERMISSIONS.CAMPAIGNS.UPDATE]) as any,
+    campaignCtrl.setCampaignFeatured
+)
+
 // =========================
 // 💰 GET CAMPAIGN DONATIONS
 // =========================

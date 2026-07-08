@@ -10,11 +10,12 @@ import { Account } from "../../models/Accounts";
 import OTPService from "../otp.services";
 import { startSession } from "mongoose";
 import logger from "../../logger";
+import { Types } from "mongoose";
 import { PushNotificationService } from "../pushNotificationService";
 import { ResendEmailService } from "../ResesndServices";
 import CacheService from "../cacheServices";
 import bcryptUtil from "../../utils/bcryptutils";
-
+import { NotificationService } from "../notification.Services";
 const flutterwave = new FlutterwaveService();
 const otpService = new OTPService();
 const emailService = new ResendEmailService()
@@ -102,6 +103,13 @@ export class WithdrawalService {
                 narration,
                 reference
             }], { session });
+
+            await NotificationService.createForUser({
+                userId: userWallet.userId as Types.ObjectId,
+                title: "Withdrawal",
+                message: `You have successfully withdrawn ${amount} from ${campaign.title} campaign`,
+                type: "WITHDRAWAL"
+            })
             await PushNotificationService.sendToUser(userId, {
                 title: "Withdrawal",
                 body: `You have successfully withdrawn ${amount} from ${campaign.title} campaign`,

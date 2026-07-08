@@ -273,6 +273,19 @@ export class CampaignAdminService {
         return formatPagination({ campaigns, campaignStats }, total, page, limit);
     }
 
+    async setFeatured(campaignId: string, isFeatured: boolean) {
+        const campaign = await Campaign.findOneAndUpdate(
+            { _id: campaignId, isDeleted: false },
+            { isFeatured },
+            { new: true }
+        );
+
+        if (!campaign) {
+            throw new Error("Campaign not found");
+        }
+
+        return campaign;
+    }
     // async getAllCampaigns(filters: CampaignFilters) {
     //     const { page = 1, limit = 10, ownerId } = filters;
 

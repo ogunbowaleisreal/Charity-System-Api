@@ -18,6 +18,10 @@ router.get("/",
     validate(campaignFilterSchema, "query"),
     campaignCtrl.getAllCampaigns);
 
+router.get("/featured/campaigns",
+    campaignCtrl.getFeaturedCampaign
+)
+
 router.get("/:campaignId", campaignCtrl.getCampaignById);
 
 router.get("/stats/:campaignId", campaignCtrl.getCampaignStats);
@@ -44,6 +48,14 @@ router.use(verifyClientToken);
 router.post("/create",
     validate(createCampaignSchema),
     campaignCtrl.createCampaign);
+
+router.get("/user/favorite",
+    campaignCtrl.getUserFavouriteCampaign
+);
+
+router.get("/toggle-favorite/:campaignId",
+    campaignCtrl.toggleCampaignFavourite
+)
 
 router.patch("/update/:campaignId",
     validate(updateCampaignSchema),
