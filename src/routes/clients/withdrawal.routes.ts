@@ -22,6 +22,7 @@ router.get("/wallet", withdrawalCtrl.getUserWallet);
 router.post("/toggle-withdrawal-2fa", withdrawalCtrl.toggleWithdrawal2Fa)
 router.post("/wallet/:campaignId", withdrawalCtrl.withdrawFundsToWwallet);
 router.post("/bank/:walletId", withdrawalCtrl.applyForWithdrawalToBank);
+router.get("/resend-withdrawal-otp", withdrawalCtrl.resendWithdrawalOtp);
 router.post("/verify-withdrawal-2fa/:walletId", withdrawalCtrl.verifyWithdrawalRequestOtp)
 
 export default router;

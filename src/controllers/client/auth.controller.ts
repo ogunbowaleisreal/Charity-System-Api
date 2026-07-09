@@ -161,8 +161,9 @@ export class authController {
             return res.status(200).json({ message: "Login successful", response });
         } catch (err: any) {
             //  return res.status(500).json({ message: "Internal Server Error", error: err })
-            sendErrorResponse(res, err.message, err.statusCode, err.errorCode, err.details)
-            return next(err)
+            logger.error("login failed", err)
+            return sendErrorResponse(res, err.message, err.statusCode, err.errorCode, err.details)
+            //  return next(err)
         }
     }
 
@@ -253,6 +254,7 @@ export class authController {
             next(err)
         }
     }
+
     async resend2FAOtp(req: Request, res: Response, next: NextFunction) {
         try {
             const { email } = req.body;

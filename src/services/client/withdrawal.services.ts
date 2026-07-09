@@ -344,6 +344,12 @@ export class WithdrawalService {
         });
 
         await emailService.sendNewWwithdrawalRequestNotification(withdrawalRequest)
+        await PushNotificationService.sendToUser(userId,
+            {
+                title: "New withdrawal request Sent",
+                body: `You have made a new withdrawal request of ${amount} from Help Me Nigeria`,
+            }
+        )
         //await PushNotificationService.sendToUsers()
 
         // const newTransaction = new WalletTransaction({
@@ -412,9 +418,33 @@ export class WithdrawalService {
         });
 
         await emailService.sendNewWwithdrawalRequestNotification(withdrawalRequest)
+
+        //   await emailService.sendNewWwithdrawalRequestNotification(withdrawalRequest)
+        await PushNotificationService.sendToUser(userId,
+            {
+                title: "New withdrawal request Sent",
+                body: `You have made a new withdrawal request of ${amount} from Help Me Nigeria`,
+            }
+        )
         //await PushNotificationService.sendToUsers()  
         return withdrawalRequest
 
+    }
+
+    async resendWithdrawal2FAOtp(userId: string) {
+        const user = await Account.findById(userId);
+        if (!user) throw new AppError("User not found", 404);
+
+        if (!user.twoFactorWithdrawalEnabled) {
+            throw new AppError("2FA withdrawal is not enabled for this account", 400);
+        }
+
+        await otpService.generateAndSendOTP(user.email, "2fa");
+
+        return {
+            message: "OTP resent to your email",
+            status: HTTP_STATUS.OK, // or 200 if you don't have this constant
+        };
     }
 
     async toggle2faWithdrawal(userId: string, toggle: boolean) {

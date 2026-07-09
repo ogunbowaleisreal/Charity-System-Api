@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { WithdrawalService } from "../../services/client/withdrawal.services";
 import logger from "../../logger";
 import { sendSuccessResponse, sendErrorResponse } from "../../utils/helpers";
@@ -51,6 +51,18 @@ export class WithdrawalController {
         } catch (error: any) {
             logger.error(error);
             return sendErrorResponse(res, error.message, error.statusCode);
+        }
+    }
+
+    async resendWithdrawalOtp(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
+        try {
+            const userId = req.user.userId; // adjust to however you attach the authenticated user
+
+            const result = await withdrawalService.resendWithdrawal2FAOtp(userId);
+            return res.status(result.status).json({ message: result.message });
+        } catch (err) {
+            logger.error("withdrawal otp resend failed");
+            next(err);
         }
     }
 
