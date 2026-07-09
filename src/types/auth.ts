@@ -138,6 +138,8 @@ export interface AuthResponse {
         logo?: string;
         about?: string;
         businessAddress?: string;
+        isbankDetailCreated: boolean;
+        isWalletPinSet: boolean;
 
         // =========================
         // SOCIALS

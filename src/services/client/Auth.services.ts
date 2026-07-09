@@ -114,9 +114,9 @@ export class authService {
 
                     // ===== SECURITY =====
                     twoFactorEnabled: user.twoFactorEnabled,
-                    twoFactorWithdrawalEnabled:
-                        user.twoFactorWithdrawalEnabled,
+                    twoFactorWithdrawalEnabled: user.twoFactorWithdrawalEnabled,
                     isWalletPinSet: user.isWalletPinSet,
+                    isBankDetailCreated: user.isBankDetailCreated,
 
                     // ===== LOGIN INFO =====
                     lastLogin: user.lastLogin,
@@ -155,6 +155,9 @@ export class authService {
                 twoFactorEnabled: user.twoFactorEnabled,
                 companyName: user.companyName,
                 organizationType: user.organizationType,
+                isbankDetailCreated: user.isBankDetailCreated,
+                twoFactorWithdrawalEnabled: user.twoFactorWithdrawalEnabled,
+                isWalletPinSet: user.isWalletPinSet,
                 // website: user.website,
                 instagram: user.instagram,
                 facebook: user.facebook,
@@ -162,6 +165,8 @@ export class authService {
                 tiktok: user.tiktok,
                 youtube: user.youtube,
                 snapchat: user.snapchat,
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt,
 
                 //twoFactorEnabled: user.twoFactorEnabled,
             },

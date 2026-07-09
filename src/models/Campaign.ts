@@ -125,7 +125,7 @@ const CampaignSchema = new Schema<ICampaign>(
         category: {
             type: Schema.Types.ObjectId,
             required: true,
-            ref: "Category",
+            ref: "CampaignCategory",
         },
 
         authors: [{

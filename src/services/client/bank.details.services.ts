@@ -31,15 +31,22 @@ export class BankDetailsService {
     private otpService = new OTPService();
 
     async createBankDetails(payload: CreateBankDetailsDTO, userId: string) {
+        const account = await Account.findById(userId);
+        if (!account) throw new Error("User not found");
+
         const existingBankDetail = await BankDetail.findOne({
             user: userId,
             isDeleted: false,
         });
         if (existingBankDetail) throw new Error("user already has Bank details, try updating");
-        return await BankDetail.create({
+        const bankDetails = await BankDetail.create({
             ...payload,
             user: userId,
         });
+
+        account.isBankDetailCreated = true;
+        await account?.save();
+        return bankDetails;
     }
 
     async getUserBankDetails(userId: string) {
@@ -122,7 +129,11 @@ export class BankDetailsService {
         if (!bankDetails) throw new Error("Bank details not found");
 
         bankDetails.isDeleted = true;
-        return await bankDetails.save();
+        await bankDetails.save();
+
+        user.isBankDetailCreated = false;
+        await user.save();
+        return bankDetails;
     }
 }
 // import { BankDetail } from "../../models/BankDetails";
