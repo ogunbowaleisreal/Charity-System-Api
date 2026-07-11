@@ -50,6 +50,7 @@ export class DonationService {
             logger.info("User not found, Creating donation for guest user", { email: data.email });
             // throw new AppError("User not found, Creating donation for guest user", 400);
         }
+        if (!data.firstname || !data.lastname || !data.amount) throw new Error(" insufficient information")
 
         const campaign = await Campaign.findById(data.campaignId);
         if (!campaign) throw new Error("Campaign not found");
@@ -77,8 +78,9 @@ export class DonationService {
             netAmount: amountData.donationAmount,
             grossAmount: amountData.totalAmount,
             reference: reference,
+            isAnonymous: data.donateAnonymously,
             idempotencyKey: reference,
-            fullName: data.donateAnonymously ? "Anonymous" : `${data.firstname} ${data.lastname}`,
+            fullName: `${data.firstname} ${data.lastname}`,
             type: user ? "user" : "guest",
             serviceCharge: serviceFee ? serviceFee.value : 0,
             userId: user ? user._id : null, //user._id,
@@ -90,6 +92,7 @@ export class DonationService {
                 totalAmount: amountData.totalAmount,
                 feeType: serviceFee ? serviceFee.type : "none",
                 feeValue: serviceFee ? serviceFee.value : 0,
+                isAnonymous: data.donateAnonymously
 
             },
         });

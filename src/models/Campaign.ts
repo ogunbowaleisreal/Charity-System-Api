@@ -3,6 +3,7 @@ import mongoose, { Schema, model, Document, Types } from "mongoose";
 export interface ICampaign extends Document {
     // ===== BASIC =====
     title: string;
+    _id: Types.ObjectId;
     description: string;
     image: {
         imageUrl: string,

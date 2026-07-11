@@ -167,6 +167,7 @@ export class authService {
                 snapchat: user.snapchat,
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt,
+                kyc
 
                 //twoFactorEnabled: user.twoFactorEnabled,
             },

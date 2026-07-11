@@ -1,5 +1,5 @@
 import { ObjectId, Types } from "mongoose";
-import Campaign from "../../models/Campaign";
+import Campaign, { ICampaign } from "../../models/Campaign";
 import { Donation } from "../../models/Donations";
 import Comment from "../../models/Comment";
 import { Account } from "../../models/Accounts";
@@ -8,6 +8,7 @@ import { FilterQuery } from "mongoose";
 import { PushNotificationService } from "../pushNotificationService";
 import { NotificationService } from "../notification.Services";
 import favouriteService from "./favourite.service";
+import { sanitizeDonation } from "../../utils/helpers";
 // type createCampaign = {
 //     title: string;
 //     description: string;
@@ -154,28 +155,42 @@ export class CampaignService {
             const bucket = grouped.get(key)!;
             if (bucket.length >= 3) continue;       // already have 3 for this campaign
 
-            bucket.push({
-                _id: donation._id as Types.ObjectId,
-                amount: donation.amount,
-                currency: donation.currency,
-                message: donation.message,
-                isAnonymous: donation.isAnonymous,
-                createdAt: donation.createdAt,
-                paymentMethod: donation.paymentMethod,
-                paymentStatus: donation.paymentStatus,
+            // bucket.push({
+            //     _id: donation._id as Types.ObjectId,
+            //     amount: donation.amount,
+            //     currency: donation.currency,
+            //     message: donation.message,
+            //     isAnonymous: donation.isAnonymous,
+            //     createdAt: donation.createdAt,
+            //     paymentMethod: donation.paymentMethod,
+            //     paymentStatus: donation.paymentStatus,
 
-                // ── Anonymity masking ──────────────────────────────────────────
-                // Strip donor identity when isAnonymous is true.
-                // We never expose the donor ObjectId either — that alone could be
-                // used to correlate across requests.
-                donorName: donation.isAnonymous
-                    ? null
-                    : (donation.donorName ?? null),
+            //     // ── Anonymity masking ──────────────────────────────────────────
+            //     // Strip donor identity when isAnonymous is true.
+            //     // We never expose the donor ObjectId either — that alone could be
+            //     // used to correlate across requests.
+            //     donorName: donation.isAnonymous
+            //         ? null
+            //         : (donation.donorName ?? null),
 
-                donor: donation.isAnonymous
-                    ? null
-                    : (donation.donor as DonorSnapshot | null),
-            });
+            //     donor: donation.isAnonymous
+            //         ? null
+            //         : (donation.donor as DonorSnapshot | null),
+            // });
+            bucket.push(
+                sanitizeDonation({
+                    _id: donation._id as Types.ObjectId,
+                    amount: donation.amount,
+                    currency: donation.currency,
+                    message: donation.message,
+                    isAnonymous: donation.isAnonymous,
+                    createdAt: donation.createdAt,
+                    paymentMethod: donation.paymentMethod,
+                    paymentStatus: donation.paymentStatus,
+                    donorName: donation.donorName ?? null,
+                    donor: donation.donor as DonorSnapshot | null,
+                })
+            );
         }
 
         return grouped;
@@ -211,6 +226,7 @@ export class CampaignService {
             body: "`A new campaign '${campaign.title}' has been created`",
         })
 
+        return campaign
 
     }
 
@@ -346,93 +362,6 @@ export class CampaignService {
         };
     }
 
-
-    // async getAllCampaigns(query: any) {
-    //     const { page = 1, limit = 10, category, status, search } = query;
-
-    //     const filter: any = {
-    //         isDeleted: false,
-    //         isActive: true,
-    //         status: "ongoing",
-    //     };
-
-    //     if (category) filter.category = category;
-    //     if (status) filter.status = status;
-
-    //     // if (search) {
-    //     //     filter.$or = [
-    //     //         { title: { $regex: search, $options: "i" } },
-    //     //         { description: { $regex: search, $options: "i" } },
-    //     //     ];
-    //     // }
-
-    //     if (search) {
-    //         const regex = { $regex: search, $options: "i" };
-    //         filter.$or = [
-    //             { title: regex },
-    //             { description: regex },
-    //             { firstName: regex },
-    //             { lastName: regex },
-    //             { userName: regex },
-    //             { companyName: regex },
-    //         ];
-    //     }
-
-    //     const skip = (page - 1) * limit;
-
-    //     // ── DB call #1 + #2 run concurrently ────────────────────────────────────
-    //     // countDocuments was already parallel with find() in your original code.
-    //     // We keep that pattern and add the donations fetch to the same Promise.all.
-    //     //
-    //     // Execution timeline:
-    //     //   t=0  ──┬── Campaign.find()           (query 1)
-    //     //          ├── Campaign.countDocuments()  (query 2)
-    //     //          └── (donations fetched AFTER campaigns resolve — see note below)
-    //     //
-    //     // Note: we need the campaign IDs before we can query donations, so the
-    //     // donations query is sequential to the Campaign.find(), but it's still
-    //     // just 2 total DB round-trips.  countDocuments remains concurrent.
-
-    //     const [campaigns, total] = await Promise.all([
-    //         Campaign.find(filter)
-    //             .sort({ createdAt: -1 })
-    //             .skip(skip)
-    //             .limit(Number(limit))
-    //             .populate("owner", "firstName lastName companyName logo profilePicture")
-    //             .populate("category", "categoryName description image status")
-    //             .populate("tags", "name")
-    //             .lean(),
-
-    //         Campaign.countDocuments(filter),
-    //     ]);
-
-    //     // ── DB call #2: one batched donation lookup for the whole page ───────────
-    //     const campaignIds = campaigns.map((c) => c._id as Types.ObjectId);
-    //     const donationsMap = await this.getRecentDonationsForCampaigns(campaignIds);
-
-    //     // ── Merge in-memory — no DB work here ────────────────────────────────────
-    //     const campaignsWithDonations = campaigns.map((campaign) => ({
-    //         ...campaign,
-    //         recentDonations: donationsMap.get(campaign._id.toString()) ?? [],
-    //     }));
-
-    //     const totalPages = Math.ceil(total / limit);
-
-    //     return {
-    //         campaigns: campaignsWithDonations,
-    //         pagination: {
-    //             current_page: Number(page),
-    //             total_pages: totalPages,
-    //             per_page: Number(limit),
-    //             total_records: total,
-    //             has_next_page: page < totalPages,
-    //             has_prev_page: page > 1,
-    //         },
-    //     };
-
-    // }
-
-
     async getCampaignById(campaignId: string) {
         const campaign = await Campaign.findById(campaignId)
             .populate("owner", "firstName lastName companyName logo")
@@ -462,16 +391,31 @@ export class CampaignService {
             .limit(limit)
             .populate("owner", "firstName lastName companyName logo")
             .populate("category", "categoryName description image status")
-            .populate("tags", "name");
+            .populate("tags", "name")
+            .lean();
 
         const total = await Campaign.countDocuments({
             owner: userId,
             isDeleted: false,
         });
+
+        const campaignIds = campaigns.map((c) => c._id as Types.ObjectId);
+
+        // ── these two run concurrently, same pattern as before ──
+        const [donationsMap, favoritesSet] = await Promise.all([
+            this.getRecentDonationsForCampaigns(campaignIds),
+            favouriteService.getUserFavoritesForCampaigns(userId, campaignIds),
+        ]);
+
+        const campaignsWithExtras = campaigns.map((campaign) => ({
+            ...campaign,
+            recentDonations: donationsMap.get(campaign._id.toString()) ?? [],
+            isFavorited: favoritesSet.has(campaign._id.toString()),
+        }));
         const totalPages = Math.ceil(total / limit);
 
         return {
-            campaigns,
+            campaigns: campaignsWithExtras,
             pagination: {
                 current_page: page,
                 total_pages: totalPages,
@@ -575,6 +519,62 @@ export class CampaignService {
     // 🔹 DONATIONS
     // =============================
 
+    // async getCampaignDonations(campaignId: string, filter: donationFilter) {
+    //     let sort: any = { createdAt: -1 };
+
+    //     if (filter.sort === "top") {
+    //         return await Donation.aggregate([
+    //             {
+    //                 $match: {
+    //                     campaign: new Types.ObjectId(campaignId),
+    //                     paymentStatus: "success",
+    //                 },
+    //             },
+    //             {
+    //                 $group: {
+    //                     _id: "$donor",
+    //                     total: { $sum: "$amount" },
+    //                 },
+    //             },
+    //             { $sort: { total: -1 } },
+    //         ]);
+    //     }
+
+
+    //     const donations = await Donation.find({
+    //         campaign: campaignId,
+    //         paymentStatus: "success",
+    //     })
+    //         .sort(sort)
+    //         .skip((filter.page - 1) * filter.limit)
+    //         .limit(filter.limit)
+    //         .populate("donor", "firstName lastName profilePicture logo country state");
+
+    //     const total = await Donation.countDocuments({
+    //         campaign: campaignId,
+    //         paymentStatus: "success",
+    //     });
+
+    //     const totalPages = Math.ceil(total / filter.limit);
+
+
+    //     // donations.forEach((d) => {
+    //     //     d.createdAt = moment(d.createdAt).fromNow();
+    //     // })
+
+    //     return {
+    //         donations,
+    //         pagination: {
+    //             current_page: filter.page,
+    //             total_pages: totalPages,
+    //             per_page: filter.limit,
+    //             total_records: total,
+    //             has_next_page: filter.page < totalPages,
+    //             has_prev_page: filter.page > 1,
+    //         }
+    //     }
+    // }
+
     async getCampaignDonations(campaignId: string, filter: donationFilter) {
         let sort: any = { createdAt: -1 };
 
@@ -584,6 +584,7 @@ export class CampaignService {
                     $match: {
                         campaign: new Types.ObjectId(campaignId),
                         paymentStatus: "success",
+                        isAnonymous: { $ne: true }, // 👈 exclude anonymous donors from leaderboard
                     },
                 },
                 {
@@ -596,7 +597,6 @@ export class CampaignService {
             ]);
         }
 
-
         const donations = await Donation.find({
             campaign: campaignId,
             paymentStatus: "success",
@@ -604,7 +604,10 @@ export class CampaignService {
             .sort(sort)
             .skip((filter.page - 1) * filter.limit)
             .limit(filter.limit)
-            .populate("donor", "firstName lastName profilePicture logo country state");
+            .populate("donor", "firstName lastName profilePicture logo country state")
+            .lean(); // 👈 needed so plain objects work cleanly with the sanitizer
+
+        const sanitizedDonations = donations.map(sanitizeDonation);
 
         const total = await Donation.countDocuments({
             campaign: campaignId,
@@ -613,13 +616,8 @@ export class CampaignService {
 
         const totalPages = Math.ceil(total / filter.limit);
 
-
-        // donations.forEach((d) => {
-        //     d.createdAt = moment(d.createdAt).fromNow();
-        // })
-
         return {
-            donations,
+            donations: sanitizedDonations,
             pagination: {
                 current_page: filter.page,
                 total_pages: totalPages,

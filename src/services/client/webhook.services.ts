@@ -422,7 +422,7 @@ export class webhookServices {
                                 paymentProvider: "flutterwave",
                                 reference: transaction.reference,
                                 donorPhoneNumber: transaction.phoneNumber,
-                                isAnonymous: transaction.fullName == "Anonymous" ? true : false,
+                                isAnonymous: transaction.isAnonymous, //== "Anonymous" ? true : false,
                                 //providerR
                                 paymentStatus: "success",
                                 paymentStatusExtended: "initialized",

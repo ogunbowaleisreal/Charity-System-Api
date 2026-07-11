@@ -3,7 +3,31 @@ import { Response } from "express";
 import { ApiResponse, ErrorResponse, SuccessResponse } from "../types/api";
 import { HTTP_STATUS } from "./constants";
 import logger from "../logger";
+import { Types } from "mongoose";
 
+
+interface DonorSnapshot {
+    _id: Types.ObjectId;
+    firstName?: string;
+    lastName?: string;
+    profilePicture?: string;
+    role?: string;
+    logo?: string;
+    country?: string;
+    state?: string;
+}
+
+export function sanitizeDonation<T extends { isAnonymous: boolean; donorName?: string | null; donor?: any }>(
+    donation: T
+): T {
+    if (!donation.isAnonymous) return donation;
+
+    return {
+        ...donation,
+        donorName: null,
+        donor: null,
+    };
+}
 export const generateOTP = (length: number = 6): string => {
     let otp = "";
     for (let i = 0; i < length; i++) {

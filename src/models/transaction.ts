@@ -21,6 +21,7 @@ export interface IWalletTransaction extends Document {
     campaignId?: Types.ObjectId
     gratuityPercentage: number
     gratuityAmount: number
+    isAnonymous: boolean
 
     grossAmount: number;
 
@@ -153,6 +154,10 @@ const WalletTransactionSchema = new Schema<IWalletTransaction>(
         gratuityAmount: {
             type: Number,
             default: 0,
+        },
+        isAnonymous: {
+            type: Boolean,
+            default: false
         },
 
         method: {

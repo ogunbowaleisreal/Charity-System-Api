@@ -1,5 +1,6 @@
 import { Request } from "express";
 import mongoose from "mongoose";
+import { IKYC } from "../models/KYC";
 
 export interface JWTPayload {
     id: string;
@@ -183,6 +184,7 @@ export interface AuthResponse {
         lastLoginIp?: string;
         lastLoginLocation?: any;
         lastLogin?: Date;
+        kyc?: IKYC
 
         // =========================
         // META
