@@ -14,10 +14,13 @@ export class KYCService {
 
     private async getOrCreateKYC(userId: string) {
         let kyc = await KYC.findOne({ userId });
+        const account = await Account.findById(userId)
+        if (!account) throw new Error("Account not found")
 
         if (!kyc) {
             kyc = await KYC.create({
                 userId,
+                type: account?.role,
                 status: "not_started",
                 level: 0,
             });

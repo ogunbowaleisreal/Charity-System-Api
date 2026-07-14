@@ -22,7 +22,7 @@ export class ZeehKycService implements IKycProvider {
         this.client = axios.create({
             baseURL: this.baseUrl,
             headers: {
-                Authorization: `Bearer ${this.apiKey}`,
+                Secret_key: this.apiKey,
                 "Content-Type": "application/json",
             },
         });
@@ -31,9 +31,11 @@ export class ZeehKycService implements IKycProvider {
     // 🔹 BVN
     async verifyBVN(bvn: string): Promise<ZeehBvnResponse> {
         try {
-            const response = await this.client.post("/nigeria_kyc/lookup_bvn_basic_igree", { bvn });
+            console.log(this.apiKey, this.baseUrl)
+            const response = await this.client.post("/nigeria_kyc/lookup_bvn" /*_basic_igree"*/, { bvn });
             return response.data;
         } catch (error) {
+            console.log(error)
             this.handleError("BVN Verification", error);
         }
     }
@@ -140,8 +142,14 @@ export class ZeehKycService implements IKycProvider {
         return base64.replace(/^data:image\/\w+;base64,/, "");
     }
 
+    // private handleError(context: string, error: any): never {
+    //     console.error(`${context} Error:`, error?.response?.data || error.message);
+    //     throw new Error(`${context} failed`);
+    // }
+
     private handleError(context: string, error: any): never {
-        console.error(`${context} Error:`, error?.response?.data || error.message);
-        throw new Error(`${context} failed`);
+        const detail = error?.response?.data || error?.message || "Unknown error";
+        console.error(`${context} Error:`, detail);
+        throw new Error(`${context} failed: ${JSON.stringify(detail)}`);
     }
 }

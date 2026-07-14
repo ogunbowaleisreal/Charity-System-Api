@@ -23,7 +23,7 @@ export class KYCController {
 
     async submitBVN(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
         try {
-            const userId = req.user.user_id;
+            const userId = req.user.userId;
             const { bvn } = req.body;
 
             const result = await kycService.submitBVN(userId, { bvn: bvn, dob: req.body.dob });

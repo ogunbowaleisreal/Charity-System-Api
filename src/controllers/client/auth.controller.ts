@@ -11,6 +11,7 @@ import { HTTP_STATUS } from "../../utils/constants";
 import { KYCService } from "../../services/client/Kyc.services";
 import { KYC } from "../../models/KYC";
 import { Wallet } from "../../models/Wallet";
+import jwtUtil from "../../utils/jwt";
 
 const otpService = new OTPService();
 const Authservice = new authService()
@@ -109,7 +110,21 @@ export class authController {
             registeredUser.wallet = newWallet._id as any
             await registeredUser.save()
 
-            return res.status(200).json({ "message": "otp verification and registration completed" })
+            const tokens = jwtUtil.generateTokenPair({
+                userId: registeredUser._id as string,
+                email: registeredUser.email,
+                role: registeredUser.role,
+            });
+
+            // Save refresh token
+            await Authservice.saveRefreshToken(
+                tokens.tokenId,
+                registeredUser._id as string,
+                registeredUser.role,
+                tokens.refreshToken
+            );
+
+            return res.status(200).json({ "message": "otp verification and registration completed", tokens })
         } catch (err: any) {
             logger.error("verificaion failed", err)
             return next(err)
