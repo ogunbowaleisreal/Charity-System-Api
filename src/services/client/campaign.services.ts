@@ -304,7 +304,7 @@ export class CampaignService {
         };
 
         if (category) filter.category = category;
-        if (status) filter.status = status;
+        // if (status) filter.status = status;
 
         if (search) {
             const regex = { $regex: search, $options: "i" };

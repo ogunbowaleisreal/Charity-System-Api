@@ -94,13 +94,15 @@ export class CampaignController {
     // =============================
 
     async getAllCampaigns(
-        req: Request,
+        req: AuthenticatedClientRequest,
         res: Response,
         next: NextFunction
     ) {
+        const userId = req.user?.userId
         try {
             const result = await campaignServices.getAllCampaigns(
-                req.query as any
+                req.query as any,
+                userId
             );
 
             return sendSuccessResponse(res, result);

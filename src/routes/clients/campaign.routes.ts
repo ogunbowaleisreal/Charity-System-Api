@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { CampaignController } from "../../controllers/client/campaign.controller";
-import { verifyClientToken } from "../../middleware/auth";
+import { verifyClientToken, optionalClientAuth } from "../../middleware/auth";
 import { rateLimiter } from "../../middleware/ratelimiter";
 import { validate } from "../../middleware/validator";
 import {
@@ -13,6 +13,8 @@ import {
 const router = Router();
 
 const campaignCtrl = new CampaignController();
+
+router.use(optionalClientAuth);
 
 router.get("/",
     validate(campaignFilterSchema, "query"),
@@ -40,7 +42,7 @@ router.get(
 // 🔒 GLOBAL MIDDLEWARE
 // =============================
 router.use(rateLimiter.general);
-router.use(verifyClientToken);
+
 
 // =============================
 // 🔹 CAMPAIGNS

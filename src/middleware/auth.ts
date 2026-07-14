@@ -160,7 +160,7 @@ const verifyClientToken = async (
 };
 
 const optionalClientAuth = async (
-    req: Request,
+    req: AuthenticatedClientRequest,
     res: Response,
     next: NextFunction
 ) => {
