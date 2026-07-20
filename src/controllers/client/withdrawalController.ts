@@ -13,7 +13,7 @@ export class WithdrawalController {
 
     async applyForWithdrawalToBank(req: AuthenticatedClientRequest, res: Response) {
         const userId = req.user.userId;
-        const walletId = req.params.walletId;
+        const walletId = req.params.walletId as string;
         try {
             const withdrawal = await withdrawalService.applyForWithdrawalToBank(
                 userId,
@@ -34,7 +34,7 @@ export class WithdrawalController {
 
     async verifyWithdrawalRequestOtp(req: AuthenticatedClientRequest, res: Response) {
         const userId = req.user.userId
-        const walletId = req.params.walletId;
+        const walletId = req.params.walletId as string;
         try {
             const withdrawal = await withdrawalService.verifyWithdrawalRequest2FA(
                 userId,
@@ -165,7 +165,7 @@ export class WithdrawalController {
     }
 
     async withdrawFundsToWwallet(req: AuthenticatedClientRequest, res: Response) {
-        const campaignId = req.params.campaignId;
+        const campaignId = req.params.campaignId as string;
         const userId = req.user.userId;
         console.log(campaignId);
         try {
@@ -185,7 +185,7 @@ export class WithdrawalController {
 
     async verifyWitdrawal2fa(req: AuthenticatedClientRequest, res: Response) {
         const userId = req.user.userId;
-        const campaignId = req.params.campaignId;
+        const campaignId = req.params.campaignId as string;
         const code = req.body.otp;
         const amount = req.body.amount;
         const narration = req.body.narration;

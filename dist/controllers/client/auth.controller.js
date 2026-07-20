@@ -15,6 +15,7 @@ const constants_1 = require("../../utils/constants");
 const Kyc_services_1 = require("../../services/client/Kyc.services");
 const KYC_1 = require("../../models/KYC");
 const Wallet_1 = require("../../models/Wallet");
+const jwt_1 = __importDefault(require("../../utils/jwt"));
 const otpService = new otp_services_1.OTPService();
 const Authservice = new Auth_services_1.authService();
 const kycService = new Kyc_services_1.KYCService();
@@ -23,27 +24,36 @@ class authController {
         try {
             // Registration logic here
             //const { username, password, email } = req.body;
-            const { firstName, lastName, password, email, phoneNumber, role, companyName, organizationType } = req.body;
-            if (!firstName || !lastName || !password || !email || !phoneNumber || !role) {
-                return res.status(400).json({ message: "username, password and email are required" });
+            const { firstName, lastName, userName, password, gender, email, phoneNumber, role, companyName, organizationType } = req.body;
+            if (!password || !email || !phoneNumber || !role) {
+                return res.status(400).json({ message: " password and email are required" });
             }
             const user = await Accounts_1.Account.findOne({ email, isDeleted: false });
             if (!user) {
+                // if (role == "organization") {
+                //     if (!userName) {
+                //         return res.status(400).json({ message: "user name is required" })
+                //     }
+                // }
                 const hashedPassword = await bcryptutils_1.default.hashPassword(password);
                 const newUser = new Accounts_1.Account({
                     firstName,
                     lastName,
+                    userName,
                     role: role,
                     password: hashedPassword,
                     email,
                     phoneNumber,
+                    gender,
                     //phoneCountryCode,
-                    //gender,
                     //companyName,
                     //businessCategory,
                     isVerified: false
                 });
                 if (role == "organization") {
+                    if (!companyName || !organizationType) {
+                        return res.status(400).json({ message: "company name and organization type are required" });
+                    }
                     newUser.companyName = companyName;
                     newUser.organizationType = organizationType;
                     //newUser.role = role
@@ -87,10 +97,18 @@ class authController {
                 return res.status(404).json({ "message": "user not registered" });
             }
             registeredUser.isVerified = true;
-            await registeredUser.save();
             const kyc = await KYC_1.KYC.create({ userId: registeredUser._id, status: "not_started", level: 0, type: registeredUser.role });
             const newWallet = await Wallet_1.Wallet.create({ userId: registeredUser._id });
-            return res.status(200).json({ "message": "otp verification and registration completed" });
+            registeredUser.wallet = newWallet._id;
+            await registeredUser.save();
+            const tokens = jwt_1.default.generateTokenPair({
+                userId: registeredUser._id,
+                email: registeredUser.email,
+                role: registeredUser.role,
+            });
+            // Save refresh token
+            await Authservice.saveRefreshToken(tokens.tokenId, registeredUser._id, registeredUser.role, tokens.refreshToken);
+            return res.status(200).json({ "message": "otp verification and registration completed", tokens });
         }
         catch (err) {
             logger_1.default.error("verificaion failed", err);
@@ -136,8 +154,9 @@ class authController {
         }
         catch (err) {
             //  return res.status(500).json({ message: "Internal Server Error", error: err })
-            (0, helpers_1.sendErrorResponse)(res, err.message, err.statusCode, err.errorCode, err.details);
-            return next(err);
+            logger_1.default.error("login failed", err);
+            return (0, helpers_1.sendErrorResponse)(res, err.message, err.statusCode, err.errorCode, err.details);
+            //  return next(err)
         }
     }
     async logout(req, res) {
@@ -219,6 +238,23 @@ class authController {
                 return res.status(400).json({ message: "Email is required" });
             }
             await otpService.generateAndSendOTP(email, "registration");
+            return res.status(200).json({ message: "OTP resent to email" });
+        }
+        catch (err) {
+            logger_1.default.error("otp request failed");
+            next(err);
+        }
+    }
+    async resend2FAOtp(req, res, next) {
+        try {
+            const { email } = req.body;
+            if (!email) {
+                return res.status(400).json({ message: "Email is required" });
+            }
+            const user = await Accounts_1.Account.find({ email });
+            if (!user)
+                throw new Error("Account not found");
+            await otpService.generateAndSendOTP(email, "2fa");
             return res.status(200).json({ message: "OTP resent to email" });
         }
         catch (err) {

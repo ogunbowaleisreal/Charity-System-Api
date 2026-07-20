@@ -1,17 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.formatPagination = exports.buildPagination = void 0;
-// export interface PaginatedResponse<T> {
-//     data: T[];
-//     pagination: {
-//         page: number;
-//         limit: number;
-//         total: number;
-//         totalPages: number;
-//         hasNext: boolean;
-//         hasPrev: boolean;
-//     };
-// }
 const buildPagination = (page = 1, limit = 10) => {
     const safePage = Math.max(1, page);
     const safeLimit = Math.max(1, Math.min(limit, 100)); // prevent abuse

@@ -26,7 +26,8 @@ const AnnouncementSchema = new mongoose_1.Schema({
             "normal_users",
             "active_users",
             "suspended_users",
-            "specific"
+            "specific",
+            "subscribed_users"
         ],
         required: true,
     },

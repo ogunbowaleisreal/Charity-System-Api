@@ -3,7 +3,7 @@ export interface AdminUpdatePayload {
     email?: string;
     adminLevel?: string
 }
-import { Document, Schema } from "mongoose";
+import { Document, Schema, Types } from "mongoose";
 import { Request } from "express";
 import { AnnounceController } from "../controllers/admin/Announcement.controller";
 
@@ -52,7 +52,7 @@ export interface UpdateAdminRequest {
 //import { Document, Schema } from "mongoose";
 
 export interface IAdmin extends Document {
-    _id: Schema.Types.ObjectId;
+    _id: Types.ObjectId;
 
     // Basic Information
     firstName: string;

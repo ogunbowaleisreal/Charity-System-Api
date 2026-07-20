@@ -82,7 +82,7 @@ class profileController {
         }
         catch (err) {
             logger_1.default.error("password change failed", err.message);
-            //sendErrorResponse(res, err.message, err.statusCode)
+            (0, helpers_1.sendErrorResponse)(res, err.message, err.statusCode);
             next(err);
         }
     }

@@ -199,7 +199,7 @@ export class CampaignService {
     async createCampaign(payload: CreateCampaignDTO, userId: string) {
         const user = await Account.findById(userId);
         if (!user) throw new Error("User not found");
-        payload.owner = user._id as string;
+        payload.owner = user._id.toString() as string;
         payload.ownerType = user.role;
         payload.firstName = user.firstName;
         payload.lastName = user.lastName;

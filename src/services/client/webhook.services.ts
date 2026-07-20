@@ -2,8 +2,6 @@ import { Donation } from "../../models/Donations";
 import { WalletTransaction } from "../../models/transaction";
 import { Account } from "../../models/Accounts";
 import Campaign from "../../models/Campaign";
-import { saasservicemgmt_v1beta1 } from "googleapis";
-import Crypto from "crypto";
 import logger from "../../logger";
 import axios from "axios";
 import { PROVIDERS } from "../../config/providers";

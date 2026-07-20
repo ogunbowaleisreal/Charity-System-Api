@@ -17,7 +17,7 @@ class KYCController {
     // }
     async submitBVN(req, res, next) {
         try {
-            const userId = req.user.user_id;
+            const userId = req.user.userId;
             const { bvn } = req.body;
             const result = await kycService.submitBVN(userId, { bvn: bvn, dob: req.body.dob });
             (0, helpers_1.sendSuccessResponse)(res, result, `BVN submitted: verifiation status: ${result.bvnVerification?.status}`);

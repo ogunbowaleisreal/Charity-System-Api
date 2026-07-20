@@ -7,6 +7,7 @@ exports.CampaignController = void 0;
 const logger_1 = __importDefault(require("../../logger"));
 const helpers_1 = require("../../utils/helpers");
 const campaign_services_1 = require("../../services/client/campaign.services");
+const favourite_service_1 = __importDefault(require("../../services/client/favourite.service"));
 const campaignServices = new campaign_services_1.CampaignService();
 class CampaignController {
     // =============================
@@ -33,6 +34,16 @@ class CampaignController {
             return (0, helpers_1.sendErrorResponse)(res, error);
         }
     }
+    async getFeaturedCampaign(req, res, next) {
+        try {
+            const campaign = await campaignServices.getFeaturedCampaigns(req.query);
+            return (0, helpers_1.sendSuccessResponse)(res, campaign);
+        }
+        catch (error) {
+            logger_1.default.error(error);
+            return (0, helpers_1.sendErrorResponse)(res, error);
+        }
+    }
     async deleteCampaign(req, res, next) {
         try {
             const { campaignId } = req.params;
@@ -48,8 +59,9 @@ class CampaignController {
     // 🔹 FETCH
     // =============================
     async getAllCampaigns(req, res, next) {
+        const userId = req.user?.userId;
         try {
-            const result = await campaignServices.getAllCampaigns(req.query);
+            const result = await campaignServices.getAllCampaigns(req.query, userId);
             return (0, helpers_1.sendSuccessResponse)(res, result);
         }
         catch (error) {
@@ -70,12 +82,34 @@ class CampaignController {
     }
     async getUserCampaigns(req, res, next) {
         try {
-            const campaigns = await campaignServices.getUserCampaigns(req.user._id, req.query);
+            const campaigns = await campaignServices.getUserCampaigns(req.user.userId, req.query);
             return (0, helpers_1.sendSuccessResponse)(res, campaigns);
         }
         catch (error) {
             logger_1.default.error(error);
             return (0, helpers_1.sendErrorResponse)(res, error);
+        }
+    }
+    async toggleCampaignFavourite(req, res, next) {
+        try {
+            const { campaignId } = req.params;
+            const campaign = await favourite_service_1.default.toggleFavorite(req.user.userId, campaignId);
+            return (0, helpers_1.sendSuccessResponse)(res, campaign);
+        }
+        catch (error) {
+            logger_1.default.error(error);
+            return (0, helpers_1.sendErrorResponse)(res, error);
+        }
+    }
+    async getUserFavouriteCampaign(req, res, next) {
+        try {
+            // const { campaignId } = req.params;
+            const campaign = await favourite_service_1.default.getUserFavoriteCampaigns(req.user.userId, req.query);
+            return (0, helpers_1.sendSuccessResponse)(res, campaign);
+        }
+        catch (error) {
+            logger_1.default.error(error);
+            return (0, helpers_1.sendErrorResponse)(res, error.message);
         }
     }
     // =============================

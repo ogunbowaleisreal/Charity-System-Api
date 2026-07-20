@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CampaignCategoryServices = void 0;
+const campaignCategory_1 = require("../../models/campaignCategory");
 const Category_1 = require("../../models/Category");
 class CampaignCategoryServices {
     async getCampaignCategory() {
@@ -22,7 +23,7 @@ class CampaignCategoryServices {
         sortObj[sortBy] = sortOrder === "asc" ? 1 : -1;
         const skip = (Number(page) - 1) * Number(limit);
         const [categories, totalCount] = await Promise.all([
-            Category_1.Category.find(filter)
+            campaignCategory_1.CampaignCategory.find(filter)
                 .sort(sortObj)
                 .skip(skip)
                 .limit(Number(limit))

@@ -56,7 +56,7 @@ const WalletTransactionSchema = new mongoose_1.Schema({
     },
     userId: {
         type: mongoose_1.Schema.Types.ObjectId,
-        ref: "User",
+        ref: "Account",
         //required: true,
     },
     campaignId: {
@@ -64,6 +64,9 @@ const WalletTransactionSchema = new mongoose_1.Schema({
         ref: "Campaign",
         required: false,
         index: true,
+    },
+    phoneNumber: {
+        type: String
     },
     status: {
         type: String,
@@ -107,6 +110,10 @@ const WalletTransactionSchema = new mongoose_1.Schema({
     gratuityAmount: {
         type: Number,
         default: 0,
+    },
+    isAnonymous: {
+        type: Boolean,
+        default: false
     },
     method: {
         type: String,

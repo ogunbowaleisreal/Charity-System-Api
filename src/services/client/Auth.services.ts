@@ -140,7 +140,7 @@ export class authService {
         return {
             message: "Account verified successfully",
             user: {
-                id: user._id as string,
+                id: user._id.toString() as string,
                 email: user.email,
                 firstName: user.firstName,
                 lastName: user.lastName,
@@ -280,7 +280,7 @@ export class authService {
 
         // // Generate tokens
         const tokens = jwtUtil.generateTokenPair({
-            userId: client._id as string,
+            userId: client._id.toString() as string,
             email: client.email,
             role: client.role,
         });
@@ -288,7 +288,7 @@ export class authService {
         // Save refresh token
         await this.saveRefreshToken(
             tokens.tokenId,
-            client._id as string,
+            client._id.toString() as string,
             client.role,
             tokens.refreshToken,
             ip,
@@ -317,14 +317,14 @@ export class authService {
         if (!verified) throw new Error("Invalid OTP")
 
         const tokens = jwtUtil.generateTokenPair({
-            userId: client._id as string,
+            userId: client._id.toString() as string,
             email: client.email,
             role: client.role,
         });
 
         await this.saveRefreshToken(
             tokens.tokenId,
-            client._id as string,
+            client._id.toString() as string,
             client.role,
             tokens.refreshToken
         );
@@ -365,7 +365,7 @@ export class authService {
 
         // Generate new tokens
         const tokens = jwtUtil.generateTokenPair({
-            userId: client._id as string,
+            userId: client._id.toString() as string,
             email: client.email,
             role: client.role,
         });
@@ -373,7 +373,7 @@ export class authService {
         // Save new refresh token
         await this.saveRefreshToken(
             tokens.tokenId,
-            client._id as string,
+            client._id.toString() as string,
             client.role,
             tokens.refreshToken
         );
@@ -402,7 +402,7 @@ export class authService {
         await client!.save()
 
         const payload: clientJwtPayload = {
-            user_id: client._id as string,
+            user_id: client._id.toString() as string,
             role: user.role,
             permission: {}
         }

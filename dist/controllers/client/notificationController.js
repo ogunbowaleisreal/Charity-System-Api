@@ -62,6 +62,13 @@ class NotificationController {
                 (0, helpers_2.sendErrorResponse)(res, error.message, constants_1.HTTP_STATUS.BAD_REQUEST);
             }
         };
+        // subscribeForUpdates= async(req: AuthenticatedClientRequest, res: Response)=>{
+        //     try{
+        //     }catch(error:any){
+        //         logger.error("failed to subscribe", error.message);
+        //         sendErrorResponse(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+        //     }
+        // }
     }
 }
 exports.NotificationController = NotificationController;

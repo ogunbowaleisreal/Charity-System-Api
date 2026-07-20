@@ -25,14 +25,52 @@ class WithdrawalAdminService {
     // 📊 GET ALL REQUESTS (ADMIN)
     // =========================
     async getWithdrawalRequests(filters) {
-        const { status, userId } = filters;
+        const { status, userId, startDate, endDate, search } = filters;
         const page = parseInt(filters.page) || 1;
         const limit = parseInt(filters.limit) || 10;
-        // const skip = (page - 1) * limit;
         const { skip } = (0, paginationUtills_1.buildPagination)(page, limit);
         const query = {};
         if (status)
             query.status = status;
+        // 🔍 search
+        if (search) {
+            query.$or = [
+                {
+                    firstName: {
+                        $regex: search,
+                        $options: "i",
+                    },
+                },
+                {
+                    lastName: {
+                        $regex: search,
+                        $options: "i",
+                    },
+                },
+                {
+                    userName: {
+                        $regex: search,
+                        $options: "i",
+                    },
+                },
+                {
+                    companyName: {
+                        $regex: search,
+                        $options: "i",
+                    },
+                },
+            ];
+        }
+        // 📅 date range
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) {
+                query.createdAt.$gte = new Date(startDate);
+            }
+            if (endDate) {
+                query.createdAt.$lte = new Date(endDate);
+            }
+        }
         if (userId) {
             query.userId = new mongoose_1.Types.ObjectId(userId);
             const withdrawalRequestsStats = await dashboard.getUserWithdrawalRequestStats(new mongoose_1.Types.ObjectId(userId));
@@ -59,6 +97,45 @@ class WithdrawalAdminService {
         ]);
         return (0, paginationUtills_1.formatPagination)({ data, withdrawalRequestsStats }, total, page, limit);
     }
+    // async getWithdrawalRequests(filters: any) {
+    //     const { status, userId, startDate, endDate } = filters;
+    //     const page = parseInt(filters.page) || 1;
+    //     const limit = parseInt(filters.limit) || 10;
+    //     const { skip } = buildPagination(page, limit);
+    //     const query: any = {};
+    //     if (status) query.status = status;
+    //     // 📅 date range
+    //     if (startDate || endDate) {
+    //         query.createdAt = {};
+    //         if (startDate) query.createdAt.$gte = new Date(startDate);
+    //         if (endDate) query.createdAt.$lte = new Date(endDate);
+    //     }
+    //     if (userId) {
+    //         query.userId = new Types.ObjectId(userId);
+    //         const withdrawalRequestsStats = await dashboard.getUserWithdrawalRequestStats(new Types.ObjectId(userId))
+    //         const [data, total] = await Promise.all([
+    //             WithdrawalRequest.find(query)
+    //                 .populate("userId", "email firstName lastName role phoneNumber logo profilePicture")
+    //                 .populate("reviewedBy", "firstName lastName adminLevel phoneNumber")
+    //                 .sort({ createdAt: -1 })
+    //                 .skip(skip)
+    //                 .limit(limit),
+    //             WithdrawalRequest.countDocuments(query),
+    //         ]);
+    //         return formatPagination({ data, withdrawalRequestsStats }, total, page, limit)
+    //     }
+    //     const withdrawalRequestsStats = await dashboard.getWithdrawalRequestStats()
+    //     const [data, total] = await Promise.all([
+    //         WithdrawalRequest.find(query)
+    //             .populate("userId", "email firstName lastName role phoneNumber logo profilePicture")
+    //             .populate("reviewedBy", "firstName lastName adminLevel phoneNumber")
+    //             .sort({ createdAt: -1 })
+    //             .skip(skip)
+    //             .limit(limit),
+    //         WithdrawalRequest.countDocuments(query),
+    //     ]);
+    //     return formatPagination({ data, withdrawalRequestsStats }, total, page, limit)
+    // }
     // =========================
     // ❌ REJECT REQUEST
     // =========================

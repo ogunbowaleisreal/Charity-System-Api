@@ -11,7 +11,7 @@ const transactionService = new WalletTransactionServices()
 export class TransactionController {
     async getTransactionById(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
         try {
-            const transactionId = req.params.transactionId
+            const transactionId = req.params.transactionId as string
             const transactions = await transactionService.getWalletTransaction(transactionId)
             sendSuccessResponse(res, transactions, "transactions fetched successfully", 200)
         } catch (error: any) {

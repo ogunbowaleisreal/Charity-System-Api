@@ -47,7 +47,7 @@ class CategoryService {
         if (updateData.categoryName && updateData.categoryName !== existingCategory.categoryName) {
             const categoryWithSameName = await this.categoryRepository.getCategoryByName(updateData.categoryName);
             console.log(categoryWithSameName);
-            if (categoryWithSameName && categoryWithSameName._id !== categoryId.toString()) {
+            if (categoryWithSameName && categoryWithSameName._id.toString() !== categoryId.toString()) {
                 throw {
                     message: "Category with this name already exists",
                     statusCode: constants_1.HTTP_STATUS.CONFLICT,

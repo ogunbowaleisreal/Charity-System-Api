@@ -6,6 +6,9 @@ const AccountSchema = new mongoose_1.Schema({
     // ===== BASIC AUTH =====
     firstName: { type: String },
     lastName: { type: String },
+    userName: {
+        type: String,
+    },
     email: {
         type: String,
         required: true,
@@ -14,7 +17,7 @@ const AccountSchema = new mongoose_1.Schema({
     phoneNumber: {
         type: String,
         required: true,
-        unique: true,
+        // unique: true,
     },
     password: {
         type: String,
@@ -32,6 +35,14 @@ const AccountSchema = new mongoose_1.Schema({
         type: String,
         enum: ["local", "google", "apple"],
         default: "local",
+    },
+    noOfCampaigns: {
+        type: Number,
+        default: 0
+    },
+    wallet: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "Wallet"
     },
     googleId: {
         type: String,
@@ -51,6 +62,10 @@ const AccountSchema = new mongoose_1.Schema({
         default: false,
     },
     isWalletPinSet: {
+        type: Boolean,
+        default: false
+    },
+    isBankDetailCreated: {
         type: Boolean,
         default: false
     },

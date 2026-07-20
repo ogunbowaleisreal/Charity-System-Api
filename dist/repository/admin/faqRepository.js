@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.FAQRepository = void 0;
 const FAQ_1 = require("../../models/FAQ");
 const mongoose_1 = require("mongoose");
+const Category_1 = require("../../models/Category");
 class FAQRepository {
     //private subcategoryRepository = new SubcategoryRepository();
     async adminfindAllWithFilters(params) {
@@ -92,6 +93,14 @@ class FAQRepository {
         // if (!subcategoryExists) {
         //   throw { message: "Category not found", statusCode: 404 };
         // }
+        const existingFAQ = await FAQ_1.FAQ.findOne({ question: data.question });
+        if (existingFAQ) {
+            throw { message: "FAQ already exists", statusCode: 400 };
+        }
+        const isValidCategory = await Category_1.Category.exists({ categoryName: data.category });
+        if (!isValidCategory) {
+            throw { message: "Category not found", statusCode: 404 };
+        }
         const faq = new FAQ_1.FAQ(data);
         return await faq.save();
     }

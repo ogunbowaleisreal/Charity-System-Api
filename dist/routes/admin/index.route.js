@@ -18,7 +18,7 @@ const comments_route_1 = __importDefault(require("./comments.route"));
 const profile_routes_1 = __importDefault(require("./profile.routes"));
 const withdrawal_routes_1 = __importDefault(require("./withdrawal.routes"));
 const donations_routes_1 = __importDefault(require("./donations.routes"));
-const businessCategoryManagement_1 = __importDefault(require("./businessCategoryManagement"));
+const campaignCategoryManagement_1 = __importDefault(require("./campaignCategoryManagement"));
 const contact_1 = __importDefault(require("./contact"));
 const medis_1 = __importDefault(require("./medis"));
 const enquiries_routes_1 = __importDefault(require("./enquiries.routes"));
@@ -30,6 +30,7 @@ const withdrawal_routes_2 = __importDefault(require("./withdrawal.routes"));
 const transaction_management_1 = __importDefault(require("./transaction.management"));
 const kyc_routes_1 = __importDefault(require("./kyc.routes"));
 const service_fee_routes_1 = __importDefault(require("./service.fee.routes"));
+const banner_routes_1 = __importDefault(require("./banner.routes"));
 //import reportRoutes from "./reports.route"
 //import subscriptionManagementRoutes from "./subscriptionManagement"
 const adminPlanManagement_1 = __importDefault(require("./adminPlanManagement"));
@@ -48,10 +49,11 @@ router.use("/kyc", kyc_routes_1.default);
 router.use("/accounts", accountManagement_1.default);
 router.use("/comments", comments_route_1.default);
 router.use("/donation", donations_routes_1.default);
+router.use("/banner", banner_routes_1.default);
 //router.use("/requests", requestRoutes)
 //router.use("/bid", bidRoutes)
 //router.use("/assignments", assignmentRoutes)
-router.use("/business-category", businessCategoryManagement_1.default);
+router.use("/campaign-category", campaignCategoryManagement_1.default);
 router.use("/service-fee", service_fee_routes_1.default);
 router.use("/transactions", transaction_management_1.default);
 router.use("/tags", tags_route_1.default);

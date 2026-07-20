@@ -3,8 +3,7 @@ import { AdminPlanController } from "../../controllers/admin/adminPlanManagement
 import { verifyAdminToken, authorize } from "../../middleware/adminAuth";
 import { rateLimiter } from "../../middleware/ratelimiter";
 import { AdminPlanMigrationController } from "../../controllers/admin/adminMigrationPlan";
-import { ADMIN_PERMISSIONS } from "../../types/admin.management";
-import { auth } from "googleapis/build/src/apis/abusiveexperiencereport";
+
 
 const router = Router();
 const controller = new AdminPlanController();

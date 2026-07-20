@@ -111,7 +111,7 @@ export class authController {
             await registeredUser.save()
 
             const tokens = jwtUtil.generateTokenPair({
-                userId: registeredUser._id as string,
+                userId: registeredUser._id.toString() as string,
                 email: registeredUser.email,
                 role: registeredUser.role,
             });
@@ -119,7 +119,7 @@ export class authController {
             // Save refresh token
             await Authservice.saveRefreshToken(
                 tokens.tokenId,
-                registeredUser._id as string,
+                registeredUser._id.toString() as string,
                 registeredUser.role,
                 tokens.refreshToken
             );

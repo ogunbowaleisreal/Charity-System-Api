@@ -22,6 +22,9 @@ const DonationSchema = new mongoose_1.Schema({
         type: Number,
         required: true,
     },
+    donorPhoneNumber: {
+        type: String,
+    },
     serviceFee: {
         type: Number,
         default: 0,

@@ -43,7 +43,7 @@ class FAQController {
                 }
                 const faq = await this.faqService.createFAQ(req.body);
                 logger_1.default.info("FAQ created", {
-                    faqId: faq._id,
+                    faqId: faq._id.toString(),
                     createdBy: adminId,
                     category: faq.category,
                 });

@@ -1,4 +1,7 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AnnouncementService = void 0;
 const Accounts_1 = require("../models/Accounts");
@@ -7,6 +10,7 @@ const pushNotificationService_1 = require("./pushNotificationService");
 const ResesndServices_1 = require("./ResesndServices");
 const ResesndServices_2 = require("./ResesndServices");
 const ResesndServices_3 = require("./ResesndServices");
+const Subscriber_1 = __importDefault(require("../models/Subscriber"));
 class AnnouncementService {
     constructor() {
         this.resendService = new ResesndServices_1.ResendEmailService();
@@ -16,6 +20,9 @@ class AnnouncementService {
         if (data.audience === "specific" &&
             (!data.specificUsers || !data.specificUsers.length)) {
             throw new Error("specificUsers is required when audience is specific");
+        }
+        if (data.audience === "subscribed_users" && data.channel == "push") {
+            throw new Error("Only Email channel is allowed for subscribed users");
         }
         const announcement = await Announcement_1.Announcement.create({
             ...data,
@@ -165,11 +172,14 @@ class AnnouncementService {
     // }
     async getAudienceUsers(audience, specificUsers) {
         if (audience === "specific") {
-            return Accounts_1.Account.find({
+            return await Accounts_1.Account.find({
                 _id: {
                     $in: specificUsers || [],
                 },
             }).lean();
+        }
+        if (audience == "subscribed_users") {
+            return await Subscriber_1.default.find({ isSubscribed: true }).lean();
         }
         const query = this.buildAudienceQuery(audience);
         return Accounts_1.Account.find(query).lean();
@@ -189,8 +199,6 @@ class AnnouncementService {
                 return { status: "active" };
             case "suspended_users":
                 return { status: "suspended" };
-            case "subscribed_users":
-                return { emailSubscribed: true };
             case "specific":
                 return {
                     _id: {

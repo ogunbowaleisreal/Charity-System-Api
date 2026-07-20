@@ -14,14 +14,12 @@ class DonationController {
     // =============================
     async initiateDonation(req, res, next) {
         try {
-            const donation = await donationService.initiateDonation(
-            // req.user?._id,
-            req.body);
+            const donation = await donationService.initiateDonation(req.user?.userId, req.body);
             return (0, helpers_1.sendSuccessResponse)(res, donation);
         }
         catch (error) {
             logger_1.default.error("Initiate donation error:", error);
-            return (0, helpers_1.sendErrorResponse)(res, error);
+            return (0, helpers_1.sendErrorResponse)(res, error.message);
         }
     }
     async initiateDonationForGuest(req, res, next) {
@@ -36,7 +34,7 @@ class DonationController {
     }
     async getUserDonations(req, res, next) {
         try {
-            const donations = await donationService.getUserDonations(req.user?._id, req.query);
+            const donations = await donationService.getUserDonations(req.user?.userId, req.query);
             return (0, helpers_1.sendSuccessResponse)(res, donations);
         }
         catch (error) {

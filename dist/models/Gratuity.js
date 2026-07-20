@@ -20,6 +20,9 @@ const GratuitySchema = new mongoose_1.Schema({
         required: true,
         index: true,
     },
+    fullName: {
+        type: String
+    },
     campaign: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: "Campaign",

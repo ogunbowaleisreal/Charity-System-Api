@@ -1,4 +1,4 @@
-import { Document, Schema } from "mongoose";
+import { Document, Schema, Types } from "mongoose";
 export const ADMIN_PERMISSIONS = {
     READ: 'read',
     WRITE: 'write',
@@ -8,7 +8,7 @@ export const ADMIN_PERMISSIONS = {
 };
 
 export interface IAdmin extends Document {
-    _id: Schema.Types.ObjectId;
+    _id: Types.ObjectId;
     firstName: string;
     lastName: string;
     email: string;

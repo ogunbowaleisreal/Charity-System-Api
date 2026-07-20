@@ -8,21 +8,40 @@ const CampaignSchema = new mongoose_1.Schema({
         required: true,
         trim: true,
     },
+    firstName: {
+        type: String,
+        //default: null
+    },
+    lastName: {
+        type: String
+    },
+    companyName: {
+        type: String
+    },
+    userName: {
+        type: String
+    },
     description: {
         type: String,
         required: true,
     },
-    image: {
-        type: [String],
-        default: [],
-    },
-    thumbnailUrl: {
-        type: String
-    },
+    image: [
+        {
+            imageUrl: {
+                type: String,
+            },
+            thumbnailUrl: {
+                type: String
+            }
+        }
+    ],
+    // thumbnailUrl: {
+    //     type: String
+    // },
     category: {
         type: mongoose_1.Schema.Types.ObjectId,
         required: true,
-        ref: "Category",
+        ref: "CampaignCategory",
     },
     authors: [{
             type: mongoose_1.Schema.Types.ObjectId,
@@ -46,6 +65,10 @@ const CampaignSchema = new mongoose_1.Schema({
         type: String,
         enum: ["user", "organization"],
         required: true,
+    },
+    favoritesCount: {
+        type: Number,
+        default: 0,
     },
     // ===== FUNDING =====
     targetAmount: {
@@ -82,6 +105,11 @@ const CampaignSchema = new mongoose_1.Schema({
     isActive: {
         type: Boolean,
         default: true,
+    },
+    // in CampaignSchema
+    isFeatured: {
+        type: Boolean,
+        default: false,
     },
     // ===== SETTINGS =====
     allowComments: {

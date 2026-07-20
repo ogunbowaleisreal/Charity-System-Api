@@ -23,14 +23,16 @@ class DonationService {
     // =========================
     // 🔹 INITIATE DONATION
     // =========================
-    async initiateDonation(data) {
+    async initiateDonation(userId, data) {
         //const reference = `don_${Date.now()}`;
         const reference = `DON_${Date.now()}_${crypto_1.default.randomBytes(4).toString("hex")}`; //crypto.randomUUID();
-        const user = await Accounts_1.Account.findOne({ email: data.email });
+        const user = await Accounts_1.Account.findById(userId);
         if (!user) {
             logger_1.default.info("User not found, Creating donation for guest user", { email: data.email });
             // throw new AppError("User not found, Creating donation for guest user", 400);
         }
+        if (!data.firstname || !data.lastname || !data.amount)
+            throw new Error(" insufficient information");
         const campaign = await Campaign_1.default.findById(data.campaignId);
         if (!campaign)
             throw new Error("Campaign not found");
@@ -53,9 +55,11 @@ class DonationService {
             gratuityPercentage: amountData.gratuityPercentage,
             campaignId: campaign._id,
             provider: "flutterwave",
+            phoneNumber: data.phoneNumber,
             netAmount: amountData.donationAmount,
             grossAmount: amountData.totalAmount,
             reference: reference,
+            isAnonymous: data.donateAnonymously,
             idempotencyKey: reference,
             fullName: `${data.firstname} ${data.lastname}`,
             type: user ? "user" : "guest",
@@ -69,6 +73,7 @@ class DonationService {
                 totalAmount: amountData.totalAmount,
                 feeType: serviceFee ? serviceFee.type : "none",
                 feeValue: serviceFee ? serviceFee.value : 0,
+                isAnonymous: data.donateAnonymously
             },
         });
         const linkExpiration = new Date(Date.now() + 15 * 60 * 1000).toISOString();
@@ -79,9 +84,9 @@ class DonationService {
             currency: "NGN",
             redirectUrl: `${process.env.REDIRECT_URL}`,
             customerEmail: data.email,
-            customerName: `${data.firstname} ${data.lastname}`,
-            link_expiration: linkExpiration
-            // customerPhone: data.phone,
+            customerName: data.donateAnonymously ? "Anonymous" : `${data.firstname} ${data.lastname}`,
+            link_expiration: linkExpiration,
+            customerPhone: data.phoneNumber,
             //lastname: data.lastname,
             //  reference,
         });
@@ -217,20 +222,54 @@ class DonationService {
             //donorEmailSnapshot: paymentDetails.donorEmailSnapshot,
         });
     }
+    // async getUserDonations(userId: string, query: donationFilter) {
+    //     const { page, limit } = query
+    //     const donations = await Donation.find({ donor: userId, type: "user" })
+    //     .populate("donor", "firstName lastName profilePicture logo country state")
+    //     .populate("campaign", "title image description")
+    //     .sort({ createdAt: -1 })
+    //     .skip((page - 1) * limit)
+    //     .limit(limit)
+    //     const total = await Donation.countDocuments({ donor: userId, type: "user" });
+    //     const totalPages = Math.ceil(total / limit);
+    //     return {
+    //         donations, pagination: {
+    //             current_page: page,
+    //             total_pages: totalPages,
+    //             per_page: limit,
+    //             total_records: total,
+    //             has_next_page: page < totalPages,
+    //             has_prev_page: page > 1
+    //         }
+    //     };
+    // }
     async getUserDonations(userId, query) {
         const { page, limit } = query;
-        const donations = await Donations_1.Donation.find({ donor: userId, type: "user" }).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit);
+        const donations = await Donations_1.Donation.find({ donor: userId, type: "user" })
+            .populate("donor", "firstName lastName profilePicture logo country state")
+            .populate({
+            path: "campaign",
+            select: "title image description owner",
+            populate: {
+                path: "owner",
+                select: "firstName lastName profilePicture logo email country state",
+            },
+        })
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit);
         const total = await Donations_1.Donation.countDocuments({ donor: userId, type: "user" });
         const totalPages = Math.ceil(total / limit);
         return {
-            donations, pagination: {
+            donations,
+            pagination: {
                 current_page: page,
                 total_pages: totalPages,
                 per_page: limit,
                 total_records: total,
                 has_next_page: page < totalPages,
-                has_prev_page: page > 1
-            }
+                has_prev_page: page > 1,
+            },
         };
     }
     //     // =========================================

@@ -30,6 +30,12 @@ exports.ADMIN_PERMISSIONS = {
         // APPROVE: "donation.approve",
         // REJECT: "donation.reject",
     },
+    BANNER: {
+        UPDATE: "banner.update",
+        DELETE: "banner.delete",
+        VIEW: "banner.view",
+        CREATE: "banner.create"
+    },
     // BIDS: {
     //     VIEW: "bids.view",
     //     APPROVE: "bids.approve",

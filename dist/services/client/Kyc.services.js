@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.KYCService = void 0;
 const KYC_1 = require("../../models/KYC");
+const Accounts_1 = require("../../models/Accounts");
 const DojahServices_1 = require("../DojahServices");
 const dojah_config_1 = require("../../config/dojah.config");
 const zeehAfrica_services_1 = require("../zeehAfrica.services");
@@ -11,9 +12,13 @@ const zeehService = new zeehAfrica_services_1.ZeehKycService(zeehAfrica_config_1
 class KYCService {
     async getOrCreateKYC(userId) {
         let kyc = await KYC_1.KYC.findOne({ userId });
+        const account = await Accounts_1.Account.findById(userId);
+        if (!account)
+            throw new Error("Account not found");
         if (!kyc) {
             kyc = await KYC_1.KYC.create({
                 userId,
+                type: account?.role,
                 status: "not_started",
                 level: 0,
             });

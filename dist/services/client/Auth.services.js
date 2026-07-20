@@ -72,6 +72,7 @@ class authService {
                         twoFactorEnabled: user.twoFactorEnabled,
                         twoFactorWithdrawalEnabled: user.twoFactorWithdrawalEnabled,
                         isWalletPinSet: user.isWalletPinSet,
+                        isBankDetailCreated: user.isBankDetailCreated,
                         // ===== LOGIN INFO =====
                         lastLogin: user.lastLogin,
                         // lastLoginIp: user.lastLoginIp,
@@ -106,6 +107,9 @@ class authService {
                     twoFactorEnabled: user.twoFactorEnabled,
                     companyName: user.companyName,
                     organizationType: user.organizationType,
+                    isbankDetailCreated: user.isBankDetailCreated,
+                    twoFactorWithdrawalEnabled: user.twoFactorWithdrawalEnabled,
+                    isWalletPinSet: user.isWalletPinSet,
                     // website: user.website,
                     instagram: user.instagram,
                     facebook: user.facebook,
@@ -113,6 +117,9 @@ class authService {
                     tiktok: user.tiktok,
                     youtube: user.youtube,
                     snapchat: user.snapchat,
+                    createdAt: user.createdAt,
+                    updatedAt: user.updatedAt,
+                    kyc
                     //twoFactorEnabled: user.twoFactorEnabled,
                 },
                 tokens,
@@ -170,10 +177,16 @@ class authService {
             };
         }
         if (client.isVerified === false) {
+            otpService.generateAndSendOTP(email, "registration");
             throw {
-                message: "Account has not been verified",
-                statusCode: constants_1.HTTP_STATUS.FORBIDDEN,
+                success: false,
+                message: "Just one more step! We've sent a verification code to your email. Please check your inbox and enter the code to complete your login.",
+                statusCode: constants_1.HTTP_STATUS.LOCKED,
             };
+            // throw {
+            //     message: "Account has not been verified",
+            //     statusCode: HTTP_STATUS.FORBIDDEN,
+            // };
         }
         // // Check if account is locked
         // if (user.checkAccountLock()) {

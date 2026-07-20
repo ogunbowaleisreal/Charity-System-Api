@@ -47,6 +47,18 @@ const WithdrawalRequestSchema = new mongoose_1.Schema({
         ref: "Campaign",
         index: true,
     },
+    firstName: {
+        type: String
+    },
+    lastName: {
+        type: String
+    },
+    userName: {
+        type: String
+    },
+    companyName: {
+        type: String
+    },
     amount: {
         type: Number,
         required: true,

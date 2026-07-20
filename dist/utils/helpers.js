@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generatePasswordCrypto = exports.retryWithBackoff = exports.isEmpty = exports.deepClone = exports.formatDuration = exports.addTime = exports.isExpired = exports.removeSensitiveFields = exports.safeJsonParse = exports.slugify = exports.capitalize = exports.sleep = exports.calculatePagination = exports.sendPaginatedResponse = exports.sendErrorResponse = exports.formatPhoneNumber = exports.sendSuccessResponse = exports.generateUUID = exports.generateRandomString = exports.generateOTP = void 0;
+exports.sanitizeDonation = sanitizeDonation;
 exports.getMonthRange = getMonthRange;
 exports.getCurrentAndLastMonth = getCurrentAndLastMonth;
 exports.calculatePercentageChange = calculatePercentageChange;
@@ -11,6 +12,15 @@ exports.calculateTrend = calculateTrend;
 const crypto_1 = __importDefault(require("crypto"));
 const constants_1 = require("./constants");
 const logger_1 = __importDefault(require("../logger"));
+function sanitizeDonation(donation) {
+    if (!donation.isAnonymous)
+        return donation;
+    return {
+        ...donation,
+        donorName: null,
+        donor: null,
+    };
+}
 const generateOTP = (length = 6) => {
     let otp = "";
     for (let i = 0; i < length; i++) {

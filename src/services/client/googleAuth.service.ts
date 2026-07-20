@@ -115,7 +115,7 @@ export class GoogleAuthService {
          * This uses your existing JWT utility
          */
         const tokens = jwtUtil.generateTokenPair({
-            userId: user._id as string,
+            userId: user._id.toString() as string,
             email: user.email,
             role: user.role,
         });

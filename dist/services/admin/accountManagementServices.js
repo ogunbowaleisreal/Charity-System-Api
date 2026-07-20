@@ -11,10 +11,12 @@ const Comment_1 = __importDefault(require("../../models/Comment"));
 const Donations_1 = require("../../models/Donations");
 const transaction_1 = require("../../models/transaction");
 const ResesndServices_1 = require("../ResesndServices");
+const dashboardStatistics_1 = require("./dashboardStatistics");
 const paginationUtills_1 = require("../../utils/admin/paginationUtills");
 class AccountAdminService {
     constructor() {
         this.emailService = new ResesndServices_1.ResendEmailService();
+        this.dashboard = new dashboardStatistics_1.DashboardService();
     }
     // =========================
     // 🔍 GET ALL ACCOUNTS
@@ -50,20 +52,22 @@ class AccountAdminService {
             if (endDate)
                 query.createdAt.$lte = endDate;
         }
+        const userMetrics = await this.dashboard.getUserMetrics();
         const [accounts, total] = await Promise.all([
             Accounts_1.Account.find(query)
+                .populate("wallet", "availableBalance currency")
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
             Accounts_1.Account.countDocuments(query)
         ]);
-        return (0, paginationUtills_1.formatPagination)(accounts, total, page, limit);
+        return (0, paginationUtills_1.formatPagination)({ accounts, userMetrics }, total, page, limit);
     }
     // =========================
     // 👤 GET ACCOUNT BY ID
     // =========================
     async getAccountById(accountId) {
-        return Accounts_1.Account.findById(accountId);
+        return Accounts_1.Account.findById(accountId).populate("wallet", "availableBalance currency");
     }
     // =========================
     // 🚫 SUSPEND ACCOUNT

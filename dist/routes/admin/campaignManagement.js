@@ -27,6 +27,7 @@ router.get("/comments/:campaignId", (0, adminAuth_1.authorize)([admin_management
 router.get("/stats/:campaignId", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.CAMPAIGNS.VIEW]), campaignCtrl.getCampaignStats);
 router.get("/suspend/:campaignId", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.CAMPAIGNS.SUSPEND]), campaignCtrl.suspendCampaign);
 router.get("/unsuspend/:campaignId", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.CAMPAIGNS.SUSPEND]), campaignCtrl.unsuspendCampaign);
+router.post("/set-featured/:campaignId", (0, adminAuth_1.authorize)([admin_management_1.ADMIN_PERMISSIONS.CAMPAIGNS.UPDATE]), campaignCtrl.setCampaignFeatured);
 // =========================
 // 💰 GET CAMPAIGN DONATIONS
 // =========================

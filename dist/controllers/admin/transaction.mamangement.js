@@ -11,8 +11,24 @@ const transactionService = new transaction_services_1.WalletTransactionServices(
 class AdminTransactionController {
     async getWalletTransactionHistory(req, res, next) {
         try {
+            const { userId, category, status, provider, method, minAmount, maxAmount, startDate, endDate, search, page = 1, limit = 10, } = req.query;
+            const payload = {
+                userId,
+                category,
+                status,
+                provider,
+                method,
+                minAmount,
+                maxAmount,
+                startDate,
+                endDate,
+                search,
+                page: Number(page),
+                limit: Number(limit)
+            };
+            // console.log(payload)
             // const { userId, filters } = req.body;
-            const response = await transactionService.getWalletTransactionHistory(req.query);
+            const response = await transactionService.getWalletTransactionHistory(payload);
             (0, helpers_1.sendSuccessResponse)(res, response, "transaction retrieved successfully");
         }
         catch (error) {

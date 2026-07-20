@@ -19,6 +19,7 @@ const pushNotificationService_1 = require("../pushNotificationService");
 const ResesndServices_1 = require("../ResesndServices");
 const cacheServices_1 = __importDefault(require("../cacheServices"));
 const bcryptutils_1 = __importDefault(require("../../utils/bcryptutils"));
+const notification_Services_1 = require("../notification.Services");
 const flutterwave = new flutterwave_services_1.FlutterwaveService();
 const otpService = new otp_services_1.default();
 const emailService = new ResesndServices_1.ResendEmailService();
@@ -45,16 +46,16 @@ class WithdrawalService {
             if (!userWallet)
                 throw new Error("Wallet not found");
             if (campaign.availableBalance < amount) {
-                throw new Error("Insufficient balance");
+                throw new Error("Insufficient balance on campaign");
             }
-            if (user.twoFactorWithdrawalEnabled == true) {
-                const otp = await otpService.generateAndSendOTP(user.email, "2fa");
-                return {
-                    "success": true,
-                    "message": "Just one more step! We've sent a verification code to your email. Please check your inbox and enter the code to complete your withdrawl.",
-                    "statusCode": constants_1.HTTP_STATUS.NO_CONTENT
-                };
-            }
+            // if (user.twoFactorWithdrawalEnabled == true) {
+            //     const otp = await otpService.generateAndSendOTP(user.email, "2fa");
+            //     return {
+            //         "success": true,
+            //         "message": "Just one more step! We've sent a verification code to your email. Please check your inbox and enter the code to complete your withdrawl.",
+            //         "statusCode": HTTP_STATUS.NO_CONTENT
+            //     }
+            // }
             await Campaign_1.default.updateOne({ _id: campaignId }, {
                 $inc: {
                     availableBalance: -amount,
@@ -76,6 +77,12 @@ class WithdrawalService {
                     narration,
                     reference
                 }], { session });
+            await notification_Services_1.NotificationService.createForUser({
+                userId: userWallet.userId,
+                title: "Withdrawal",
+                message: `You have successfully withdrawn ${amount} from ${campaign.title} campaign`,
+                type: "WITHDRAWAL"
+            });
             await pushNotificationService_1.PushNotificationService.sendToUser(userId, {
                 title: "Withdrawal",
                 body: `You have successfully withdrawn ${amount} from ${campaign.title} campaign`,
@@ -86,24 +93,6 @@ class WithdrawalService {
             // await session.abortTransaction();
             throw err;
         }
-        // // 1. LOCK FUNDS
-        // campaign.availableBalance -= amount;
-        // //campaign.frozenBalance += amount;
-        // campaign.totalWithdrawn += amount;
-        // await campaign.save();
-        // // 2. UPDATE WALLET
-        // userWallet.availableBalance += amount;
-        // await userWallet.save();
-        // const transaction = await WalletTransaction.create({
-        //     wallet: userWallet._id,
-        //     amount,
-        //     type: "user",
-        //     status: "success",
-        //     category: "wallet_credit",
-        //     narration,
-        //     reference: reference,
-        // })
-        // return transaction
     }
     async firstTimeWalletPinSet(userId, pin) {
         if (!/^\d{4}$/.test(pin)) {
@@ -131,6 +120,7 @@ class WithdrawalService {
         await wallet.save();
         user.isWalletPinSet = true;
         await user.save();
+        return user;
     }
     async resetWalletPin(userId) {
         //const userId = req.user.userId
@@ -179,43 +169,16 @@ class WithdrawalService {
         user.isWalletPinSet = true;
         await user.save();
         await cacheServices_1.default.delete(`wallet_pin_reset_verified:${user.email}`);
-        return true;
+        return user;
     }
-    // async setWalletPin(userId: string, Pin: string) {
-    //     if (!/^\d{6}$/.test(Pin)) {
-    //         throw new AppError("PIN must be exactly 6 digits", 400);
-    //     }
-    //     const newPin = await bcryptUtil.hashPassword(Pin);
-    //     const user = await Account.findById(userId).lean();
-    //     if (!user) {
-    //         throw new Error("User not found");
-    //     }
-    //     const verified = await CacheService.get(
-    //         `wallet_pin_reset_verified:${user.email}`
-    //     );
-    //     if (!verified) {
-    //         throw new Error("OTP verification required");
-    //     }
-    //     const wallet = await Wallet.findOne({
-    //         userId: user._id
-    //     })
-    //     if (!wallet) throw new Error("Wallet not found");
-    //     const hashedPin =
-    //         await bcryptUtil.hashPassword(newPin);
-    //     wallet.walletPin = hashedPin;
-    //     await wallet?.save();
-    //     // clear verification session
-    //     await CacheService.delete(
-    //         `wallet_pin_reset_verified:${user.email}`
-    //     );
-    //     return true;
-    // }
     async verifyWalletPin(userId, walletPin) {
         const wallet = await Wallet_1.Wallet.findOne({ userId }).select("+walletPin").lean();
         if (!wallet)
-            throw new errorHandler_1.AppError("wallet retrieval failed", 404);
+            throw new Error("wallet retrieval failed");
         // console.log(wallet.walletPin)
         //console.log(wallet, walletPin)
+        if (!wallet.walletPin)
+            throw new Error("wallet pin not set");
         const isValidPin = await bcryptutils_1.default.comparePassword(walletPin, wallet.walletPin);
         if (!isValidPin) {
             throw new errorHandler_1.AppError("Invalid wallet pin", 400);
@@ -228,16 +191,16 @@ class WithdrawalService {
             throw new errorHandler_1.AppError("User not found", 404);
         const isValidOTP = await otpService.verifyOTP(user.email, otp, "2fa");
         if (!isValidOTP) {
-            throw new errorHandler_1.AppError("Invalid or expired OTP", 400);
+            throw new Error("Invalid or expired OTP");
         }
         const campaign = await Campaign_1.default.findById(campaignId);
         if (!campaign)
-            throw new errorHandler_1.AppError("Campaign not found", 404);
+            throw new Error("Campaign not found");
         const userWallet = await Wallet_1.Wallet.findOne({
             userId: userId,
         });
         if (!userWallet)
-            throw new errorHandler_1.AppError("Wallet not found", 404);
+            throw new Error("Wallet not found");
         const reference = `WIT_${Date.now()}_${crypto_1.default.randomBytes(4).toString("hex")}`;
         // 1. LOCK FUNDS
         campaign.availableBalance -= amount;
@@ -285,6 +248,10 @@ class WithdrawalService {
         const withdrawalRequest = await WithdrawalRequest_1.WithdrawalRequest.create({
             wallet: walletId,
             userId,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            userName: user.userName,
+            companyName: user.companyName,
             amount,
             type: "withdrawal",
             status: "pending",
@@ -300,6 +267,10 @@ class WithdrawalService {
             },
         });
         await emailService.sendNewWwithdrawalRequestNotification(withdrawalRequest);
+        await pushNotificationService_1.PushNotificationService.sendToUser(userId, {
+            title: "New withdrawal request Sent",
+            body: `You have made a new withdrawal request of ${amount} from Help Me Nigeria`,
+        });
         //await PushNotificationService.sendToUsers()
         // const newTransaction = new WalletTransaction({
         //     wallet: walletId,
@@ -327,7 +298,6 @@ class WithdrawalService {
         const wallet = await Wallet_1.Wallet.findById(walletId);
         if (!wallet)
             throw new Error("Wallet not found");
-        //if(!ammount)
         if (wallet.availableBalance < amount) {
             throw new Error("Insufficient balance");
         }
@@ -349,12 +319,31 @@ class WithdrawalService {
                 bankCode: bankCode,
                 accountNumber,
                 accountName: accountName,
+                bank_name: bank_name
             },
             reference
         });
         await emailService.sendNewWwithdrawalRequestNotification(withdrawalRequest);
+        //   await emailService.sendNewWwithdrawalRequestNotification(withdrawalRequest)
+        await pushNotificationService_1.PushNotificationService.sendToUser(userId, {
+            title: "New withdrawal request Sent",
+            body: `You have made a new withdrawal request of ${amount} from Help Me Nigeria`,
+        });
         //await PushNotificationService.sendToUsers()  
         return withdrawalRequest;
+    }
+    async resendWithdrawal2FAOtp(userId) {
+        const user = await Accounts_1.Account.findById(userId);
+        if (!user)
+            throw new errorHandler_1.AppError("User not found", 404);
+        if (!user.twoFactorWithdrawalEnabled) {
+            throw new errorHandler_1.AppError("2FA withdrawal is not enabled for this account", 400);
+        }
+        await otpService.generateAndSendOTP(user.email, "2fa");
+        return {
+            message: "OTP resent to your email",
+            status: constants_1.HTTP_STATUS.OK, // or 200 if you don't have this constant
+        };
     }
     async toggle2faWithdrawal(userId, toggle) {
         const user = await Accounts_1.Account.findById(userId);

@@ -1,8 +1,13 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GoogleAuthController = void 0;
 const googleAuth_service_1 = require("../../services/client/googleAuth.service");
 const Auth_services_1 = require("../../services/client/Auth.services");
+const logger_1 = __importDefault(require("../../logger"));
+const helpers_1 = require("../../utils/helpers");
 const googleAuthService = new googleAuth_service_1.GoogleAuthService();
 const authservice = new Auth_services_1.authService();
 class GoogleAuthController {
@@ -28,7 +33,9 @@ class GoogleAuthController {
             });
         }
         catch (err) {
-            next(err);
+            logger_1.default.error(err.message);
+            (0, helpers_1.sendErrorResponse)(res, err.message, err.statusCode);
+            //  next(err);
         }
     }
 }

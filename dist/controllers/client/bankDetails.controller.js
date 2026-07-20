@@ -39,46 +39,49 @@ class BankDetailsController {
             return (0, helpers_1.sendErrorResponse)(res, error.message);
         }
     }
-    // async getBankDetailsById(
-    //     req: Request,
-    //     res: Response,
-    //     next: NextFunction
-    // ) {
-    //     try {
-    //         const { bankDetailsId } = req.params;
-    //         const bankDetails =
-    //             await bankDetailsService.getBankDetailsById(
-    //                 bankDetailsId
-    //             );
-    //         return sendSuccessResponse(res, bankDetails);
-    //     } catch (error: any) {
-    //         logger.error(error);
-    //         return sendErrorResponse(res, error);
-    //     }
-    // }
     // =============================
-    // 🔹 UPDATE
+    // 🔹 UPDATE (request otp -> confirm)
     // =============================
     async updateBankDetails(req, res, next) {
         try {
-            const { bankDetailsId } = req.params;
-            const bankDetails = await bankDetailsService.updateBankDetails(bankDetailsId, req.user.userId, req.body);
-            return (0, helpers_1.sendSuccessResponse)(res, bankDetails);
+            await bankDetailsService.requestUpdateOTP(req.user.userId, req.body);
+            return (0, helpers_1.sendSuccessResponse)(res, null, "OTP sent to your registered email, please confirm to complete the update");
         }
         catch (error) {
             logger_1.default.error(error);
-            return (0, helpers_1.sendErrorResponse)(res, error);
+            return (0, helpers_1.sendErrorResponse)(res, error.message, error.statusCode);
+        }
+    }
+    async confirmUpdateBankDetails(req, res, next) {
+        try {
+            const { otp } = req.body;
+            const bankDetails = await bankDetailsService.confirmUpdate(req.user.userId, otp);
+            return (0, helpers_1.sendSuccessResponse)(res, bankDetails, "Bank details updated successfully");
+        }
+        catch (error) {
+            logger_1.default.error(error);
+            return (0, helpers_1.sendErrorResponse)(res, error.message, error.statusCode);
         }
     }
     // =============================
-    // 🔹 DELETE
+    // 🔹 DELETE (request otp -> confirm)
     // =============================
     async deleteBankDetails(req, res, next) {
         try {
-            const { bankDetailsId } = req.params;
-            const bankDetails = await bankDetailsService.deleteBankDetails(bankDetailsId, req.user.userId);
+            await bankDetailsService.requestDeleteOTP(req.user.userId);
+            return (0, helpers_1.sendSuccessResponse)(res, null, "OTP sent to your registered email, please confirm to complete the deletion");
+        }
+        catch (error) {
+            logger_1.default.error(error);
+            return (0, helpers_1.sendErrorResponse)(res, error.message, error.statusCode);
+        }
+    }
+    async confirmDeleteBankDetails(req, res, next) {
+        try {
+            const { otp } = req.body;
+            await bankDetailsService.confirmDelete(req.user.userId, otp);
             logger_1.default.info("Bank details deleted successfully");
-            return (0, helpers_1.sendSuccessResponse)(res, bankDetails, "bank details deleted successfully");
+            return (0, helpers_1.sendSuccessResponse)(res, null, "Bank details deleted successfully");
         }
         catch (error) {
             logger_1.default.error(error);

@@ -35,6 +35,17 @@ class WithdrawalController {
             return (0, helpers_1.sendErrorResponse)(res, error.message, error.statusCode);
         }
     }
+    async resendWithdrawalOtp(req, res, next) {
+        try {
+            const userId = req.user.userId; // adjust to however you attach the authenticated user
+            const result = await withdrawalService.resendWithdrawal2FAOtp(userId);
+            return res.status(result.status).json({ message: result.message });
+        }
+        catch (err) {
+            logger_1.default.error("withdrawal otp resend failed");
+            next(err);
+        }
+    }
     async toggleWithdrawal2Fa(req, res) {
         const userId = req.user.userId;
         const toggle = req.body.toggle;
@@ -62,8 +73,8 @@ class WithdrawalController {
         const userId = req.user.userId;
         console.log("goit here ");
         try {
-            await withdrawalService.firstTimeWalletPinSet(userId, req.body.walletPin);
-            return (0, helpers_1.sendSuccessResponse)(res, "wallet pin set successfully");
+            const data = await withdrawalService.firstTimeWalletPinSet(userId, req.body.walletPin);
+            return (0, helpers_1.sendSuccessResponse)(res, data, "wallet pin set successfully");
         }
         catch (err) {
             logger_1.default.error(err);
@@ -121,7 +132,7 @@ class WithdrawalController {
         try {
             const isVerified = await withdrawalService.verifyWalletPin(userId, req.body.walletPin);
             logger_1.default.info("wallet pin verified successfully");
-            return (0, helpers_1.sendSuccessResponse)(res, "wallet pin verified successfully");
+            return (0, helpers_1.sendSuccessResponse)(res, { isVerified }, "wallet pin verified successfully");
         }
         catch (err) {
             logger_1.default.error(err);

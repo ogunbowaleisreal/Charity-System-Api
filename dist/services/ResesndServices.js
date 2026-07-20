@@ -197,7 +197,7 @@ class ResendEmailService {
      */
     async sendAdminWelcomeEmail(email, firstName, adminLevel, password) {
         try {
-            const subject = "Welcome to Help me Nigeria Admin Team";
+            const subject = "Welcome to Help Me Nigeria Admin Team";
             const html = this.getAdminWelcomeTemplate(firstName, adminLevel, password);
             await this.sendEmail(email, subject, html);
             logger_1.default.info("Admin welcome email sent successfully", {

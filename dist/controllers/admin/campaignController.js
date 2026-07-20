@@ -61,6 +61,18 @@ class CampaignAdminController {
             next(err);
         }
     }
+    async setCampaignFeatured(req, res, next) {
+        try {
+            //const adminId = req.admin?.adminId;
+            const campaignId = req.params.campaignId;
+            const stats = await campaignAdminService.setFeatured(campaignId, req.body.isFeatured);
+            return (0, helpers_1.sendSuccessResponse)(res, stats, "campaign unsuspended");
+        }
+        catch (err) {
+            logger_1.default.error(err.message);
+            next(err);
+        }
+    }
     // =========================
     // 🎯 GET CAMPAIGN BY ID
     // =========================

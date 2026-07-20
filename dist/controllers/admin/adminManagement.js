@@ -47,7 +47,7 @@ class AdminManagementController {
         };
         this.getAdminById = async (req, res) => {
             try {
-                const { adminId } = req.params;
+                const adminId = req.params.adminId;
                 const admin = await this.adminManagementService.getAdminById(adminId);
                 (0, helpers_1.sendSuccessResponse)(res, { admin }, "Admin retrieved successfully");
             }
@@ -61,7 +61,7 @@ class AdminManagementController {
         };
         this.updateAdmin = async (req, res) => {
             try {
-                const { adminId } = req.params;
+                const adminId = req.params.adminId;
                 const updatedBy = req.admin?.adminId;
                 if (!updatedBy) {
                     (0, helpers_1.sendErrorResponse)(res, "Unauthorized", constants_1.HTTP_STATUS.UNAUTHORIZED);
@@ -86,7 +86,7 @@ class AdminManagementController {
         };
         this.suspendAdmin = async (req, res) => {
             try {
-                const { adminId } = req.params;
+                const adminId = req.params.adminId;
                 const suspendedBy = req.admin.adminId;
                 const reason = req.body.reason;
                 const action = req.body.action;
@@ -105,7 +105,7 @@ class AdminManagementController {
         };
         this.deactivateAdmin = async (req, res) => {
             try {
-                const { adminId } = req.params;
+                const adminId = req.params.adminId;
                 const deactivatedBy = req.admin?.adminId;
                 if (!deactivatedBy) {
                     (0, helpers_1.sendErrorResponse)(res, "Unauthorized", constants_1.HTTP_STATUS.UNAUTHORIZED);
@@ -129,7 +129,7 @@ class AdminManagementController {
         };
         this.resetAdminPassword = async (req, res) => {
             try {
-                const { adminId } = req.params;
+                const adminId = req.params.adminId;
                 const resetBy = req.admin?.adminId;
                 if (!resetBy) {
                     (0, helpers_1.sendErrorResponse)(res, "Unauthorized", constants_1.HTTP_STATUS.UNAUTHORIZED);

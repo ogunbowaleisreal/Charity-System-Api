@@ -71,6 +71,5 @@ const bankSchema = new mongoose_1.Schema({
 }, {
     timestamps: true,
 });
-bankSchema.index({ code: 1 });
 bankSchema.index({ name: 1 });
 exports.Bank = mongoose_1.default.model("Bank", bankSchema);

@@ -32,7 +32,7 @@ export class BannerController {
         next: NextFunction
     ) {
         try {
-            const { category } = req.params;
+            const category = req.params.category as string;
 
             const banners =
                 await bannerService.getBannersByCategory(

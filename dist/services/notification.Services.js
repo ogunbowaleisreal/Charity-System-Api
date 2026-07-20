@@ -33,6 +33,8 @@ class NotificationService {
         }));
         return await Notification_1.default.insertMany(notifications);
     }
+    // async subscribeForUpdates(email: string) {
+    // }
     static async getAllNotifications(filter, page = 1, limit = 10) {
         const notificatiosn = await Notification_1.default.find(filter).sort({ createdAt: -1 })
             .skip((page - 1) * limit)
