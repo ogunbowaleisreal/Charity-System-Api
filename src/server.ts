@@ -26,6 +26,10 @@ async function startServer() {
 
         server.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);
+            const mem = process.memoryUsage();
+            console.log(`RSS: ${(mem.rss / 1024 / 1024).toFixed(1)} MB`);
+            console.log(`Heap Used: ${(mem.heapUsed / 1024 / 1024).toFixed(1)} MB`);
+            console.log(`Modules loaded: ${Object.keys(require.cache).length}`);
         });
 
     } catch (error) {
