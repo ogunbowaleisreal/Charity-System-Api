@@ -46,9 +46,11 @@ export class DonationService {
         //const reference = `don_${Date.now()}`;
         const reference = `DON_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`; //crypto.randomUUID();
         const user = await Account.findById(userId) as any
-        if (!user) {
-            logger.info("User not found, Creating donation for guest user", { email: data.email });
+        if (user) {
+            logger.info("User found, Creating donation for registered user", { email: data.email });
             // throw new AppError("User not found, Creating donation for guest user", 400);
+            data.firstname = user.firstName;
+            data.lastname = user.lastName;
         }
         if (!data.firstname || !data.lastname || !data.amount) throw new Error(" insufficient information")
 

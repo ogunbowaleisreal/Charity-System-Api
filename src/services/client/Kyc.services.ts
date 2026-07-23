@@ -50,12 +50,11 @@ export class KYCService {
         kyc.status = "in_progress";
     }
 
+
+
     async submitBVN(
         userId: string,
-        payload: {
-            bvn: string;
-            dob: string;
-        }
+        payload: { bvn: string; dob: string, firstName: string, lastName: string }
     ) {
         const kyc = await this.getOrCreateKYC(userId);
 
@@ -65,52 +64,50 @@ export class KYCService {
         kyc.status = "pending_verification";
 
         // =========================
-        // ZEEH BVN VERIFICATION ONLY
+        // DOJAH BVN VERIFICATION
         // =========================
 
-        const result = await zeehService.verifyBVN(payload.bvn);
+        const result = await dojahService.validateBVN(payload);
 
+        const entity = result?.data;
         const isVerified =
-            result?.success === true &&
-            result?.data &&
-            result?.data?.firstName;
+            result?.status === "verified" &&
+            !!entity?.first_name &&
+            entity?.date_of_birth === payload.dob;
 
-        // =========================
-        // SUCCESS
-        // =========================
-
-        if (isVerified && result?.data.dateOfBirth == payload.dob) {
+        if (isVerified) {
             kyc.bvnVerification = {
                 status: "verified",
-                provider: "zeeh",
+                provider: "dojah",
                 matchedData: {
-                    firstName: result.data.firstName,
-                    middleName: result.data.middleName,
-                    lastName: result.data.lastName,
-                    dateOfBirth: result.data.dateOfBirth,
-                    phoneNumber: result.data.phoneNumber,
+                    firstName: entity.first_name,
+                    middleName: entity.middle_name,
+                    lastName: entity.last_name,
+                    dateOfBirth: entity.date_of_birth,
+                    phoneNumber: entity.phone_number1,
                 },
                 verifiedAt: new Date(),
             };
-        }
+            // } else {
+            //     kyc.bvnVerification = {
+            //         status: "failed",
+            //         provider: "dojah",
+            //     };
 
-        // =========================
-        // FAILURE
-        // =========================
-
-        else {
+            //     kyc.status = "rejected";
+            //     kyc.rejectionReason = "BVN verification failed";
+            // }
+        } else {
             kyc.bvnVerification = {
                 status: "failed",
-                provider: "zeeh",
+                provider: "dojah",
             };
 
             kyc.status = "rejected";
-            kyc.rejectionReason = "BVN verification failed";
+            kyc.rejectionReason = result?.mismatchedFields?.length
+                ? `BVN verification failed: mismatch on ${result.mismatchedFields.join(", ")}`
+                : "BVN verification failed";
         }
-
-        // =========================
-        // STATE UPDATE
-        // =========================
 
         this.updateStatus(kyc);
         await kyc.save();
@@ -126,47 +123,34 @@ export class KYCService {
         }
 
         kyc.facialImage = imageUrl;
-
         kyc.steps.face.submitted = true;
         kyc.steps.face.submittedAt = new Date();
         kyc.status = "pending_verification";
 
         // =========================
-        // ZEEH FACE VERIFICATION
+        // DOJAH FACE VERIFICATION
         // =========================
 
-        const result = await zeehService.verifyFace(
-            kyc.bvn as any,
-            imageUrl,
-        );
+        const result = await dojahService.verifyFaceWithBVN({
+            bvn: kyc.bvn as any,
+            selfieBase64: imageUrl, // DojahService pulls the URL and converts it internally
+        });
 
-        const isVerified =
-            result?.success === true &&
-            result?.data?.face_data.confidence >= 85;
-
-        // =========================
-        // SUCCESS
-        // =========================
+        const isVerified = result?.status === "verified";
 
         if (isVerified) {
             kyc.faceVerification = {
                 status: "verified",
-                provider: "zeeh",
-                confidenceScore: result.data.face_data.confidence || 0,
+                provider: "dojah",
+                confidenceScore: result.confidence || 0,
                 verifiedAt: new Date(),
             };
 
             kyc.status = "in_progress";
-        }
-
-        // =========================
-        // FAILURE
-        // =========================
-
-        else {
+        } else {
             kyc.faceVerification = {
                 status: "failed",
-                provider: "zeeh",
+                provider: "dojah",
             };
 
             kyc.status = "rejected";
@@ -178,8 +162,6 @@ export class KYCService {
 
         return kyc;
     }
-
-
 
     async submitUtilityBill(userId: string, base64: string) {
         const kyc = await this.getOrCreateKYC(userId);

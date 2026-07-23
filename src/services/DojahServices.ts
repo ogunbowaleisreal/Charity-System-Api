@@ -26,14 +26,50 @@ export class DojahService {
     // =========================
     // 🔹 BVN VALIDATION (WITH USER DATA MATCH)
     // =========================
+    // async validateBVN(data: {
+    //     bvn: string;
+    //     firstName: string;
+    //     lastName: string;
+    //     dob: string; // YYYY-MM-DD
+    // }): Promise<{
+    //     status: VerificationStatus;
+    //     data?: any;
+    // }> {
+    //     try {
+    //         const response = await this.client.get("/api/v1/kyc/bvn", {
+    //             params: {
+    //                 bvn: data.bvn,
+    //                 first_name: data.firstName,
+    //                 last_name: data.lastName,
+    //                 dob: data.dob,
+    //             },
+    //         });
+
+    //         const entity = response.data?.entity;
+
+    //         const isMatch =
+    //             entity?.bvn?.status &&
+    //             entity?.first_name?.status &&
+    //             entity?.last_name?.status;
+
+    //         return {
+    //             status: isMatch ? "verified" : "failed",
+    //             data: entity,
+    //         };
+    //     } catch {
+    //         return { status: "failed" };
+    //     }
+    // }
+
     async validateBVN(data: {
         bvn: string;
         firstName: string;
         lastName: string;
-        dob: string; // YYYY-MM-DD
+        dob?: string; // kept, but unconfirmed whether Dojah actually matches on this — verify in sandbox
     }): Promise<{
         status: VerificationStatus;
         data?: any;
+        mismatchedFields?: string[];
     }> {
         try {
             const response = await this.client.get("/api/v1/kyc/bvn", {
@@ -47,17 +83,22 @@ export class DojahService {
 
             const entity = response.data?.entity;
 
-            const isMatch =
-                entity?.bvn?.status &&
-                entity?.first_name?.status &&
-                entity?.last_name?.status;
+            if (!entity?.bvn) {
+                return { status: "failed", mismatchedFields: ["bvn"] };
+            }
+
+            const mismatchedFields: string[] = [];
+            if (!entity.bvn.status) mismatchedFields.push("bvn");
+            if (!entity.first_name?.status) mismatchedFields.push("first_name");
+            if (!entity.last_name?.status) mismatchedFields.push("last_name");
 
             return {
-                status: isMatch ? "verified" : "failed",
+                status: mismatchedFields.length === 0 ? "verified" : "failed",
                 data: entity,
+                mismatchedFields,
             };
-        } catch {
-            return { status: "failed" };
+        } catch (error) {
+            return { status: "failed", mismatchedFields: ["request_error"] };
         }
     }
 

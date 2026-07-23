@@ -47,7 +47,16 @@ export class WithdrawalService {
             if (!campaign) throw new Error("Campaign not found");
             //  if (campaign.status == "ongoing" || campaign.status == "upcoming") throw new AppError("Campaign is still ongoing or has not started yet", 400);
 
-            // if (campaign.owner.toString() != userId) throw new AppError("Unauthorized, ypu are not the owner of this campaign", 401);
+            if (campaign.owner.toString() != userId) throw new AppError("Unauthorized, you are not the owner of this campaign", 401);
+            const daysSinceCreation =
+                (Date.now() - new Date(campaign.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+
+            if (daysSinceCreation < 5) {
+                throw new AppError(
+                    "Withdrawals are only allowed 5 days after the campaign was created",
+                    400
+                );
+            }
 
             const userWallet = await Wallet.findOne({
                 userId: userId,
@@ -121,6 +130,12 @@ export class WithdrawalService {
             throw err;
         }
 
+    }
+
+    static isMoreThan5DaysAfter(otherDate: Date) {
+        const diffMs = Date.now() - new Date(otherDate).getTime();
+        const diffDays = diffMs / (1000 * 60 * 60 * 24);
+        return diffDays > 5;
     }
 
     async firstTimeWalletPinSet(userId: string, pin: string) {

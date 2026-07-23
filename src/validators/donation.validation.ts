@@ -53,24 +53,24 @@ export const initiateDonationSchema = z
             .boolean()
             .default(false),
     })
-    .superRefine((data, ctx) => {
-        // Require a name unless donating anonymously
-        if (!data.donateAnonymously) {
-            if (!data.firstname) {
-                ctx.addIssue({
-                    code: "custom",
-                    path: ["firstname"],
-                    message: "First name is required",
-                });
-            }
+    // .superRefine((data, ctx) => {
+    //     // Require a name unless donating anonymously
+    //     if (!data.donateAnonymously) {
+    //         if (!data.firstname) {
+    //             ctx.addIssue({
+    //                 code: "custom",
+    //                 path: ["firstname"],
+    //                 message: "First name is required",
+    //             });
+    //         }
 
-            if (!data.lastname) {
-                ctx.addIssue({
-                    code: "custom",
-                    path: ["lastname"],
-                    message: "Last name is required",
-                });
-            }
-        }
-    })
+    //         if (!data.lastname) {
+    //             ctx.addIssue({
+    //                 code: "custom",
+    //                 path: ["lastname"],
+    //                 message: "Last name is required",
+    //             });
+    //         }
+    //     }
+    // })
     .strict();

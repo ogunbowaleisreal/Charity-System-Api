@@ -21,20 +21,33 @@ export class KYCController {
     //     }
     // }
 
+    // async submitBVN(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
+    //     try {
+    //         const userId = req.user.userId;
+    //         const { bvn } = req.body;
+
+    //         const result = await kycService.submitBVN(userId, { bvn: bvn, dob: req.body.dob });
+
+    //         sendSuccessResponse(res, result, `BVN submitted: verifiation status: ${result.bvnVerification?.status}`);
+    //     } catch (error: any) {
+    //         sendErrorResponse(
+    //             res,
+    //             error.message,
+    //             HTTP_STATUS.BAD_REQUEST
+    //         );
+    //     }
+    // }
+
     async submitBVN(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
         try {
             const userId = req.user.userId;
-            const { bvn } = req.body;
+            const { bvn, firstName, lastName, dob } = req.body;
 
-            const result = await kycService.submitBVN(userId, { bvn: bvn, dob: req.body.dob });
+            const result = await kycService.submitBVN(userId, { bvn, firstName, lastName, dob });
 
-            sendSuccessResponse(res, result, `BVN submitted: verifiation status: ${result.bvnVerification?.status}`);
+            sendSuccessResponse(res, result, `BVN submitted: verification status: ${result.bvnVerification?.status}`);
         } catch (error: any) {
-            sendErrorResponse(
-                res,
-                error.message,
-                HTTP_STATUS.BAD_REQUEST
-            );
+            sendErrorResponse(res, error.message, HTTP_STATUS.BAD_REQUEST);
         }
     }
 
