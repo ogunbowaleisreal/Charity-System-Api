@@ -8,6 +8,8 @@ import { LoginRequest } from "../../types/auth";
 import adminJwtUtil from "../../utils/admin/jwt";
 import { IAdmin } from "../../types/admin.management";
 import logger from "../../logger";
+import { logAudit } from "../../services/audit.services";
+import { ActorType, AUDIT_ACTIONS } from "../../types/auditlogs.types";
 
 export class AuthService {
     private otpService = new OTPService();
@@ -27,6 +29,14 @@ export class AuthService {
             };
         }
         if (admin.status == "suspended") {
+            await logAudit({
+                actorType: ActorType.ADMIN,
+                actorId: admin._id.toString(),
+                actorEmail: admin.email,
+                action: AUDIT_ACTIONS.ADMIN.LOGIN_BLOCKED_SUSPENDED,
+                ipAddress: ip,
+                userAgent,
+            });
             throw {
                 message: "Your account has been suspended. Contact support.",
                 statusCode: HTTP_STATUS.FORBIDDEN, // 403 is more accurate than 401
@@ -34,6 +44,14 @@ export class AuthService {
         }
 
         if (admin.isLocked()) {
+            await logAudit({
+                actorType: ActorType.ADMIN,
+                actorId: admin._id.toString(),
+                actorEmail: admin.email,
+                action: AUDIT_ACTIONS.ADMIN.LOGIN_BLOCKED_LOCKED,
+                ipAddress: ip,
+                userAgent,
+            });
             throw { message: "Account is locked", statusCode: HTTP_STATUS.LOCKED };
         }
 
@@ -42,6 +60,16 @@ export class AuthService {
         if (!isPasswordValid) {
             console.log("Admin not found  2 for email:", email);
             await admin.incrementLoginAttempts();
+
+            await logAudit({
+                actorType: ActorType.ADMIN,
+                actorId: admin._id.toString(),
+                actorEmail: admin.email,
+                action: AUDIT_ACTIONS.ADMIN.LOGIN_FAILED,
+                ipAddress: ip,
+                userAgent,
+                metadata: { attemptNumber: admin.loginAttempts + 1 },
+            });
             throw {
                 message: "Invalid credentials",
                 statusCode: HTTP_STATUS.UNAUTHORIZED,
@@ -131,6 +159,15 @@ export class AuthService {
             tokens.family,
             tokens.generation
         );
+        await logAudit({
+            actorType: ActorType.ADMIN,
+            actorId: admin._id.toString(),
+            actorEmail: admin.email,
+            action: AUDIT_ACTIONS.ADMIN.LOGIN,
+            ipAddress: ip,
+            userAgent,
+            metadata: { tokenFamily: tokens.family, twoFactorEnabled: false },
+        });
 
         logger.info("New login session created", {
             adminId: admin._id.toString(),
@@ -177,6 +214,15 @@ export class AuthService {
         admin.lastActiveAt = new Date();
         admin.totalLogins = (admin.totalLogins || 0) + 1;
         await admin.save();
+
+        await logAudit({
+            actorType: ActorType.ADMIN,
+            actorId: admin._id.toString(),
+            actorEmail: admin.email,
+            action: AUDIT_ACTIONS.ADMIN.TWO_FA_VERIFIED,
+            ipAddress: ip,
+            userAgent,
+        });
 
         // Save refresh token
         await this.saveRefreshToken(
@@ -246,6 +292,11 @@ export class AuthService {
 
                     await RefreshToken.deactivateAllUserTokens(decoded.adminId, "admin");
                 }
+                await logAudit({
+                    actorType: ActorType.ADMIN,
+                    actorId: decoded.adminId,
+                    action: AUDIT_ACTIONS.ADMIN.LOGOUT,
+                });
 
                 logger.info("Admin logged out successfully", {
                     adminId: decoded.adminId,
@@ -272,6 +323,15 @@ export class AuthService {
             const isSuspicious = await adminJwtUtil.detectTokenReuse(decoded);
             if (isSuspicious) {
                 await adminJwtUtil.handleSuspiciousActivity(decoded);
+                await logAudit({
+                    actorType: ActorType.ADMIN,
+                    actorId: decoded.adminId,
+                    action: AUDIT_ACTIONS.ADMIN.TOKEN_REUSE_DETECTED,
+                    ipAddress: ip,
+                    userAgent,
+                    metadata: { family: decoded.family, tokenId: decoded.tokenId },
+                });
+
                 throw {
                     message: "Security violation detected. All sessions invalidated.",
                     statusCode: HTTP_STATUS.UNAUTHORIZED,
@@ -437,6 +497,13 @@ export class AuthService {
             hashedPassword
         );
         await admin.save();
+
+        await logAudit({
+            actorType: ActorType.ADMIN,
+            actorId: admin._id.toString(),
+            actorEmail: admin.email,
+            action: AUDIT_ACTIONS.ADMIN.PASSWORD_RESET,
+        });
 
         // Invalidate all refresh tokens
         await RefreshToken.deactivateAllUserTokens(admin._id.toString(), "admin");

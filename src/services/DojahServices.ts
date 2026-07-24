@@ -21,46 +21,6 @@ export class DojahService {
         });
     }
 
-
-
-    // =========================
-    // 🔹 BVN VALIDATION (WITH USER DATA MATCH)
-    // =========================
-    // async validateBVN(data: {
-    //     bvn: string;
-    //     firstName: string;
-    //     lastName: string;
-    //     dob: string; // YYYY-MM-DD
-    // }): Promise<{
-    //     status: VerificationStatus;
-    //     data?: any;
-    // }> {
-    //     try {
-    //         const response = await this.client.get("/api/v1/kyc/bvn", {
-    //             params: {
-    //                 bvn: data.bvn,
-    //                 first_name: data.firstName,
-    //                 last_name: data.lastName,
-    //                 dob: data.dob,
-    //             },
-    //         });
-
-    //         const entity = response.data?.entity;
-
-    //         const isMatch =
-    //             entity?.bvn?.status &&
-    //             entity?.first_name?.status &&
-    //             entity?.last_name?.status;
-
-    //         return {
-    //             status: isMatch ? "verified" : "failed",
-    //             data: entity,
-    //         };
-    //     } catch {
-    //         return { status: "failed" };
-    //     }
-    // }
-
     async validateBVN(data: {
         bvn: string;
         firstName: string;

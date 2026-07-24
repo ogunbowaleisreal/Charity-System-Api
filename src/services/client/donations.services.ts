@@ -11,6 +11,8 @@ import { Account } from "../../models/Accounts";
 import { FlutterwaveService } from "../flutterwave.services";
 import logger from "../../logger";
 import { ServiceFeeConfig } from "../../models/ServiceFee";
+import { logAudit } from "../../services/audit.services";
+import { ActorType, AUDIT_ACTIONS } from "../../types/auditlogs.types";
 
 const safeHaven = new SaveHavenService();
 const flutterwave = new FlutterwaveService();
@@ -114,6 +116,22 @@ export class DonationService {
             customerPhone: data.phoneNumber,
             //lastname: data.lastname,
             //  reference,
+        });
+        await logAudit({
+            actorType: ActorType.USER,
+            actorId: user ? user._id.toString() : `guest:${data.email}`,
+            actorEmail: data.email,
+            action: AUDIT_ACTIONS.DONATION.INITIATED,
+            targetType: "Campaign",
+            targetId: campaign._id.toString(),
+            metadata: {
+                transactionId: transaction._id.toString(),
+                reference,
+                amount: amountData.totalAmount,
+                currency: "NGN",
+                isAnonymous: !!data.donateAnonymously,
+                donorType: user ? "user" : "guest",
+            },
         });
 
         return {

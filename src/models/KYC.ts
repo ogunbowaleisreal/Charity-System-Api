@@ -14,6 +14,7 @@ export interface IKYC extends Document {
         provider?: string;
         matchedData?: any;
         verifiedAt?: Date;
+        jobId?: string;
     };
 
     faceVerification?: {
@@ -21,6 +22,8 @@ export interface IKYC extends Document {
         provider?: string;
         confidenceScore?: number;
         verifiedAt?: Date;
+        jobId?: string;
+        enrolled?: boolean;
     };
 
     // ===== STEP TRACKING =====

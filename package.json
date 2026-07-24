@@ -68,6 +68,7 @@
     "redis": "^5.8.3",
     "resend": "^6.12.2",
     "slugify": "^1.6.9",
+    "smile-identity-core": "^3.2.1",
     "uuid": "^8.3.2",
     "winston": "^3.18.3",
     "winston-daily-rotate-file": "^5.0.0",

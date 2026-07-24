@@ -9,35 +9,6 @@ const kycService = new KYCService();
 
 export class KYCController {
 
-    // async startKYC(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
-    //     try {
-    //         const userId = req.user.user_id;
-
-    //         const result = await kycService.startKYC(userId);
-
-    //         sendSuccessResponse(res, result, "KYC initialized");
-    //     } catch (error: any) {
-    //         next(error);
-    //     }
-    // }
-
-    // async submitBVN(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
-    //     try {
-    //         const userId = req.user.userId;
-    //         const { bvn } = req.body;
-
-    //         const result = await kycService.submitBVN(userId, { bvn: bvn, dob: req.body.dob });
-
-    //         sendSuccessResponse(res, result, `BVN submitted: verifiation status: ${result.bvnVerification?.status}`);
-    //     } catch (error: any) {
-    //         sendErrorResponse(
-    //             res,
-    //             error.message,
-    //             HTTP_STATUS.BAD_REQUEST
-    //         );
-    //     }
-    // }
-
     async submitBVN(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
         try {
             const userId = req.user.userId;
@@ -53,34 +24,42 @@ export class KYCController {
 
     async submitFace(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
         try {
-            const userId = req.user.user_id;
-            const fileUrl = req.body?.fileUrl;
+            const userId = req.user.userId;
+            const { imageUrl, livenessImageUrls } = req.body;
 
-            const result = await kycService.submitFace(userId, fileUrl);
+            const result = await kycService.submitFace(userId, imageUrl, livenessImageUrls || []);
 
-            sendSuccessResponse(res, result, `Facial verification submitted:verification status is : ${result.faceVerification?.status}`);
+            sendSuccessResponse(res, result, `Facial verification submitted: verification status is: ${result.faceVerification?.status}`);
         } catch (error: any) {
             next(error);
         }
     }
 
-    // async submitDocument(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
-    //     try {
-    //         const userId = req.user.user_id;
-    //         const fileUrl = req.body.fileUrl;
+    /**
+     * Smile ID webhook — receives async Biometric KYC (face match) results.
+     * Wire this to your SMILE_ID_CALLBACK_URL route, e.g.:
+     *   router.post("/webhooks/smile-id/face", kycController.smileIdFaceWebhook)
+     * No auth middleware here — Smile ID authenticates via signature in the payload,
+     * verified inside kycService.handleFaceWebhook.
+     */
+    async smileIdFaceWebhook(req: Request, res: Response, next: NextFunction) {
+        try {
+            await kycService.handleFaceWebhook(req.body);
 
-    //         const result = await kycService.submitDocument(userId, fileUrl);
-
-    //         sendSuccessResponse(res, result, "Document submitted");
-    //     } catch (error: any) {
-    //         next(error);
-    //     }
-    // }
+            // Acknowledge receipt so Smile ID doesn't retry.
+            res.status(HTTP_STATUS.OK).json({ received: true });
+        } catch (error: any) {
+            logger.error("Smile ID face webhook error", error);
+            // Still avoid leaking internals to Smile ID's retry logic;
+            // a 400 tells them the payload/signature was rejected.
+            sendErrorResponse(res, error.message, HTTP_STATUS.BAD_REQUEST);
+        }
+    }
 
     async verifyCac(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
         try {
-            const userId = req.user.user_id;
-            const { rcNumber, companyType, cacDocument } = req.body;
+            const userId = req.user.userId;
+            const { cacDocument } = req.body;
 
             const result = await kycService.uploadCACDocument(userId, cacDocument);
 
@@ -92,7 +71,7 @@ export class KYCController {
 
     async submitUtilityBill(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
         try {
-            const userId = req.user.user_id;
+            const userId = req.user.userId;
             const { utilityBill } = req.body;
 
             const result = await kycService.uploadUtilityBill(userId, utilityBill);
@@ -103,10 +82,9 @@ export class KYCController {
         }
     }
 
-
     async getKYCStatus(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
         try {
-            const userId = req.user.user_id;
+            const userId = req.user.userId;
 
             const result = await kycService.getKYCStatus(userId);
 

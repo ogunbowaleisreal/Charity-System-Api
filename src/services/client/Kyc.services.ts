@@ -1,13 +1,13 @@
 import { KYC } from "../../models/KYC";
 import { Account } from "../../models/Accounts";
 import { Types } from "mongoose";
-import { DojahService } from "../DojahServices";
-import { dojahConfig } from "../../config/dojah.config";
+import { SmileIDService, SmileWebhookPayload } from "../SmileIdServices";
+import { SmileIdConfig } from "../../config/smileid.config";
 import logger from "../../logger";
 import { ZeehKycService } from "../zeehAfrica.services";
 import { ZeehConfig } from "../../config/zeehAfrica.config";
 
-const dojahService = new DojahService(dojahConfig);
+const smileIdService = new SmileIDService(SmileIdConfig);
 const zeehService = new ZeehKycService(ZeehConfig.apiKey, ZeehConfig.baseUrl, ZeehConfig.webhookSecret);
 
 export class KYCService {
@@ -64,48 +64,46 @@ export class KYCService {
         kyc.status = "pending_verification";
 
         // =========================
-        // DOJAH BVN VERIFICATION
+        // SMILE ID BVN VALIDATION (Enhanced/Basic KYC, job_type 5)
         // =========================
+        // No selfie is attached here, so this call is synchronous — the
+        // verified/failed verdict comes back directly, no webhook involved.
 
-        const result = await dojahService.validateBVN(payload);
+        const jobId = `bvn-${userId}-${Date.now()}`;
+        const result = await smileIdService.validateBVN(payload, jobId, userId);
 
-        const entity = result?.data;
-        const isVerified =
-            result?.status === "verified" &&
-            !!entity?.first_name &&
-            entity?.date_of_birth === payload.dob;
-
-        if (isVerified) {
+        if (result.status === "verified") {
             kyc.bvnVerification = {
                 status: "verified",
-                provider: "dojah",
+                provider: "smile_id",
+                jobId: result.jobId,
                 matchedData: {
-                    firstName: entity.first_name,
-                    middleName: entity.middle_name,
-                    lastName: entity.last_name,
-                    dateOfBirth: entity.date_of_birth,
-                    phoneNumber: entity.phone_number1,
+                    fullName: result.data?.fullName,
+                    dateOfBirth: result.data?.dateOfBirth,
+                    phoneNumber: result.data?.phoneNumber,
                 },
                 verifiedAt: new Date(),
             };
-            // } else {
-            //     kyc.bvnVerification = {
-            //         status: "failed",
-            //         provider: "dojah",
-            //     };
-
-            //     kyc.status = "rejected";
-            //     kyc.rejectionReason = "BVN verification failed";
-            // }
-        } else {
+        } else if (result.status === "error") {
             kyc.bvnVerification = {
                 status: "failed",
-                provider: "dojah",
+                provider: "smile_id",
+                jobId: result.jobId,
             };
 
             kyc.status = "rejected";
-            kyc.rejectionReason = result?.mismatchedFields?.length
-                ? `BVN verification failed: mismatch on ${result.mismatchedFields.join(", ")}`
+            kyc.rejectionReason = "BVN verification could not be submitted to Smile ID";
+        } else {
+            // "failed": Smile ID responded, but the submitted data didn't match the BVN record.
+            kyc.bvnVerification = {
+                status: "failed",
+                provider: "smile_id",
+                jobId: result.jobId,
+            };
+
+            kyc.status = "rejected";
+            kyc.rejectionReason = result.resultText
+                ? `BVN verification failed: ${result.resultText}`
                 : "BVN verification failed";
         }
 
@@ -115,7 +113,7 @@ export class KYCService {
         return kyc;
     }
 
-    async submitFace(userId: string, imageUrl: string) {
+    async submitFace(userId: string, imageUrl: string, livenessImageUrls: string[] = []) {
         const kyc = await this.getOrCreateKYC(userId);
 
         if (kyc.bvnVerification?.status !== "verified") {
@@ -128,33 +126,60 @@ export class KYCService {
         kyc.status = "pending_verification";
 
         // =========================
-        // DOJAH FACE VERIFICATION
+        // SMILE ID FACE MATCH (Biometric KYC, job_type 1)
         // =========================
+        // Matches the selfie directly against the BVN's photo on file. This one
+        // IS async — a "pending" result here means Smile ID accepted the job
+        // and the final verdict will arrive at handleFaceWebhook below.
 
-        const result = await dojahService.verifyFaceWithBVN({
-            bvn: kyc.bvn as any,
-            selfieBase64: imageUrl, // DojahService pulls the URL and converts it internally
-        });
+        const jobId = `face-${userId}-${Date.now()}`;
+        const selfieBase64 = await smileIdService.imageUrlToBase64(imageUrl);
+        const livenessImagesBase64 = await Promise.all(
+            livenessImageUrls.map((url) => smileIdService.imageUrlToBase64(url))
+        );
 
-        const isVerified = result?.status === "verified";
+        const result = await smileIdService.matchFaceWithBVN(
+            { bvn: kyc.bvn as string, selfieBase64, livenessImagesBase64 },
+            jobId,
+            userId
+        );
 
-        if (isVerified) {
+        if (result.status === "verified") {
             kyc.faceVerification = {
                 status: "verified",
-                provider: "dojah",
+                provider: "smile_id",
+                jobId: result.jobId,
                 confidenceScore: result.confidence || 0,
                 verifiedAt: new Date(),
             };
 
             kyc.status = "in_progress";
-        } else {
+        } else if (result.status === "failed") {
             kyc.faceVerification = {
                 status: "failed",
-                provider: "dojah",
+                provider: "smile_id",
+                jobId: result.jobId,
+                confidenceScore: result.confidence || 0,
             };
 
             kyc.status = "rejected";
-            kyc.rejectionReason = "Face verification failed";
+            kyc.rejectionReason = result.resultText || "Face verification failed";
+        } else if (result.status === "error") {
+            kyc.faceVerification = {
+                status: "failed",
+                provider: "smile_id",
+                jobId: result.jobId,
+            };
+
+            kyc.status = "rejected";
+            kyc.rejectionReason = "Face verification could not be submitted to Smile ID";
+        } else {
+            // pending: submission succeeded, awaiting webhook.
+            kyc.faceVerification = {
+                status: "pending",
+                provider: "smile_id",
+                jobId: result.jobId,
+            };
         }
 
         this.updateStatus(kyc);
@@ -163,42 +188,77 @@ export class KYCService {
         return kyc;
     }
 
+    /**
+     * Smile ID webhook handler for Biometric KYC (face match) results.
+     * Wire this up to whatever route receives POSTs to your SMILE_ID_CALLBACK_URL.
+     * (Not needed for BVN — validateBVN never goes through a webhook.)
+     */
+    async handleFaceWebhook(payload: SmileWebhookPayload) {
+        const isAuthentic = smileIdService.verifyWebhookSignature(payload.timestamp, payload.signature);
+        if (!isAuthentic) {
+            throw new Error("Invalid Smile ID webhook signature");
+        }
+
+        const userId = payload.PartnerParams?.user_id;
+        const kyc = await KYC.findOne({ userId });
+        if (!kyc) throw new Error("KYC not found for webhook user_id");
+
+        // NOTE (see caveat in SmileIdServices.ts): confirm this pass/fail signal
+        // against a real sandbox response for job_type 1 before relying on it in
+        // production.
+        const confidence = Number(payload.ConfidenceValue) || 0;
+        const isVerified = payload.Actions?.Verify_ID_Number === "Verified" && confidence >= 90;
+
+        if (isVerified) {
+            kyc.faceVerification = {
+                status: "verified",
+                provider: "smile_id",
+                jobId: payload.PartnerParams.job_id,
+                confidenceScore: confidence,
+                verifiedAt: new Date(),
+            };
+
+            kyc.status = "in_progress";
+        } else {
+            kyc.faceVerification = {
+                status: "failed",
+                provider: "smile_id",
+                jobId: payload.PartnerParams.job_id,
+                confidenceScore: confidence,
+            };
+
+            kyc.status = "rejected";
+            kyc.rejectionReason = payload.ResultText || "Face verification failed";
+        }
+
+        this.updateStatus(kyc);
+        await kyc.save();
+
+        return kyc;
+    }
+
+    // =========================
+    // UTILITY BILL — kept as manual/admin review only.
+    // Smile ID has no equivalent of Dojah's OCR-a-bill-photo product; its closest
+    // product ("Digital Address Verification") matches a utility ACCOUNT NUMBER
+    // to an address, it doesn't accept a bill photo. This stays manual — same
+    // behaviour as uploadUtilityBill below.
+    // =========================
     async submitUtilityBill(userId: string, base64: string) {
         const kyc = await this.getOrCreateKYC(userId);
 
         kyc.steps.document.utility.submitted = true;
-        kyc.utilityBill = base64
+        kyc.utilityBill = base64;
         kyc.steps.document.utility.submittedAt = new Date();
         kyc.status = "pending_verification";
 
-        const result = await dojahService.verifyUtilityBill(base64);
-
-        if (result.status === "verified") {
-            kyc.documentVerification = {
-                ...kyc.documentVerification,
-                utility: {
-                    status: "verified",
-                    provider: "dojah",
-                    extractedData: result.data,
-                    verifiedAt: new Date(),
-                },
-            };
-
-            kyc.steps.document.utility.verified = true;
-
-            // kyc.steps.document.verified = true;
-        } else {
-            kyc.documentVerification = {
-                ...kyc.documentVerification,
-                utility: {
-                    status: "verified",
-                    provider: "dojah",
-                },
-            };
-
-            kyc.status = "rejected";
-            kyc.rejectionReason = "Utility bill verification failed";
-        }
+        kyc.documentVerification = {
+            ...kyc.documentVerification,
+            utility: {
+                status: "pending", // waiting manual/admin review
+                provider: "manual",
+            },
+        };
 
         await kyc.save();
         return kyc;
@@ -216,14 +276,28 @@ export class KYCService {
         kyc.steps.document.cac.submitted = true;
         kyc.steps.document.cac.submittedAt = new Date();
 
-        const result = await dojahService.verifyCAC(rcNumber, companyType);
+        // =========================
+        // SMILE ID BUSINESS VERIFICATION (CAC / RC NUMBER LOOKUP)
+        // =========================
+        // Synchronous, so this stays close to the old Dojah shape: submit, get a
+        // final verdict back immediately.
+
+        const jobId = `cac-${userId}-${Date.now()}`;
+        const result = await smileIdService.submitBusinessVerification({
+            country: "NG",
+            idType: "BUSINESS_REGISTRATION",
+            idNumber: rcNumber,
+            businessType: companyType as "bn" | "co" | "it",
+            jobId,
+            userId,
+        });
 
         if (result.status === "verified") {
             kyc.documentVerification = {
                 ...kyc.documentVerification,
                 cac: {
                     status: "verified",
-                    provider: "dojah",
+                    provider: "smile_id",
                     extractedData: result.data,
                     verifiedAt: new Date(),
                 },
@@ -235,11 +309,10 @@ export class KYCService {
                 ...kyc.documentVerification,
                 cac: {
                     status: "failed",
-                    provider: "dojah",
+                    provider: "smile_id",
                 },
             };
 
-            //   kyc.steps.document.cac.verified = true;
             kyc.status = "rejected";
             kyc.rejectionReason = "CAC verification failed";
         }
@@ -284,10 +357,6 @@ export class KYCService {
 
     async uploadUtilityBill(userId: string, utilityBillUrl: string) {
         const kyc = await this.getOrCreateKYC(userId);
-
-        // if (kyc.type !== "user") {
-        //     throw new Error("Utility bill upload only allowed for personal accounts");
-        // }
 
         // ===== STORE FILE =====
         kyc.utilityBill = utilityBillUrl;

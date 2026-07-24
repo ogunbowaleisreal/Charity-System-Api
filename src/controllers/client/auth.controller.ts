@@ -152,8 +152,8 @@ export class authController {
                 }
                 return ip;
             };
-
             const cleanIp = normalizeIp(ip);
+            let location: { data: any } | null = null;
 
             if (
                 cleanIp === "127.0.0.1" ||
@@ -163,16 +163,38 @@ export class authController {
             ) {
                 console.log("Skipping geolocation for local/private IP");
             } else {
-                // call ipapi
+                try {
+                    location = await axios.get(`https://ipapi.co/${cleanIp}/json/`);
+                } catch (geoErr: any) {
+                    logger.warn("Geolocation lookup failed, continuing without it", { message: geoErr.message });
+                }
             }
 
-            const location = await axios.get(`https://ipapi.co/${cleanIp}/json/`);
-            console.log({ location: location.data })
+            user.lastLogin = new Date();
+            user.lastLoginIp = cleanIp;
+            user.lastLoginLocation = location?.data ?? null;
+            await user.save();
 
-            user.lastLogin = new Date()
-            user.lastLoginIp = cleanIp
-            user.lastLoginLocation = location.data
-            await user.save()
+
+
+            // if (
+            //     cleanIp === "127.0.0.1" ||
+            //     cleanIp === "::1" ||
+            //     cleanIp.startsWith("192.168.") ||
+            //     cleanIp.startsWith("10.")
+            // ) {
+            //     console.log("Skipping geolocation for local/private IP");
+            // } else {
+            //     // call ipapi
+            // }
+
+            // const location = await axios.get(`https://ipapi.co/${cleanIp}/json/`);
+            // console.log({ location: location.data })
+
+            // user.lastLogin = new Date()
+            // user.lastLoginIp = cleanIp
+            // user.lastLoginLocation = location.data
+            // await user.save()
             return res.status(200).json({ message: "Login successful", response });
         } catch (err: any) {
             //  return res.status(500).json({ message: "Internal Server Error", error: err })

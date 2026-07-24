@@ -16,6 +16,8 @@ import { ResendEmailService } from "../ResesndServices";
 import CacheService from "../cacheServices";
 import bcryptUtil from "../../utils/bcryptutils";
 import { NotificationService } from "../notification.Services";
+import { logAudit } from "../audit.services";
+import { AUDIT_ACTIONS, ActorType } from "../../types/auditlogs.types";
 const flutterwave = new FlutterwaveService();
 const otpService = new OTPService();
 const emailService = new ResendEmailService()
@@ -113,6 +115,22 @@ export class WithdrawalService {
                 reference
             }], { session });
 
+            await logAudit({
+                actorType: ActorType.USER,
+                actorId: userId,
+                actorEmail: user.email,
+                action: AUDIT_ACTIONS.PAYOUT.WITHDRAWN_TO_WALLET,
+                targetType: "Campaign",
+                targetId: campaignId,
+                metadata: {
+                    amount,
+                    reference,
+                    campaignTitle: campaign.title,
+                    availableBalanceAfter: campaign.availableBalance - amount,
+                },
+                session,
+            });
+
             await NotificationService.createForUser({
                 userId: userWallet.userId as Types.ObjectId,
                 title: "Withdrawal",
@@ -166,6 +184,12 @@ export class WithdrawalService {
 
         user.isWalletPinSet = true
         await user.save()
+        await logAudit({
+            actorType: ActorType.USER,
+            actorId: userId,
+            actorEmail: user.email,
+            action: AUDIT_ACTIONS.WALLET.PIN_SET,
+        });
         return user
     }
 
@@ -232,6 +256,13 @@ export class WithdrawalService {
         await CacheService.delete(
             `wallet_pin_reset_verified:${user.email}`
         );
+
+        await logAudit({
+            actorType: ActorType.USER,
+            actorId: userId,
+            actorEmail: user.email,
+            action: AUDIT_ACTIONS.WALLET.PIN_CHANGED,
+        });
 
         return user;
     }
@@ -358,6 +389,21 @@ export class WithdrawalService {
             },
         });
 
+        await logAudit({
+            actorType: ActorType.USER,
+            actorId: userId,
+            actorEmail: user.email,
+            action: AUDIT_ACTIONS.PAYOUT.REQUESTED,
+            targetType: "WithdrawalRequest",
+            targetId: withdrawalRequest._id.toString(),
+            metadata: {
+                amount,
+                reference,
+                bankName: bank_name,
+                accountNumberLast4: accountNumber?.slice(-4), // don't log full account number
+            },
+        });
+
         await emailService.sendNewWwithdrawalRequestNotification(withdrawalRequest)
         await PushNotificationService.sendToUser(userId,
             {
@@ -365,22 +411,6 @@ export class WithdrawalService {
                 body: `You have made a new withdrawal request of ${amount} from Help Me Nigeria`,
             }
         )
-        //await PushNotificationService.sendToUsers()
-
-        // const newTransaction = new WalletTransaction({
-        //     wallet: walletId,
-        //     amount,
-        //     type: "withdrawal",
-        //     status: "pending",
-        //     narration,
-        //     method: "bank_transfer",
-        //     bankDetails: {
-        //         bankName: bank_name,
-        //         accountNumber,
-        //         accountName: accountName,
-        //     },
-        // });
-        // await newTransaction.save();
 
         return withdrawalRequest
 
@@ -431,6 +461,19 @@ export class WithdrawalService {
             },
             reference
         });
+        await logAudit({
+            actorType: ActorType.USER,
+            actorId: userId,
+            action: AUDIT_ACTIONS.PAYOUT.REQUESTED,
+            targetType: "WithdrawalRequest",
+            targetId: withdrawalRequest._id.toString(),
+            metadata: {
+                amount,
+                reference,
+                via2FA: true,
+                accountNumberLast4: accountNumber?.slice(-4),
+            },
+        });
 
         await emailService.sendNewWwithdrawalRequestNotification(withdrawalRequest)
 
@@ -472,6 +515,12 @@ export class WithdrawalService {
         }
         user.twoFactorWithdrawalEnabled = false
         user.save()
+        await logAudit({
+            actorType: ActorType.USER,
+            actorId: userId,
+            actorEmail: user.email,
+            action: AUDIT_ACTIONS.WALLET.TWO_FA_WITHDRAWAL_DISABLED,
+        });
         return { message: "2fa has been disabled", user, status: 200 }
     }
 
