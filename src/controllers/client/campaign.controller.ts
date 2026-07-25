@@ -270,7 +270,7 @@ export class CampaignController {
 
             const comment = await campaignServices.addComment(
                 campaignId,
-                req.user._id,
+                req.user.userId,
                 req.body.message
             );
 
