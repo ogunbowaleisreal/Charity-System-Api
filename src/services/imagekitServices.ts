@@ -1,3 +1,4 @@
+import { url } from "inspector";
 import { imagekit } from "../config/imagekit";
 
 export class ImageKitService {
@@ -31,6 +32,7 @@ export class ImageKitService {
             expire: authParams.expire,
             token: authParams.token,
             publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+            urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
         };
     }
 
