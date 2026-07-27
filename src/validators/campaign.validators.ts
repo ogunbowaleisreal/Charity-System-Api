@@ -63,7 +63,7 @@ export const createCampaignSchema = z
 
         allowComments: z.boolean(),
 
-        showDonationHistory: z.boolean(),
+        showDonations: z.boolean(),
 
         isActive: z.boolean(),
 
