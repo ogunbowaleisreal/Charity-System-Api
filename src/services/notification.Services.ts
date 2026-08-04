@@ -24,6 +24,51 @@ export class NotificationService {
         });
     }
 
+    static async getUserNotifications(userId: Types.ObjectId, query: any) {
+        const page = Number(query.page) || 1;
+        const limit = Number(query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Whitelist only the fields users are allowed to filter by.
+        // Never spread raw query params into a Mongo filter.
+        const allowedFilters: Record<string, any> = {};
+
+        if (query.type && ["DONATION", "WITHDRAWAL", "GENERAL"].includes(query.type)) {
+            allowedFilters.type = query.type;
+        }
+        if (query.isRead !== undefined) {
+            allowedFilters.isRead = query.isRead === "true" || query.isRead === true;
+        }
+
+        // userId set last (and not overridable) — this is the actual fix
+        const finalQuery = { ...allowedFilters, userId };
+
+        const [notifications, total] = await Promise.all([
+            Notification.find(finalQuery)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            Notification.countDocuments(finalQuery),
+        ]);
+
+        const totalPages = Math.ceil(total / limit);
+
+        return {
+            notifications,
+            pagination: {
+                current_page: page,
+                total_pages: totalPages,
+                per_page: limit,
+                total_records: total,
+                has_next_page: page < totalPages,
+                has_prev_page: page > 1,
+            },
+        };
+    }
+
+
+
     // -------------------------
     // ADMIN: BROADCAST
     // -------------------------
@@ -80,50 +125,50 @@ export class NotificationService {
     // -------------------------
     // GET USER NOTIFICATIONS
     // -------------------------
-    static async getUserNotifications(
-        userId: Types.ObjectId,
-        query: any
-    ) {
-        const page = Number(query.page) || 1;
-        const limit = Number(query.limit) || 10;
+    // static async getUserNotifications(
+    //     userId: Types.ObjectId,
+    //     query: any
+    // ) {
+    //     const page = Number(query.page) || 1;
+    //     const limit = Number(query.limit) || 10;
 
-        const skip = (page - 1) * limit;
+    //     const skip = (page - 1) * limit;
 
-        // remove pagination params
-        const {
-            page: _page,
-            limit: _limit,
-            ...filterQuery
-        } = query;
+    //     // remove pagination params
+    //     const {
+    //         page: _page,
+    //         limit: _limit,
+    //         ...filterQuery
+    //     } = query;
 
-        // always enforce userId
-        const finalQuery = {
-            userId,
-            ...filterQuery,
-        };
+    //     // always enforce userId
+    //     const finalQuery = {
+    //         userId,
+    //         ...filterQuery,
+    //     };
 
-        const notifications = await Notification.find(finalQuery)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit)
-            .lean();
+    //     const notifications = await Notification.find(finalQuery)
+    //         .sort({ createdAt: -1 })
+    //         .skip(skip)
+    //         .limit(limit)
+    //         .lean();
 
-        const total = await Notification.countDocuments(finalQuery);
+    //     const total = await Notification.countDocuments(finalQuery);
 
-        const totalPages = Math.ceil(total / limit);
+    //     const totalPages = Math.ceil(total / limit);
 
-        return {
-            notifications,
-            pagination: {
-                current_page: page,
-                total_pages: totalPages,
-                per_page: limit,
-                total_records: total,
-                has_next_page: page < totalPages,
-                has_prev_page: page > 1,
-            },
-        };
-    }
+    //     return {
+    //         notifications,
+    //         pagination: {
+    //             current_page: page,
+    //             total_pages: totalPages,
+    //             per_page: limit,
+    //             total_records: total,
+    //             has_next_page: page < totalPages,
+    //             has_prev_page: page > 1,
+    //         },
+    //     };
+    // }
 
     // -------------------------
     // MARK ONE AS READ

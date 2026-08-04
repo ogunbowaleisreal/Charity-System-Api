@@ -166,38 +166,89 @@ export class CampaignService {
         return grouped;
     }
 
+    // async createCampaign(payload: CreateCampaignDTO, userId: string) {
+    //     const user = await Account.findById(userId);
+    //     if (!user) throw new Error("User not found");
+    //     payload.owner = user._id.toString() as string;
+    //     payload.ownerType = user.role;
+    //     payload.firstName = user.firstName;
+    //     payload.lastName = user.lastName;
+    //     payload.userName = user.userName;
+    //     payload.companyName = user.companyName;
+    //     if (payload.startImmediately) payload.startDate = new Date();
+    //     console.log(payload)
+    //     user.noOfCampaigns += 1
+    //     await user.save()
+
+
+    //     const campaign = await Campaign.create({
+    //         ...payload,
+    //         owner: userId,
+    //     });
+
+    //     await NotificationService.createForUser({
+    //         userId: user._id as any,
+    //         title: "Campaign Creation",
+    //         message: `A new campaign '${campaign.title}' has been created`
+    //     })
+    //     await PushNotificationService.sendToUser(user._id as any, {
+    //         title: "Campaign Creation",
+    //         body: "`A new campaign '${campaign.title}' has been created`",
+    //     })
+
+    //     return campaign
+
+    // }
+
     async createCampaign(payload: CreateCampaignDTO, userId: string) {
         const user = await Account.findById(userId);
         if (!user) throw new Error("User not found");
+
         payload.owner = user._id.toString() as string;
         payload.ownerType = user.role;
         payload.firstName = user.firstName;
         payload.lastName = user.lastName;
         payload.userName = user.userName;
         payload.companyName = user.companyName;
-        if (payload.startImmediately) payload.startDate = new Date();
-        console.log(payload)
-        user.noOfCampaigns += 1
-        await user.save()
 
+        if (payload.startImmediately) payload.startDate = new Date();
+
+        user.noOfCampaigns += 1;
+        await user.save();
 
         const campaign = await Campaign.create({
             ...payload,
             owner: userId,
         });
 
-        await NotificationService.createForUser({
-            userId: user._id as any,
-            title: "Campaign Creation",
-            message: `A new campaign '${campaign.title}' has been created`
-        })
-        await PushNotificationService.sendToUser(user._id as any, {
-            title: "Campaign Creation",
-            body: "`A new campaign '${campaign.title}' has been created`",
-        })
+        // Notifications are a side effect — never let a failure here
+        // take down a successfully created campaign.
+        try {
+            // 1. Confirm to the owner (in-app)
+            await NotificationService.createForUser({
+                userId: user._id as any,
+                title: "Campaign Creation",
+                message: `A new campaign '${campaign.title}' has been created`,
+            });
 
-        return campaign
+            // 2. Confirm to the owner (push)
+            await PushNotificationService.sendToUser(user._id as any, {
+                title: "Campaign Creation",
+                body: `A new campaign '${campaign.title}' has been created`,
+            });
 
+            // 3. Let verified users know a new campaign exists to donate to (in-app only, no push)
+            await NotificationService.createBroadcast({
+                title: "New Campaign",
+                message: `${payload.companyName || payload.userName || "Someone"} just launched '${campaign.title}' — check it out`,
+                type: "GENERAL",
+                segment: "verifiedUsers",
+            });
+        } catch (err) {
+            console.error("Failed to send campaign creation notifications:", err);
+        }
+
+        return campaign;
     }
 
     async getFeaturedCampaigns(query: any) {
