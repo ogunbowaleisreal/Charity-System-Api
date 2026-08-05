@@ -295,7 +295,7 @@ export class authService {
             userAgent
         );
 
-        const kyc = await KYC.findOne({ userId: client._id }).select("-_id -__v  -bvn -utilityBill -cacDocument -facialImage");
+        const kyc = await KYC.findOne({ userId: client._id }).select("-_id -__v  -bvn -utilityBill -cacDocument -facialImage -nin -face -address");
         if (!kyc) {
             return this.formatLoginResponse(client, tokens);
         }

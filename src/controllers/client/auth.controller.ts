@@ -8,7 +8,7 @@ import logger from "../../logger";
 import axios from "axios";
 import { sendSuccessResponse, sendErrorResponse } from "../../utils/helpers";
 import { HTTP_STATUS } from "../../utils/constants";
-import { KYCService } from "../../services/client/Kyc.services";
+import { KYCService } from "../../services/kyc.services";
 import { KYC } from "../../models/KYC";
 import { Wallet } from "../../models/Wallet";
 import jwtUtil from "../../utils/jwt";
@@ -105,7 +105,7 @@ export class authController {
             registeredUser.isVerified = true
 
 
-            const kyc = await KYC.create({ userId: registeredUser._id, status: "not_started", level: 0, type: registeredUser.role })
+            const kyc = await kycService.getOrCreateKYC(registeredUser._id.toString())
             const newWallet = await Wallet.create({ userId: registeredUser._id })
             registeredUser.wallet = newWallet._id as any
             await registeredUser.save()

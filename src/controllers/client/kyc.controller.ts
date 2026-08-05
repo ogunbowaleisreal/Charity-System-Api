@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from "express";
-import { KYCService } from "../../services/client/Kyc.services";
+import { Response, NextFunction } from "express";
+import { KYCService } from "../../services/kyc.services";
 import { sendSuccessResponse, sendErrorResponse } from "../../utils/helpers";
 import { HTTP_STATUS } from "../../utils/constants";
 import logger from "../../logger";
@@ -9,76 +9,48 @@ const kycService = new KYCService();
 
 export class KYCController {
 
-    async submitBVN(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
+    /**
+     * One-time submission: NIN slip photo, selfie, address + bill photo,
+     * all sent together. Frontend has already uploaded the images and
+     * just hands us the URLs.
+     */
+    async submitKYC(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
         try {
             const userId = req.user.userId;
-            const { bvn, firstName, lastName, dob } = req.body;
+            const { ninImageUrl, faceImageUrl, address, addressBillImageUrl } = req.body;
 
-            const result = await kycService.submitBVN(userId, { bvn, firstName, lastName, dob });
+            const result = await kycService.submitKYC(userId, {
+                ninImageUrl,
+                faceImageUrl,
+                address,
+                addressBillImageUrl,
+            });
 
-            sendSuccessResponse(res, result, `BVN submitted: verification status: ${result.bvnVerification?.status}`);
+            sendSuccessResponse(res, result, `KYC submitted: status is ${result.status}`);
         } catch (error: any) {
             sendErrorResponse(res, error.message, HTTP_STATUS.BAD_REQUEST);
-        }
-    }
-
-    async submitFace(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
-        try {
-            const userId = req.user.userId;
-            const { imageUrl, livenessImageUrls } = req.body;
-
-            const result = await kycService.submitFace(userId, imageUrl, livenessImageUrls || []);
-
-            sendSuccessResponse(res, result, `Facial verification submitted: verification status is: ${result.faceVerification?.status}`);
-        } catch (error: any) {
-            next(error);
         }
     }
 
     /**
-     * Smile ID webhook — receives async Biometric KYC (face match) results.
-     * Wire this to your SMILE_ID_CALLBACK_URL route, e.g.:
-     *   router.post("/webhooks/smile-id/face", kycController.smileIdFaceWebhook)
-     * No auth middleware here — Smile ID authenticates via signature in the payload,
-     * verified inside kycService.handleFaceWebhook.
+     * Only works when a previous submission was rejected. Same payload
+     * shape as submitKYC.
      */
-    async smileIdFaceWebhook(req: Request, res: Response, next: NextFunction) {
+    async resubmitKYC(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
         try {
-            await kycService.handleFaceWebhook(req.body);
+            const userId = req.user.userId;
+            const { ninImageUrl, faceImageUrl, address, addressBillImageUrl } = req.body;
 
-            // Acknowledge receipt so Smile ID doesn't retry.
-            res.status(HTTP_STATUS.OK).json({ received: true });
+            const result = await kycService.resubmitKYC(userId, {
+                ninImageUrl,
+                faceImageUrl,
+                address,
+                addressBillImageUrl,
+            });
+
+            sendSuccessResponse(res, result, `KYC resubmitted: status is ${result.status}`);
         } catch (error: any) {
-            logger.error("Smile ID face webhook error", error);
-            // Still avoid leaking internals to Smile ID's retry logic;
-            // a 400 tells them the payload/signature was rejected.
             sendErrorResponse(res, error.message, HTTP_STATUS.BAD_REQUEST);
-        }
-    }
-
-    async verifyCac(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
-        try {
-            const userId = req.user.userId;
-            const { cacDocument } = req.body;
-
-            const result = await kycService.uploadCACDocument(userId, cacDocument);
-
-            sendSuccessResponse(res, result, `CAC submitted successfully: verification status is: ${result.documentVerification?.cac?.status}`);
-        } catch (error: any) {
-            next(error);
-        }
-    }
-
-    async submitUtilityBill(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
-        try {
-            const userId = req.user.userId;
-            const { utilityBill } = req.body;
-
-            const result = await kycService.uploadUtilityBill(userId, utilityBill);
-
-            sendSuccessResponse(res, result, `Utility bill submitted: verification status is: ${result.documentVerification?.utility?.status}`);
-        } catch (error: any) {
-            next(error);
         }
     }
 
@@ -90,7 +62,37 @@ export class KYCController {
 
             sendSuccessResponse(res, result, "KYC status fetched");
         } catch (error: any) {
-            next(error);
+            sendErrorResponse(res, error.message, HTTP_STATUS.BAD_REQUEST);
+        }
+    }
+
+
+    async verifyCac(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
+        try {
+            const userId = req.user.userId;
+            const { cacDocument } = req.body;
+
+            const result = await kycService.uploadCACDocument(userId, cacDocument);
+
+            sendSuccessResponse(res, result, `CAC submitted successfully: verification status is: ${result.documentVerification?.cac?.status}`);
+        } catch (error: any) {
+            sendErrorResponse(res, error.message, HTTP_STATUS.BAD_REQUEST);
+
+        }
+    }
+
+    /** Business premises utility bill — organizations only */
+    async submitUtilityBill(req: AuthenticatedClientRequest, res: Response, next: NextFunction) {
+        try {
+            const userId = req.user.userId;
+            const { utilityBill } = req.body;
+
+            const result = await kycService.uploadUtilityDocument(userId, utilityBill);
+
+            sendSuccessResponse(res, result, `Utility bill submitted: verification status is: ${result.documentVerification?.utility?.status}`);
+        } catch (error: any) {
+            sendErrorResponse(res, error.message, HTTP_STATUS.BAD_REQUEST);
+
         }
     }
 }
