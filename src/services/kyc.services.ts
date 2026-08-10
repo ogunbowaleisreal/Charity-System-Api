@@ -518,19 +518,59 @@ export class KYCService {
         kyc.steps.document.cac.submitted = true;
         kyc.steps.document.cac.submittedAt = new Date();
 
-        kyc.documentVerification = {
-            ...kyc.documentVerification,
-            cac: {
-                status: "pending",
-                provider: "manual",
-                extractedData: { source: "upload", url: cacDocumentUrl },
-            },
-        };
+        kyc.set("documentVerification.cac", {
+            status: "pending",
+            provider: "manual",
+            extractedData: { source: "upload", url: cacDocumentUrl },
+        });
 
         this.recomputeOverallStatus(kyc);
         await kyc.save();
         return kyc;
     }
+
+    // async uploadCACDocument(userId: string, cacDocumentUrl: string) {
+    //     const kyc = await this.getOrCreateKYC(userId);
+
+    //     if (kyc.type !== "organization") {
+    //         throw new Error("CAC upload only allowed for organization accounts");
+    //     }
+
+    //     kyc.cacDocument = cacDocumentUrl;
+    //     if (!kyc.steps) kyc.steps = { document: { cac: { submitted: false, verified: false }, utility: { submitted: false, verified: false } } };
+    //     kyc.steps.document.cac.submitted = true;
+    //     kyc.steps.document.cac.submittedAt = new Date();
+
+    //     if (!kyc.documentVerification) kyc.documentVerification = {} as any;
+    //     kyc.documentVerification.cac = {
+    //         status: "pending",
+    //         provider: "manual",
+    //         extractedData: { source: "upload", url: cacDocumentUrl },
+    //     };
+    //     kyc.markModified("documentVerification");
+
+    //     // uploadUtilityDocument
+    //     // if (!kyc.documentVerification) kyc.documentVerification = {} as any;
+    //     // kyc.documentVerification.utility = {
+    //     //     status: "pending",
+    //     //     provider: "manual",
+    //     //     extractedData: { source: "upload", url: utilityBillUrl },
+    //     // };
+    //     // kyc.markModified("documentVerification");
+
+    //     kyc.documentVerification = {
+    //         ...kyc.documentVerification,
+    //         cac: {
+    //             status: "pending",
+    //             provider: "manual",
+    //             extractedData: { source: "upload", url: cacDocumentUrl },
+    //         },
+    //     };
+
+    //     this.recomputeOverallStatus(kyc);
+    //     await kyc.save();
+    //     return kyc;
+    // }
 
     /** Business premises utility bill — organizations only */
     async uploadUtilityDocument(userId: string, utilityBillUrl: string) {
@@ -544,14 +584,20 @@ export class KYCService {
         kyc.steps.document.utility.submitted = true;
         kyc.steps.document.utility.submittedAt = new Date();
 
-        kyc.documentVerification = {
-            ...kyc.documentVerification,
-            utility: {
-                status: "pending",
-                provider: "manual",
-                extractedData: { source: "upload", url: utilityBillUrl },
-            },
-        };
+        kyc.set("documentVerification.utility", {
+            status: "pending",
+            provider: "manual",
+            extractedData: { source: "upload", url: utilityBillUrl },
+        });
+
+        // kyc.documentVerification = {
+        //     ...kyc.documentVerification,
+        //     utility: {
+        //         status: "pending",
+        //         provider: "manual",
+        //         extractedData: { source: "upload", url: utilityBillUrl },
+        //     },
+        // };
 
         this.recomputeOverallStatus(kyc);
         await kyc.save();
