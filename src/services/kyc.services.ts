@@ -349,12 +349,36 @@ export class KYCService {
     // ADMIN: listing / queue
     // =========================================================
 
-    async getPendingKYCs() {
-        return KYC.find({ status: "pending_verification" }).sort({ submittedAt: 1 });
+    async getPendingKYCs(filter: any) {
+        const { page = 1, limit = 20 } = filter
+        const skip = (page - 1) * limit;
+
+        const [kycs, total] = await Promise.all([KYC.find({ status: "pending_verification" })
+            .sort({ submittedAt: 1 })
+            .skip(skip)
+            .limit(Number(limit))
+            .populate("userId", "firstName lastName userName profilePicture companyName"),
+        KYC.countDocuments({ status: "pending_verification" }),
+        ])
+
+
+        const totalPages = Math.ceil(total / limit);
+
+        return {
+            kycs,
+            pagination: {
+                current_page: Number(page),
+                total_pages: totalPages,
+                per_page: Number(limit),
+                total_records: total,
+                has_next_page: page < totalPages,
+                has_prev_page: page > 1,
+            },
+        };
     }
 
     async getKYCByUserId(userId: string) {
-        const kyc = await KYC.findOne({ userId });
+        const kyc = await KYC.findOne({ userId }).populate("userId", "firstName lastName userName profilePicture companyName");
         if (!kyc) throw new Error("KYC not found");
         return kyc;
     }

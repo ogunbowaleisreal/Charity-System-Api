@@ -11,7 +11,7 @@ export class KYCAdminController {
     /** Review queue — everyone sitting in pending_verification, oldest first */
     async getPendingKYCs(req: AdminAuthenticatedRequest, res: Response, next: NextFunction) {
         try {
-            const result = await kycService.getPendingKYCs();
+            const result = await kycService.getPendingKYCs(req.query);
             sendSuccessResponse(res, result, "Pending KYC list fetched");
         } catch (error: any) {
             next(error);
