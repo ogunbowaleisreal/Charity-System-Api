@@ -36,6 +36,34 @@ export const generateOTP = (length: number = 6): string => {
     return otp;
 };
 
+export function isValidPhoneNumber(phone: string): boolean {
+    if (!phone || typeof phone !== "string") return false;
+
+    const trimmed = phone.trim().replace(/[\s-]/g, ""); // strip spaces/dashes
+
+    // international format: +234 followed by 10 digits (no leading 0)
+    const intlRegex = /^\+234[789][01]\d{8}$/;
+
+    // local format: 0 followed by 10 digits (11 digits total)
+    const localRegex = /^0[789][01]\d{8}$/;
+
+    return intlRegex.test(trimmed) || localRegex.test(trimmed);
+}
+
+/**
+ * Normalizes a valid Nigerian number to international E.164 format
+ * (+234XXXXXXXXXX). Call isValidPhoneNumber() first — this doesn't
+ * re-validate, it assumes you already checked.
+ */
+export function normalizePhoneNumber(phone: string): string {
+    const trimmed = phone.trim().replace(/[\s-]/g, "");
+
+    if (trimmed.startsWith("+234")) return trimmed;
+    if (trimmed.startsWith("0")) return `+234${trimmed.slice(1)}`;
+
+    return trimmed;
+}
+
 // utils/validateEmail.ts
 export function isValidEmail(email: string): boolean {
     if (!email || typeof email !== "string") return false;

@@ -13,7 +13,7 @@ import logger from "../../logger";
 import { ServiceFeeConfig } from "../../models/ServiceFee";
 import { logAudit } from "../../services/audit.services";
 import { ActorType, AUDIT_ACTIONS } from "../../types/auditlogs.types";
-import { isValidEmail } from "../../utils/helpers";
+import { isValidEmail, isValidPhoneNumber, normalizePhoneNumber } from "../../utils/helpers";
 
 const safeHaven = new SaveHavenService();
 const flutterwave = new FlutterwaveService();
@@ -46,10 +46,21 @@ export class DonationService {
         donateAnonymously?: boolean
         // paymentMethod: "card" | "bank_transfer";
     }) {
+        if (!data.email && data.donateAnonymously == true) throw new Error("Email is required for anonymous donations")
+        if (!data.phoneNumber && data.donateAnonymously == true) throw new Error("Phone number is required for anonymous donations")
+
         if (!isValidEmail(data.email)) {
             throw new Error("Invalid email address provided");
         }
         data.email = data.email.trim().toLowerCase();
+
+
+        if (data.phoneNumber && !isValidPhoneNumber(data.phoneNumber)) {
+            throw new Error("Invalid phone number provided");
+        }
+        if (data.phoneNumber) {
+            data.phoneNumber = normalizePhoneNumber(data.phoneNumber);
+        }
         const reference = `DON_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`; //crypto.randomUUID();
         const user = await Account.findById(userId) as any
         if (user) {

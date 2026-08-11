@@ -397,6 +397,162 @@ export class ResendEmailService {
 
     }
 
+    // =========================================================
+    // Paste these PRIVATE template methods inside your ResendEmailService class,
+    // alongside getAccountUnsuspendedTemplate(). Same structure/palette —
+    // green for good news, a matching red for rejections.
+    // =========================================================
+
+    private getFieldVerifiedTemplate(fieldLabel: string): string {
+        return `
+  <div style="font-family:Arial,sans-serif;background:#f0fdf4;padding:24px;">
+    <div style="max-width:600px;margin:auto;background:#fff;padding:24px;border-radius:8px;">
+
+      <h2 style="color:#065f46;">Help me Nigeria</h2>
+
+      <h3 style="color:#111827;">${fieldLabel} Verified</h3>
+
+      <p style="color:#374151;">
+        Good news — your ${fieldLabel.toLowerCase()} has been reviewed and verified successfully.
+      </p>
+
+      <div style="text-align:center;margin:30px 0;">
+        <a href="${process.env.CLIENT_URL}/kyc"
+          style="background:#047857;color:white;padding:12px 24px;text-decoration:none;border-radius:4px;">
+          View KYC Status
+        </a>
+      </div>
+
+      <p style="font-size:12px;color:#9ca3af;text-align:center;">
+        © ${new Date().getFullYear()} Help me Nigeria
+      </p>
+    </div>
+  </div>
+  `;
+    }
+
+    private getFieldRejectedTemplate(fieldLabel: string, reason: string): string {
+        return `
+  <div style="font-family:Arial,sans-serif;background:#fef2f2;padding:24px;">
+    <div style="max-width:600px;margin:auto;background:#fff;padding:24px;border-radius:8px;">
+
+      <h2 style="color:#991b1b;">Help me Nigeria</h2>
+
+      <h3 style="color:#111827;">${fieldLabel} Rejected</h3>
+
+      <p style="color:#374151;">
+        Unfortunately, your ${fieldLabel.toLowerCase()} could not be verified.
+      </p>
+
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:12px 16px;margin:16px 0;">
+        <p style="color:#991b1b;margin:0;font-size:14px;"><strong>Reason:</strong> ${reason}</p>
+      </div>
+
+      <p style="color:#374151;">
+        Please resubmit your KYC with a corrected ${fieldLabel.toLowerCase()} as soon as possible.
+      </p>
+
+      <div style="text-align:center;margin:30px 0;">
+        <a href="${process.env.CLIENT_URL}/kyc"
+          style="background:#b91c1c;color:white;padding:12px 24px;text-decoration:none;border-radius:4px;">
+          Resubmit KYC
+        </a>
+      </div>
+
+      <p style="font-size:12px;color:#9ca3af;text-align:center;">
+        © ${new Date().getFullYear()} Help me Nigeria
+      </p>
+    </div>
+  </div>
+  `;
+    }
+
+    private getKYCFullyVerifiedTemplate(): string {
+        return `
+  <div style="font-family:Arial,sans-serif;background:#f0fdf4;padding:24px;">
+    <div style="max-width:600px;margin:auto;background:#fff;padding:24px;border-radius:8px;">
+
+      <h2 style="color:#065f46;">Help me Nigeria</h2>
+
+      <h3 style="color:#111827;">🎉 You're Fully Verified</h3>
+
+      <p style="color:#374151;">
+        All your KYC documents have been reviewed and verified. Your account
+        now has full access to the platform.
+      </p>
+
+      <div style="text-align:center;margin:30px 0;">
+        <a href="${process.env.CLIENT_URL}/dashboard"
+          style="background:#047857;color:white;padding:12px 24px;text-decoration:none;border-radius:4px;">
+          Go to Dashboard
+        </a>
+      </div>
+
+      <p style="font-size:12px;color:#9ca3af;text-align:center;">
+        © ${new Date().getFullYear()} Help me Nigeria
+      </p>
+    </div>
+  </div>
+  `;
+    }
+
+    private getKYCRejectedTemplate(reason: string): string {
+        return `
+  <div style="font-family:Arial,sans-serif;background:#fef2f2;padding:24px;">
+    <div style="max-width:600px;margin:auto;background:#fff;padding:24px;border-radius:8px;">
+
+      <h2 style="color:#991b1b;">Help me Nigeria</h2>
+
+      <h3 style="color:#111827;">KYC Rejected</h3>
+
+      <p style="color:#374151;">
+        Your KYC submission was reviewed and could not be approved.
+      </p>
+
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:12px 16px;margin:16px 0;">
+        <p style="color:#991b1b;margin:0;font-size:14px;"><strong>Reason:</strong> ${reason}</p>
+      </div>
+
+      <div style="text-align:center;margin:30px 0;">
+        <a href="${process.env.CLIENT_URL}/kyc"
+          style="background:#b91c1c;color:white;padding:12px 24px;text-decoration:none;border-radius:4px;">
+          Resubmit KYC
+        </a>
+      </div>
+
+      <p style="font-size:12px;color:#9ca3af;text-align:center;">
+        © ${new Date().getFullYear()} Help me Nigeria
+      </p>
+    </div>
+  </div>
+  `;
+    }
+
+    // =========================================================
+    // Paste these PUBLIC send methods alongside your existing send methods.
+    // They call the private sendEmail() you already have.
+    // =========================================================
+
+    async sendKYCFieldVerifiedEmail(to: string, fieldLabel: string): Promise<void> {
+        const html = this.getFieldVerifiedTemplate(fieldLabel);
+        await this.sendEmail(to, `${fieldLabel} Verified`, html);
+    }
+
+    async sendKYCFieldRejectedEmail(to: string, fieldLabel: string, reason: string): Promise<void> {
+        const html = this.getFieldRejectedTemplate(fieldLabel, reason);
+        await this.sendEmail(to, `${fieldLabel} Rejected — Action Required`, html);
+    }
+
+    async sendKYCFullyVerifiedEmail(to: string): Promise<void> {
+        const html = this.getKYCFullyVerifiedTemplate();
+        await this.sendEmail(to, "🎉 Your KYC is Fully Verified", html);
+    }
+
+    async sendKYCRejectedEmail(to: string, reason: string): Promise<void> {
+        const html = this.getKYCRejectedTemplate(reason);
+        await this.sendEmail(to, "Your KYC Was Rejected", html);
+    }
+
     // ============================
     // 📧 TEMPLATES (GREEN PALETTE)
     // ============================

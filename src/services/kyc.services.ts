@@ -4,8 +4,10 @@ import { Types } from "mongoose";
 import { SmileIDService } from "../services/SmileIdServices";
 import { SmileIdConfig } from "../config/smileid.config";
 import logger from "../logger";
+import { ResendEmailService } from "./ResesndServices";
 
 const smileIdService = new SmileIDService(SmileIdConfig);
+const resendEmailService = new ResendEmailService();
 
 // =========================================================
 // NOTE: BVN verification (Smile ID) is on hold for now.
@@ -25,6 +27,19 @@ export interface SubmitKYCPayload {
 type ReviewDecision = "verified" | "failed";
 type ReviewableFieldName = "nin" | "face" | "address";
 type OrgDocumentType = "cac" | "utility";
+
+const FIELD_LABELS: Record<ReviewableFieldName, string> = {
+    nin: "NIN",
+    face: "Facial Verification",
+    address: "Proof of Address",
+};
+
+// If you also review org documents (cac/utility) through a similar method,
+// this covers those labels too — see note below.
+const ORG_DOCUMENT_LABELS: Record<OrgDocumentType, string> = {
+    cac: "CAC Document",
+    utility: "Utility Bill",
+};
 
 export class KYCService {
 
@@ -249,6 +264,36 @@ export class KYCService {
      * Generic per-field reviewer. Use the nin/face/address wrappers below
      * for clearer call sites, they all funnel through here.
      */
+    // async reviewField(
+    //     userId: string,
+    //     field: ReviewableFieldName,
+    //     decision: ReviewDecision,
+    //     adminId: string,
+    //     rejectionReason?: string
+    // ) {
+    //     const kyc = await KYC.findOne({ userId });
+    //     if (!kyc) throw new Error("KYC not found");
+
+    //     const current = (kyc as any)[field];
+    //     if (!current || current.status === "not_submitted") {
+    //         throw new Error(`${field} has not been submitted yet`);
+    //     }
+
+    //     if (decision === "failed" && !rejectionReason) {
+    //         throw new Error("rejectionReason is required when failing a field");
+    //     }
+
+    //     current.status = decision;
+    //     current.reviewedAt = new Date();
+    //     current.reviewedBy = new Types.ObjectId(adminId);
+    //     current.rejectionReason = decision === "failed" ? rejectionReason : undefined;
+
+    //     this.recomputeOverallStatus(kyc);
+    //     await kyc.save();
+
+    //     return kyc;
+    // }
+
     async reviewField(
         userId: string,
         field: ReviewableFieldName,
@@ -273,10 +318,50 @@ export class KYCService {
         current.reviewedBy = new Types.ObjectId(adminId);
         current.rejectionReason = decision === "failed" ? rejectionReason : undefined;
 
+        const previousOverallStatus = kyc.status;
         this.recomputeOverallStatus(kyc);
         await kyc.save();
 
+        await this.notifyFieldReview(kyc, field, decision, rejectionReason, previousOverallStatus);
+
         return kyc;
+    }
+
+    private async notifyFieldReview(
+        kyc: any,
+        field: ReviewableFieldName,
+        decision: ReviewDecision,
+        rejectionReason: string | undefined,
+        previousOverallStatus: string
+    ) {
+        const user = await Account.findById(kyc.userId).select("email");
+        if (!user?.email) return;
+
+        const fieldLabel = FIELD_LABELS[field];
+
+        try {
+            if (decision === "verified") {
+                await resendEmailService.sendKYCFieldVerifiedEmail(user.email, fieldLabel);
+            } else {
+                // decision === "failed"
+                await resendEmailService.sendKYCFieldRejectedEmail(
+                    user.email,
+                    fieldLabel,
+                    rejectionReason!
+                );
+            }
+
+            if (previousOverallStatus !== "verified" && kyc.overallStatus === "verified") {
+                await resendEmailService.sendKYCFullyVerifiedEmail(user.email);
+            } else if (previousOverallStatus !== "rejected" && kyc.overallStatus === "rejected") {
+                await resendEmailService.sendKYCRejectedEmail(
+                    user.email,
+                    rejectionReason ?? "One or more documents did not meet verification requirements."
+                );
+            }
+        } catch (err) {
+            console.error(`Failed to send KYC review email to ${user.email}:`, err);
+        }
     }
 
     async reviewNIN(userId: string, decision: ReviewDecision, adminId: string, rejectionReason?: string) {

@@ -16,6 +16,7 @@ import { ServiceFeeService } from "../servicefee.services";
 import { startSession } from "mongoose";
 import { logAudit } from "../audit.services";
 import { AUDIT_ACTIONS, ActorType } from "../../types/auditlogs.types";
+import { ServiceCharge } from "../../models/ServiceCharges";
 
 const flutterwave = new FlutterwaveService();
 const serviceFeeService = new ServiceFeeService();
@@ -459,6 +460,19 @@ export class webhookServices {
                                     transactionReference: transaction.reference,
                                     campaign: transaction.campaignId,
                                     //purposeTitle: transaction.metadata?.purposeTitle,
+                                    currency: "NGN",
+                                }], { session });
+                            }
+
+                            if (donationCalc.fee > 0) {
+                                await ServiceCharge.create([{
+                                    amount: donationCalc.fee,
+                                    feeType,
+                                    feeValue,
+                                    userId: transaction.userId,
+                                    fullName: transaction.fullName,
+                                    transactionReference: transaction.reference,
+                                    campaign: transaction.campaignId,
                                     currency: "NGN",
                                 }], { session });
                             }

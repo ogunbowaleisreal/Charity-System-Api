@@ -37,7 +37,7 @@ const GratuitySchema = new Schema<IGratuity>(
 
         userId: {
             type: Schema.Types.ObjectId,
-            ref: "User",
+            ref: "Account",
         },
 
         transactionReference: {
