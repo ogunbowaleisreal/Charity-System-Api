@@ -429,6 +429,9 @@ export class webhookServices {
                                 feeType,
                                 feeValue
                             );
+                            transaction.netAmount = donationCalc.netAmount;
+                            await transaction.save({ session });
+
 
                             const donation = await Donation.create([{
                                 campaign: transaction.campaignId,

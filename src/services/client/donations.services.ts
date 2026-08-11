@@ -93,7 +93,7 @@ export class DonationService {
             campaignId: campaign._id,
             provider: "flutterwave",
             phoneNumber: data.phoneNumber,
-            netAmount: amountData.donationAmount,
+            // netAmount: amountData.donationAmount,
             grossAmount: amountData.totalAmount,
             reference: reference,
             isAnonymous: data.donateAnonymously,
