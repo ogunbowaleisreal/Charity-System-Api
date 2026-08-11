@@ -175,6 +175,13 @@ export const ADMIN_PERMISSIONS = {
         DECLINE: "accounts.decline",
     },
 
+    BLOG: {
+        VIEW: "blog.view",
+        CREATE: "blog.create",
+        UPDATE: "blog.update",
+        DELETE: "blog.delete"
+    },
+
     CAMPAIGNS: {
         VIEW: "campaign.view",
         CREATE: "campaign.create",

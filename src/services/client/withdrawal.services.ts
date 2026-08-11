@@ -18,9 +18,11 @@ import bcryptUtil from "../../utils/bcryptutils";
 import { NotificationService } from "../notification.Services";
 import { logAudit } from "../audit.services";
 import { AUDIT_ACTIONS, ActorType } from "../../types/auditlogs.types";
+import { KYCService } from "../kyc.services";
 const flutterwave = new FlutterwaveService();
 const otpService = new OTPService();
 const emailService = new ResendEmailService()
+const kycService = new KYCService();
 
 export class WithdrawalService {
     async withdrawFundsToWallet(
@@ -344,7 +346,9 @@ export class WithdrawalService {
         console.log(userId)
         const user = await Account.findById(userId)
         if (!user) throw new Error("Account not found")
-
+        const kyc = await kycService.getKYCByUserId(userId)
+        if (!kyc) throw new Error("KYC not found")
+        if (kyc.status !== "verified") throw new Error("KYC not approved, Plss complete KYC first")
         if (user.twoFactorWithdrawalEnabled) {
             await otpService.generateAndSendOTP(user.email, "2fa")
             return { message: "Otp sent to email to confirm withdrawal", status: 201 }

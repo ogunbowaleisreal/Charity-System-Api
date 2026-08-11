@@ -36,6 +36,33 @@ export const generateOTP = (length: number = 6): string => {
     return otp;
 };
 
+// utils/validateEmail.ts
+export function isValidEmail(email: string): boolean {
+    if (!email || typeof email !== "string") return false;
+
+    const trimmed = email.trim();
+
+    // basic length sanity (RFC 5321 limits)
+    if (trimmed.length === 0 || trimmed.length > 254) return false;
+
+    const [localPart, domainPart] = trimmed.split("@");
+    if (!localPart || !domainPart) return false;
+    if (localPart.length > 64) return false;
+
+    // no consecutive dots, no leading/trailing dot in local part
+    if (/\.\./.test(trimmed)) return false;
+    if (localPart.startsWith(".") || localPart.endsWith(".")) return false;
+
+    // domain must have at least one dot and a valid TLD length
+    if (!/^[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$/.test(domainPart)) return false;
+
+    // reasonably strict RFC 5322-inspired pattern
+    const emailRegex =
+        /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
+    return emailRegex.test(trimmed);
+}
+
 export const generateRandomString = (length: number = 32): string => {
     return crypto.randomBytes(length).toString("hex");
 };

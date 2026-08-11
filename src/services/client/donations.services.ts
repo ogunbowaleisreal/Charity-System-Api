@@ -13,6 +13,7 @@ import logger from "../../logger";
 import { ServiceFeeConfig } from "../../models/ServiceFee";
 import { logAudit } from "../../services/audit.services";
 import { ActorType, AUDIT_ACTIONS } from "../../types/auditlogs.types";
+import { isValidEmail } from "../../utils/helpers";
 
 const safeHaven = new SaveHavenService();
 const flutterwave = new FlutterwaveService();
@@ -45,12 +46,14 @@ export class DonationService {
         donateAnonymously?: boolean
         // paymentMethod: "card" | "bank_transfer";
     }) {
-        //const reference = `don_${Date.now()}`;
+        if (!isValidEmail(data.email)) {
+            throw new Error("Invalid email address provided");
+        }
+        data.email = data.email.trim().toLowerCase();
         const reference = `DON_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`; //crypto.randomUUID();
         const user = await Account.findById(userId) as any
         if (user) {
             logger.info("User found, Creating donation for registered user", { email: data.email });
-            // throw new AppError("User not found, Creating donation for guest user", 400);
             data.firstname = user.firstName;
             data.lastname = user.lastName;
         }
@@ -293,28 +296,6 @@ export class DonationService {
         });
     }
 
-    // async getUserDonations(userId: string, query: donationFilter) {
-    //     const { page, limit } = query
-    //     const donations = await Donation.find({ donor: userId, type: "user" })
-    //     .populate("donor", "firstName lastName profilePicture logo country state")
-    //     .populate("campaign", "title image description")
-    //     .sort({ createdAt: -1 })
-    //     .skip((page - 1) * limit)
-    //     .limit(limit)
-    //     const total = await Donation.countDocuments({ donor: userId, type: "user" });
-    //     const totalPages = Math.ceil(total / limit);
-    //     return {
-    //         donations, pagination: {
-    //             current_page: page,
-    //             total_pages: totalPages,
-    //             per_page: limit,
-    //             total_records: total,
-    //             has_next_page: page < totalPages,
-    //             has_prev_page: page > 1
-    //         }
-    //     };
-    // }
-
     async getUserDonations(userId: string, query: donationFilter) {
         const { page, limit } = query;
 
@@ -503,32 +484,6 @@ export class DonationService {
         // 2. UPDATE WALLET
         userWallet.availableBalance += amount;
         await userWallet.save();
-
-        // try {
-        //     // 2. INITIATE TRANSFER
-        //     const res = await safeHaven.initiateTransfer({
-        //         amount,
-        //         account_number: campaign.payoutAccount.accountNumber,
-        //         bank_code: campaign.payoutAccount.bankCode,
-        //         narration,
-        //         reference: `wd_${Date.now()}`,
-        //     });
-
-        //     // 3. FINALIZE
-        //     campaign.frozenBalance -= amount;
-        //     campaign.totalWithdrawn += amount;
-
-        //     await campaign.save();
-
-        //     return res;
-        // } catch (error) {
-        //     // 4. ROLLBACK
-        //     campaign.availableBalance += amount;
-        //     campaign.frozenBalance -= amount;
-
-        //     await campaign.save();
-        //     throw error;
-        // }
     }
 
 
@@ -607,36 +562,6 @@ export class DonationService {
             },
         });
         await newTransaction.save();
-
-
-
-
-
-        // try {
-        //     // 2. INITIATE TRANSFER
-        //     const res = await safeHaven.initiateTransfer({
-        //         amount,
-        //         account_number: accountNumber,
-        //         bank_code: bankCode,
-        //         narration,
-        //         reference: `wd_${Date.now()}`,
-        //     });
-
-        //     // 3. FINALIZE
-        //     wallet.frozenBalance -= amount;
-        //     wallet.totalWithdrawn += amount;
-
-        //     await wallet.save();
-
-        //     return res;
-        // } catch (error) {
-        //     // 4. ROLLBACK
-        //     wallet.availableBalance += amount;
-        //     wallet.frozenBalance -= amount;
-
-        //     await wallet.save();
-        //     throw error;
-        // }
     }
 
     // =========================
@@ -658,272 +583,3 @@ export class DonationService {
         }
     }
 }
-// import { Types, startSession } from "mongoose";
-// import crypto from "crypto";
-// import { Donation } from "../../models/Donations";
-// import Campaign from "../../models/Campaign";
-// import logger from "../../logger";
-
-// export class DonationService {
-//     // =========================================
-//     // 🔹 CREATE DONATION (INIT PAYMENT)
-//     // =========================================
-//     async createDonation(data: any, userId?: Types.ObjectId | null) {
-//         const session = await startSession();
-//         session.startTransaction();
-
-//         try {
-//             const {
-//                 campaignId,
-//                 amount,
-//                 paymentMethod,
-//                 donorName,
-//                 isAnonymous,
-//             } = data;
-
-//             // =============================
-//             // VALIDATION
-//             // =============================
-//             const campaign = await Campaign.findById(campaignId).session(session);
-//             if (!campaign || campaign.isDeleted) {
-//                 throw new Error("Campaign not found");
-//             }
-
-//             if (!campaign.isActive) {
-//                 throw new Error("Campaign is not active");
-//             }
-
-//             // =============================
-//             // IDEMPOTENCY KEY
-//             // =============================
-//             const idempotencyKey = crypto
-//                 .createHash("sha256")
-//                 .update(`${userId || "anon"}-${campaignId}-${amount}-${Date.now()}`)
-//                 .digest("hex");
-
-//             // =============================
-//             // CREATE DONATION RECORD
-//             // =============================
-//             const donation = await Donation.create(
-//                 [
-//                     {
-//                         campaign: campaignId,
-//                         donor: userId || null,
-//                         donorName,
-//                         amount,
-//                         currency: "NGN",
-
-//                         paymentProvider: "safe haven",
-//                         transactionRef: `TX-${Date.now()}`,
-//                         paymentStatus: "pending",
-
-//                         isAnonymous: isAnonymous || false,
-
-//                         idempotencyKey,
-
-//                         paymentStatusExtended: "initialized",
-//                         settlementStatus: "unsettled",
-//                         allocationStatus: "unallocated",
-
-//                         paymentMethod,
-//                     },
-//                 ],
-//                 { session }
-//             );
-
-//             // =============================
-//             // 🔴 CALL PAYMENT PROVIDER
-//             // (MOCK / SAFEHAVEN INTEGRATION POINT)
-//             // =============================
-//             const paymentLink = `https://payment-link/${donation[0].transactionRef}`;
-
-//             await session.commitTransaction();
-
-//             return {
-//                 donation: donation[0],
-//                 paymentLink,
-//             };
-//         } catch (error) {
-//             await session.abortTransaction();
-//             throw error;
-//         } finally {
-//             session.endSession();
-//         }
-//     }
-
-//     // =========================================
-//     // 🔹 VERIFY DONATION (MANUAL / FRONTEND)
-//     // =========================================
-//     async verifyDonation(transactionRef: string) {
-//         const session = await startSession();
-//         session.startTransaction();
-
-//         try {
-//             const donation = await Donation.findOne({
-//                 transactionRef,
-//             }).session(session);
-
-//             if (!donation) throw new Error("Donation not found");
-
-//             // =============================
-//             // IDEMPOTENCY CHECK
-//             // =============================
-//             if (donation.paymentStatus === "success") {
-//                 return donation;
-//             }
-
-//             // =============================
-//             // 🔴 SIMULATE PROVIDER VERIFY
-//             // =============================
-//             const paymentSuccessful = true;
-
-//             if (!paymentSuccessful) {
-//                 donation.paymentStatus = "failed";
-//                 donation.paymentStatusExtended = "failed";
-//                 await donation.save({ session });
-
-//                 await session.commitTransaction();
-//                 return donation;
-//             }
-
-//             // =============================
-//             // UPDATE DONATION
-//             // =============================
-//             donation.paymentStatus = "success";
-//             donation.paymentStatusExtended = "success";
-//             donation.paidAt = new Date();
-
-//             // =============================
-//             // UPDATE CAMPAIGN LEDGER
-//             // =============================
-//             const campaign = await Campaign.findById(donation.campaign).session(session);
-
-//             if (!campaign) throw new Error("Campaign not found");
-
-//             campaign.totalRaised += donation.amount;
-//             campaign.availableBalance += donation.amount;
-//             campaign.donationCount += 1;
-
-//             donation.allocationStatus = "allocated_to_campaign";
-//             donation.allocatedAt = new Date();
-
-//             await donation.save({ session });
-//             await campaign.save({ session });
-
-//             await session.commitTransaction();
-
-//             return donation;
-//         } catch (error) {
-//             await session.abortTransaction();
-//             throw error;
-//         } finally {
-//             session.endSession();
-//         }
-//     }
-
-//     // =========================================
-//     // 🔹 GET SINGLE DONATION
-//     // =========================================
-//     async getDonationById(donationId: string) {
-//         const donation = await Donation.findById(donationId)
-//             .populate("campaign")
-//             .populate("donor");
-
-//         if (!donation) throw new Error("Donation not found");
-
-//         return donation;
-//     }
-
-//     // =========================================
-//     // 🔹 USER DONATIONS
-//     // =========================================
-//     async getUserDonations(userId: Types.ObjectId, query: any) {
-//         const { page = 1, limit = 10 } = query;
-
-//         const donations = await Donation.find({ donor: userId })
-//             .skip((page - 1) * limit)
-//             .limit(limit)
-//             .sort({ createdAt: -1 });
-
-//         return donations;
-//     }
-
-//     // =========================================
-//     // 🔹 CAMPAIGN DONATIONS
-//     // =========================================
-//     async getCampaignDonations(campaignId: string, query: any) {
-//         const { page = 1, limit = 10 } = query;
-
-//         const donations = await Donation.find({ campaign: campaignId })
-//             .skip((page - 1) * limit)
-//             .limit(limit)
-//             .sort({ createdAt: -1 });
-
-//         return donations;
-//     }
-
-//     // =========================================
-//     // 🔹 HANDLE WEBHOOK (CRITICAL)
-//     // =========================================
-//     async handleWebhook(payload: any) {
-//         const session = await startSession();
-//         session.startTransaction();
-
-//         try {
-//             const { transactionRef, status } = payload;
-
-//             const donation = await Donation.findOne({
-//                 transactionRef,
-//             }).session(session);
-
-//             if (!donation) throw new Error("Donation not found");
-
-//             // =============================
-//             // IDEMPOTENCY
-//             // =============================
-//             if (donation.paymentStatus === "success") {
-//                 await session.commitTransaction();
-//                 return donation;
-//             }
-
-//             if (status !== "success") {
-//                 donation.paymentStatus = "failed";
-//                 donation.paymentStatusExtended = "failed";
-//                 await donation.save({ session });
-
-//                 await session.commitTransaction();
-//                 return donation;
-//             }
-
-//             // =============================
-//             // SUCCESS FLOW
-//             // =============================
-//             donation.paymentStatus = "success";
-//             donation.paymentStatusExtended = "success";
-//             donation.paidAt = new Date();
-
-//             const campaign = await Campaign.findById(donation.campaign).session(session);
-
-//             if (!campaign) throw new Error("Campaign not found");
-
-//             campaign.totalRaised += donation.amount;
-//             campaign.availableBalance += donation.amount;
-//             campaign.donationCount += 1;
-
-//             donation.allocationStatus = "allocated_to_campaign";
-//             donation.allocatedAt = new Date();
-
-//             await donation.save({ session });
-//             await campaign.save({ session });
-
-//             await session.commitTransaction();
-
-//             return donation;
-//         } catch (error) {
-//             await session.abortTransaction();
-//             throw error;
-//         } finally {
-//             session.endSession();
-//         }
-//     }
-// }

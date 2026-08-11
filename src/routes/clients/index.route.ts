@@ -23,12 +23,14 @@ import withdrawalRoutes from "./withdrawal.routes"
 import bannerRoutes from "./banner.routes"
 import bankRoutes from "./bank.routes"
 import subscriberRoutes from "./subscriber.routes"
+import blogRoutes from "./Blog.routes"
 const router = Router();
 
 router.use('/oauth', oauthRoutes)
 router.use('/auth', authRoutes)
 router.use('/banks', bankRoutes)
 router.use('/profile', profileRoutes)
+router.use('/blogs', blogRoutes)
 //router.use('/subscription', subscriptionRoutes)
 router.use('/account', accountRoutes)
 router.use("/bank-details", bankDetailsRoutes)
