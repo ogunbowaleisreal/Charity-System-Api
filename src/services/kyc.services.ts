@@ -9,19 +9,11 @@ import { ResendEmailService } from "./ResesndServices";
 const smileIdService = new SmileIDService(SmileIdConfig);
 const resendEmailService = new ResendEmailService();
 
-// =========================================================
-// NOTE: BVN verification (Smile ID) is on hold for now.
-// The individual KYC path below is fully manual: NIN slip photo,
-// selfie, and address+bill are collected together in one submission
-// and reviewed by an admin. Organization/CAC flow is untouched and
-// still goes through Smile ID business verification.
-// =========================================================
-
 export interface SubmitKYCPayload {
-    ninImageUrl: string;
-    faceImageUrl: string;
-    address: string;
-    addressBillImageUrl: string;
+    ninImageUrl?: string;
+    faceImageUrl?: string;
+    address?: string;
+    addressBillImageUrl?: string;
 }
 
 type ReviewDecision = "verified" | "failed";
@@ -60,16 +52,6 @@ export class KYCService {
         return kyc;
     }
 
-    /**
-     * Recomputes the overall kyc.status/level. Call this after any
-     * submission or admin review, for either individual or org flows.
-     *
-     * Rules (same for both branches):
-     * - any relevant field "failed"       -> rejected
-     * - all relevant fields "verified"    -> verified
-     * - anything submitted, none failed   -> pending_verification
-     * - nothing submitted                 -> not_started
-     */
     private recomputeOverallStatus(kyc: any) {
         if (kyc.type === "organization") {
             this.recomputeOrgStatus(kyc);
@@ -87,7 +69,8 @@ export class KYCService {
 
         const anyFailed = statuses.includes("failed");
         const allVerified = statuses.every((s) => s === "verified");
-        const anySubmittedOrBeyond = statuses.some((s) => s !== "not_submitted");
+        const allSubmitted = statuses.every((s) => s !== "not_submitted");
+        const anySubmitted = statuses.some((s) => s !== "not_submitted");
 
         if (anyFailed) {
             kyc.status = "rejected";
@@ -109,9 +92,18 @@ export class KYCService {
             return;
         }
 
-        if (anySubmittedOrBeyond) {
+        // Only surface to admins once EVERY required field is in.
+        if (allSubmitted) {
             kyc.status = "pending_verification";
             kyc.level = 1;
+            kyc.submittedAt = kyc.submittedAt || new Date();
+            return;
+        }
+
+        // Some fields submitted, but not all — not admin-visible yet.
+        if (anySubmitted) {
+            kyc.status = "in_progress";
+            kyc.level = 0;
             return;
         }
 
@@ -119,10 +111,6 @@ export class KYCService {
         kyc.level = 0;
     }
 
-    /**
-     * Org KYC = CAC + utility bill (business premises proof). Both are
-     * expected once submission starts, same aggregate rule as individuals.
-     */
     private recomputeOrgStatus(kyc: any) {
         const cacStatus = kyc.documentVerification?.cac?.status || "not_submitted";
         const utilityStatus = kyc.documentVerification?.utility?.status || "not_submitted";
@@ -131,7 +119,8 @@ export class KYCService {
 
         const anyFailed = statuses.includes("failed");
         const allVerified = statuses.every((s: string) => s === "verified");
-        const anySubmittedOrBeyond = statuses.some((s: string) => s !== "not_submitted");
+        const allSubmitted = statuses.every((s: string) => s !== "not_submitted");
+        const anySubmitted = statuses.some((s: string) => s !== "not_submitted");
 
         if (anyFailed) {
             kyc.status = "rejected";
@@ -156,9 +145,18 @@ export class KYCService {
             return;
         }
 
-        if (anySubmittedOrBeyond) {
+        // Only surface to admins once BOTH documents are in.
+        if (allSubmitted) {
             kyc.status = "pending_verification";
             kyc.level = 1;
+            kyc.submittedAt = kyc.submittedAt || new Date();
+            return;
+        }
+
+        // Only one of the two submitted so far — not admin-visible yet.
+        if (anySubmitted) {
+            kyc.status = "in_progress";
+            kyc.level = 0;
             return;
         }
 
@@ -166,14 +164,6 @@ export class KYCService {
         kyc.level = 0;
     }
 
-    // =========================================================
-    // USER-FACING: single one-time submission
-    // =========================================================
-
-    /**
-     * Submits NIN, face, and address+bill all at once. This is a one-time
-     * action — call again only via resubmitKYC() if the KYC was rejected.
-     */
     async submitKYC(userId: string, payload: SubmitKYCPayload) {
         const kyc = await this.getOrCreateKYC(userId);
 
@@ -187,26 +177,30 @@ export class KYCService {
 
         const now = new Date();
 
-        kyc.nin = {
-            imageUrl: payload.ninImageUrl,
-            status: "pending",
-            submittedAt: now,
-        };
+        if (payload.ninImageUrl) {
+            kyc.nin = {
+                imageUrl: payload.ninImageUrl,
+                status: "pending",
+                submittedAt: now,
+            };
+        }
 
-        kyc.face = {
-            imageUrl: payload.faceImageUrl,
-            status: "pending",
-            submittedAt: now,
-        };
+        if (payload.faceImageUrl) {
+            kyc.face = {
+                imageUrl: payload.faceImageUrl,
+                status: "pending",
+                submittedAt: now,
+            };
+        }
 
-        kyc.address = {
-            address: payload.address,
-            billImageUrl: payload.addressBillImageUrl,
-            status: "pending",
-            submittedAt: now,
-        };
-
-        kyc.submittedAt = now;
+        if (payload.address && payload.addressBillImageUrl) {
+            kyc.address = {
+                address: payload.address,
+                billImageUrl: payload.addressBillImageUrl,
+                status: "pending",
+                submittedAt: now,
+            };
+        }
 
         this.recomputeOverallStatus(kyc);
         await kyc.save();
@@ -214,11 +208,6 @@ export class KYCService {
         return kyc;
     }
 
-    /**
-     * Only usable when a previous submission was rejected. Resets all
-     * three fields back to pending with fresh data, clears prior
-     * rejection reasons.
-     */
     async resubmitKYC(userId: string, payload: SubmitKYCPayload) {
         const kyc = await this.getOrCreateKYC(userId);
 
@@ -228,32 +217,106 @@ export class KYCService {
 
         const now = new Date();
 
-        kyc.nin = {
-            imageUrl: payload.ninImageUrl,
-            status: "pending",
-            submittedAt: now,
-        };
+        if (payload.ninImageUrl) {
+            kyc.nin = {
+                imageUrl: payload.ninImageUrl,
+                status: "pending",
+                submittedAt: now,
+            };
+        }
 
-        kyc.face = {
-            imageUrl: payload.faceImageUrl,
-            status: "pending",
-            submittedAt: now,
-        };
+        if (payload.faceImageUrl) {
+            kyc.face = {
+                imageUrl: payload.faceImageUrl,
+                status: "pending",
+                submittedAt: now,
+            };
+        }
 
-        kyc.address = {
-            address: payload.address,
-            billImageUrl: payload.addressBillImageUrl,
-            status: "pending",
-            submittedAt: now,
-        };
+        if (payload.address && payload.addressBillImageUrl) {
+            kyc.address = {
+                address: payload.address,
+                billImageUrl: payload.addressBillImageUrl,
+                status: "pending",
+                submittedAt: now,
+            };
+        }
 
-        kyc.submittedAt = now;
         kyc.rejectionReason = undefined;
 
         this.recomputeOverallStatus(kyc);
         await kyc.save();
 
         return kyc;
+    }
+
+
+
+    private buildFieldPayload(field: ReviewableFieldName, payload: SubmitKYCPayload) {
+        const now = new Date();
+
+        if (field === "nin") {
+            if (!payload.ninImageUrl) throw new Error("ninImageUrl is required");
+            return { imageUrl: payload.ninImageUrl, status: "pending" as FieldStatus, submittedAt: now };
+        }
+
+        if (field === "face") {
+            if (!payload.faceImageUrl) throw new Error("faceImageUrl is required");
+            return { imageUrl: payload.faceImageUrl, status: "pending" as FieldStatus, submittedAt: now };
+        }
+
+        // address
+        if (!payload.address || !payload.addressBillImageUrl) {
+            throw new Error("address and addressBillImageUrl are both required");
+        }
+        return {
+            address: payload.address,
+            billImageUrl: payload.addressBillImageUrl,
+            status: "pending" as FieldStatus,
+            submittedAt: now,
+        };
+    }
+
+    /**
+     * Submit or update a single field. Can be called independently at any
+     * time — users don't need all three ready at once. Overall status only
+     * becomes "pending_verification" once nin, face, AND address have all
+     * been submitted; until then it sits at "in_progress".
+     */
+    async submitField(userId: string, field: ReviewableFieldName, payload: SubmitKYCPayload) {
+        const kyc = await this.getOrCreateKYC(userId);
+
+        if (kyc.status === "verified") {
+            throw new Error("KYC has already been verified");
+        }
+
+        if (kyc.status === "pending_verification") {
+            throw new Error("KYC has already been fully submitted and is awaiting review");
+        }
+
+        const current = (kyc as any)[field];
+        if (current?.status === "verified") {
+            throw new Error(`${field} has already been verified`);
+        }
+
+        (kyc as any)[field] = this.buildFieldPayload(field, payload);
+
+        this.recomputeOverallStatus(kyc);
+        await kyc.save();
+
+        return kyc;
+    }
+
+    async submitNIN(userId: string, payload: Pick<SubmitKYCPayload, "ninImageUrl">) {
+        return this.submitField(userId, "nin", payload);
+    }
+
+    async submitFace(userId: string, payload: Pick<SubmitKYCPayload, "faceImageUrl">) {
+        return this.submitField(userId, "face", payload);
+    }
+
+    async submitAddress(userId: string, payload: Pick<SubmitKYCPayload, "address" | "addressBillImageUrl">) {
+        return this.submitField(userId, "address", payload);
     }
 
     // =========================================================
@@ -264,36 +327,6 @@ export class KYCService {
      * Generic per-field reviewer. Use the nin/face/address wrappers below
      * for clearer call sites, they all funnel through here.
      */
-    // async reviewField(
-    //     userId: string,
-    //     field: ReviewableFieldName,
-    //     decision: ReviewDecision,
-    //     adminId: string,
-    //     rejectionReason?: string
-    // ) {
-    //     const kyc = await KYC.findOne({ userId });
-    //     if (!kyc) throw new Error("KYC not found");
-
-    //     const current = (kyc as any)[field];
-    //     if (!current || current.status === "not_submitted") {
-    //         throw new Error(`${field} has not been submitted yet`);
-    //     }
-
-    //     if (decision === "failed" && !rejectionReason) {
-    //         throw new Error("rejectionReason is required when failing a field");
-    //     }
-
-    //     current.status = decision;
-    //     current.reviewedAt = new Date();
-    //     current.reviewedBy = new Types.ObjectId(adminId);
-    //     current.rejectionReason = decision === "failed" ? rejectionReason : undefined;
-
-    //     this.recomputeOverallStatus(kyc);
-    //     await kyc.save();
-
-    //     return kyc;
-    // }
-
     async reviewField(
         userId: string,
         field: ReviewableFieldName,
@@ -351,9 +384,9 @@ export class KYCService {
                 );
             }
 
-            if (previousOverallStatus !== "verified" && kyc.overallStatus === "verified") {
+            if (previousOverallStatus !== "verified" && kyc.status === "verified") {
                 await resendEmailService.sendKYCFullyVerifiedEmail(user.email);
-            } else if (previousOverallStatus !== "rejected" && kyc.overallStatus === "rejected") {
+            } else if (previousOverallStatus !== "rejected" && kyc.status === "rejected") {
                 await resendEmailService.sendKYCRejectedEmail(
                     user.email,
                     rejectionReason ?? "One or more documents did not meet verification requirements."
@@ -491,6 +524,14 @@ export class KYCService {
         let nextAction: string;
         if (kyc.status === "not_started") {
             nextAction = "Submit your NIN, selfie, and address for verification";
+        } else if (kyc.status === "in_progress") {
+            const missing: string[] = [];
+            if (ninStatus === "not_submitted") missing.push("NIN");
+            if (faceStatus === "not_submitted") missing.push("selfie");
+            if (addressStatus === "not_submitted") missing.push("address");
+            nextAction = missing.length
+                ? `Still need: ${missing.join(", ")}`
+                : "Your KYC is in progress";
         } else if (kyc.status === "rejected") {
             nextAction = "Resubmit your KYC — " + (kyc.rejectionReason || "one or more items were rejected");
         } else if (kyc.status === "verified") {
@@ -539,7 +580,7 @@ export class KYCService {
     }
 
     // =========================================================
-    // ORGANIZATION / CAC — UNTOUCHED, still Smile ID powered
+    // ORGANIZATION / CAC — still Smile ID powered
     // =========================================================
 
     async submitCAC(userId: string, cacDocument: string, companyType: string, rcNumber: string) {
@@ -614,49 +655,6 @@ export class KYCService {
         return kyc;
     }
 
-    // async uploadCACDocument(userId: string, cacDocumentUrl: string) {
-    //     const kyc = await this.getOrCreateKYC(userId);
-
-    //     if (kyc.type !== "organization") {
-    //         throw new Error("CAC upload only allowed for organization accounts");
-    //     }
-
-    //     kyc.cacDocument = cacDocumentUrl;
-    //     if (!kyc.steps) kyc.steps = { document: { cac: { submitted: false, verified: false }, utility: { submitted: false, verified: false } } };
-    //     kyc.steps.document.cac.submitted = true;
-    //     kyc.steps.document.cac.submittedAt = new Date();
-
-    //     if (!kyc.documentVerification) kyc.documentVerification = {} as any;
-    //     kyc.documentVerification.cac = {
-    //         status: "pending",
-    //         provider: "manual",
-    //         extractedData: { source: "upload", url: cacDocumentUrl },
-    //     };
-    //     kyc.markModified("documentVerification");
-
-    //     // uploadUtilityDocument
-    //     // if (!kyc.documentVerification) kyc.documentVerification = {} as any;
-    //     // kyc.documentVerification.utility = {
-    //     //     status: "pending",
-    //     //     provider: "manual",
-    //     //     extractedData: { source: "upload", url: utilityBillUrl },
-    //     // };
-    //     // kyc.markModified("documentVerification");
-
-    //     kyc.documentVerification = {
-    //         ...kyc.documentVerification,
-    //         cac: {
-    //             status: "pending",
-    //             provider: "manual",
-    //             extractedData: { source: "upload", url: cacDocumentUrl },
-    //         },
-    //     };
-
-    //     this.recomputeOverallStatus(kyc);
-    //     await kyc.save();
-    //     return kyc;
-    // }
-
     /** Business premises utility bill — organizations only */
     async uploadUtilityDocument(userId: string, utilityBillUrl: string) {
         const kyc = await this.getOrCreateKYC(userId);
@@ -674,15 +672,6 @@ export class KYCService {
             provider: "manual",
             extractedData: { source: "upload", url: utilityBillUrl },
         });
-
-        // kyc.documentVerification = {
-        //     ...kyc.documentVerification,
-        //     utility: {
-        //         status: "pending",
-        //         provider: "manual",
-        //         extractedData: { source: "upload", url: utilityBillUrl },
-        //     },
-        // };
 
         this.recomputeOverallStatus(kyc);
         await kyc.save();

@@ -83,7 +83,12 @@ export interface IKYC extends Document {
     // 0 -> nothing submitted, 1 -> submitted/pending admin review, 2 -> fully verified
     level: 0 | 1 | 2;
 
-    status: "not_started" | "pending_verification" | "verified" | "rejected";
+    // not_started         -> nothing submitted yet
+    // in_progress         -> some but not all required fields/documents submitted
+    // pending_verification -> everything required has been submitted, awaiting admin review
+    // verified            -> fully verified
+    // rejected            -> at least one field/document failed review
+    status: "not_started" | "in_progress" | "pending_verification" | "verified" | "rejected";
 
     rejectionReason?: string;
 
@@ -204,7 +209,7 @@ const KYCSchema = new Schema<IKYC>(
 
         status: {
             type: String,
-            enum: ["not_started", "pending_verification", "verified", "rejected"],
+            enum: ["not_started", "in_progress", "pending_verification", "verified", "rejected"],
             default: "not_started",
         },
 
