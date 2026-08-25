@@ -36,6 +36,8 @@ const router = Router();
 
 router.use('/auth', adminAuthRoute);
 router.use('/announcement', announcementRoutes)
+
+
 router.use('/management', managementRoutes);
 router.use("/blogs", blogRoutes)
 router.use('/dashboard', adminDashboardRoutes)
