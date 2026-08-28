@@ -54,13 +54,13 @@ export class DonationService {
         }
         data.email = data.email.trim().toLowerCase();
 
+        // if (data.phoneNumber && !isValidPhoneNumber(data.phoneNumber)) {
+        //     throw new Error("Invalid phone number provided");
+        // }
+        // if (data.phoneNumber) {
+        //     data.phoneNumber = normalizePhoneNumber(data.phoneNumber);
+        // }
 
-        if (data.phoneNumber && !isValidPhoneNumber(data.phoneNumber)) {
-            throw new Error("Invalid phone number provided");
-        }
-        if (data.phoneNumber) {
-            data.phoneNumber = normalizePhoneNumber(data.phoneNumber);
-        }
         const reference = `DON_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`; //crypto.randomUUID();
         const user = await Account.findById(userId) as any
         if (user) {

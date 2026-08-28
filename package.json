@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "@paystack-oss/dev-cli": "^1.0.0-nightly.0",
+    "@sentry/node": "^10.71.0",
     "@types/nodemailer": "^7.0.3",
     "@types/passport-google-oauth20": "^2.0.17",
     "axios": "^1.12.2",

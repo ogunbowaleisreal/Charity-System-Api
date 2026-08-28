@@ -36,6 +36,7 @@ export const generateOTP = (length: number = 6): string => {
     return otp;
 };
 
+
 export function isValidPhoneNumber(phone: string): boolean {
     if (!phone || typeof phone !== "string") return false;
 
