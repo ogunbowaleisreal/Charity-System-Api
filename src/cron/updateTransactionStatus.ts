@@ -6,7 +6,7 @@ cron.schedule("*/5 * * * *", async () => {
     await expireStaleTransactions();
 });
 async function expireStaleTransactions() {
-    const EXPIRY_TIME = 15 * 60 * 1000; // 15 minutes
+    const EXPIRY_TIME = 45 * 60 * 1000; // 15 minutes
     const cutoff = new Date(Date.now() - EXPIRY_TIME);
 
     const result = await WalletTransaction.updateMany(
