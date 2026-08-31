@@ -452,6 +452,7 @@ export class webhookServices {
                                 settlementStatus: "settled",
                                 allocationStatus: "allocated_to_campaign",
                                 paymentMethod: transaction.method,
+                                campaignOwner: campaign.owner,
                             }], { session });
 
                             if (gratuityAmount > 0) {

@@ -37,6 +37,7 @@ export interface IDonation extends Document {
     // =========================
     providerTransactionId: string; // NEW - ID from SafeHaven
     providerReference: string; // NEW - external payment reference
+    campaignOwner?: Types.ObjectId;
 
     // =========================
     // 🔴 NEW: IDEMPOTENCY / SAFETY
@@ -106,6 +107,11 @@ const DonationSchema = new Schema<IDonation>(
             ref: "Campaign",
             required: true,
             index: true,
+        },
+        campaignOwner: {
+            type: Schema.Types.ObjectId,
+            ref: "Account",
+            default: null,
         },
 
         donor: {
