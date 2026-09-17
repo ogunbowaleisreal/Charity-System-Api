@@ -18,6 +18,7 @@
     "update:Campaigns": "ts-node src/scripts/noOfcampaignsCount.ts",
     "update:Wallet": "ts-node src/scripts/walletMigrationScript.ts",
     "update:bankState": "ts-node src/scripts/syndBankDetailsState.ts",
+    "seed:campaignCategory": "ts-node src/scripts/seedDefaultCampaignCategory.ts",
     "test": "jest",
     "test:watch": "jest --watch"
   },
