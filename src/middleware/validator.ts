@@ -8,10 +8,16 @@ export const validate =
         (req: Request, res: Response, next: NextFunction) => {
             const result = schema.safeParse(req[source]);
 
+            // if (!result.success) {
+            //     return res.status(400).json({
+            //         success: false,
+            //         errors: result.error.issues,
+            //     });
+            // }
             if (!result.success) {
                 return res.status(400).json({
                     success: false,
-                    errors: result.error.issues,
+                    message: result.error.issues[0].message,
                 });
             }
 

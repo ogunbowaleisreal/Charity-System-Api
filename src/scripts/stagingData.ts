@@ -1,89 +1,117 @@
-// // import { MongoClient } from "mongodb";
-// // import dotenv from "dotenv";
-// // dotenv.config();
+import dotenv from "dotenv";
+dotenv.config();
+import mongoose from "mongoose";
+import { Donation } from "../models/Donations";
+import Campaign from "../models/Campaign";
 
+// Set to true if you want to overwrite donations that already have a
+// campaignOwner set (e.g. re-running after a campaign ownership transfer).
+// Default false = skip donations that already have campaignOwner, so this
+// script is safe to re-run repeatedly.
+const FORCE_OVERWRITE = false;
 
-// // const uri = process.env.ATLAS_DATABASE_URI as string;
-// // const client = new MongoClient(uri);
+const BATCH_SIZE = 500;
 
-// // async function moveData() {
-// //     try {
-// //         await client.connect();
+async function run() {
+    const uri = process.env["ATLAS_DATABASE_URI"]
+    if (!uri) throw new Error("MONGODB_URI is not set");
 
-// //         const sourceDB = client.db("Floatthr");
-// //         const destDB = client.db("Floatthr-staging");
+    await mongoose.connect(uri);
+    console.log("Connected to database");
 
-// //         // Get all collections in sourceDB
-// //         const collections = await sourceDB.listCollections().toArray();
+    const filter: any = FORCE_OVERWRITE
+        ? {}
+        : { $or: [{ campaignOwner: { $exists: false } }, { campaignOwner: null }] };
 
-// //         for (let col of collections) {
-// //             const sourceCol = sourceDB.collection(col.name);
-// //             const destCol = destDB.collection(col.name);
+    const totalDonations = await Donation.countDocuments(filter);
+    console.log(`Found ${totalDonations} donation(s) to process...`);
 
-// //             // Copy all documents
-// //             const docs = await sourceCol.find().toArray();
-// //             if (docs.length > 0) {
-// //                 await destCol.insertMany(docs);
-// //             }
-// //         }
+    let processed = 0;
+    let updated = 0;
+    let skippedNoCampaign = 0;
+    let skippedNoOwner = 0;
+    let failed = 0;
 
-// //         console.log("Data moved successfully");
-// //     } finally {
-// //         await client.close();
-// //     }
-// // }
+    let lastId: mongoose.Types.ObjectId | null = null;
 
-// // moveData();
-// import mongoose from "mongoose";
-// import { Account } from "../models/Accounts"; // adjust path
-// import ConsultantProfile from "../models/ConsultantProfile"; // adjust path
-// import dotenv from "dotenv"
+    while (true) {
+        const pageFilter: any = { ...filter };
+        if (lastId) {
+            pageFilter._id = { $gt: lastId };
+        }
 
-// dotenv.config();
+        const donations = await Donation.find(pageFilter)
+            .sort({ _id: 1 })
+            .limit(BATCH_SIZE)
+            .select("_id campaign campaignOwner")
+            .lean();
 
-// // -----------------------
-// // Connect to MongoDB
-// // -----------------------
-// const MONGO_URI = process.env.ATLAS_DATABASE_URI as string; // replace with your URI
+        if (donations.length === 0) break;
 
-// async function main() {
-//     await mongoose.connect(MONGO_URI);
-//     console.log("Connected to MongoDB");
+        const campaignIds = [
+            ...new Set(donations.map((d) => d.campaign?.toString()).filter(Boolean)),
+        ];
 
-//     // 1️⃣ Find all active consultant accounts
-//     const activeConsultants = await Account.find({
-//         role: "consultant",
-//         status: "active",
-//     }).select("_id status firstName lastName email");
+        const campaigns = await Campaign.find({ _id: { $in: campaignIds } })
+            .select("_id owner")
+            .lean();
 
-//     console.log(`Found ${activeConsultants.length} active consultants`);
+        const ownerByCampaignId = new Map(
+            campaigns.map((c) => [c._id.toString(), c.owner])
+        );
 
-//     // 2️⃣ Loop through each consultant
-//     for (const consultant of activeConsultants) {
-//         // Find corresponding ConsultantProfile
-//         const profile = await ConsultantProfile.findOne({ account: consultant._id });
-//         if (!profile) {
-//             console.log(
-//                 `No ConsultantProfile found for ${consultant.firstName} ${consultant.lastName} (${consultant._id})`
-//             );
-//             continue; // skip
-//         }
+        const bulkOps: any[] = [];
 
-//         // Update status
-//         if (profile.status !== consultant.status) {
-//             profile.status = consultant.status as any;
-//             await profile.save();
-//             console.log(
-//                 `Updated status for ${consultant.firstName} ${consultant.lastName} to ${consultant.status}`
-//             );
-//         }
-//     }
+        for (const donation of donations) {
+            processed++;
 
-//     console.log("Status sync completed");
-//     await mongoose.disconnect();
-// }
+            if (!donation.campaign) {
+                skippedNoCampaign++;
+                console.warn(`  ⚠ Donation ${donation._id} has no campaign reference — skipped`);
+                continue;
+            }
 
-// main().catch((err) => {
-//     console.error("Error syncing consultant statuses:", err);
-//     mongoose.disconnect();
-// });
+            const owner = ownerByCampaignId.get(donation.campaign.toString());
+
+            if (!owner) {
+                skippedNoOwner++;
+                console.warn(
+                    `  ⚠ Donation ${donation._id} — campaign ${donation.campaign} not found (deleted?) or has no owner — skipped`
+                );
+                continue;
+            }
+
+            bulkOps.push({
+                updateOne: {
+                    filter: { _id: donation._id },
+                    update: { $set: { campaignOwner: owner } },
+                },
+            });
+        }
+
+        if (bulkOps.length) {
+            try {
+                const result = await Donation.bulkWrite(bulkOps, { ordered: false });
+                updated += result.modifiedCount ?? 0;
+            } catch (err: any) {
+                failed += bulkOps.length;
+                console.error(`  ✗ Bulk write error on this batch: ${err.message}`);
+            }
+        }
+
+        lastId = donations[donations.length - 1]._id as mongoose.Types.ObjectId;
+        console.log(`  ...processed ${processed}/${totalDonations}`);
+    }
+
+    console.log(`\nDone. ${processed} donation(s) checked.`);
+    console.log(
+        `Updated: ${updated}, skipped (no campaign ref): ${skippedNoCampaign}, skipped (campaign/owner not found): ${skippedNoOwner}, failed: ${failed}`
+    );
+
+    await mongoose.disconnect();
+}
+
+run().catch((err) => {
+    console.error(err);
+    process.exit(1);
+});

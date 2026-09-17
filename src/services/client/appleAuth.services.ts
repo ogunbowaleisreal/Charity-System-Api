@@ -109,7 +109,7 @@ export class AppleAuthService {
          * 7️⃣ Generate tokens (same as your system)
          */
         const tokens = jwtUtil.generateTokenPair({
-            userId: user._id as string,
+            userId: user._id.toString() as string,
             email: user.email,
             role: user.role,
         });

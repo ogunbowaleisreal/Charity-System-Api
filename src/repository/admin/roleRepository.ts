@@ -230,7 +230,7 @@ export class RoleRepository {
                     },
                 },
             },
-        }));
+        })) as any;
 
         return await Role.bulkWrite(bulkOps);
     }

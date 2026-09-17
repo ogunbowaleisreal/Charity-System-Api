@@ -64,7 +64,7 @@ export class CategoryService {
 
             console.log(categoryWithSameName)
 
-            if (categoryWithSameName && categoryWithSameName._id as string !== categoryId.toString()) {
+            if (categoryWithSameName && categoryWithSameName._id.toString() !== categoryId.toString()) {
                 throw {
                     message: "Category with this name already exists",
                     statusCode: HTTP_STATUS.CONFLICT,

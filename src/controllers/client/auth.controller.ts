@@ -8,7 +8,7 @@ import logger from "../../logger";
 import axios from "axios";
 import { sendSuccessResponse, sendErrorResponse } from "../../utils/helpers";
 import { HTTP_STATUS } from "../../utils/constants";
-import { KYCService } from "../../services/client/Kyc.services";
+import { KYCService } from "../../services/kyc.services";
 import { KYC } from "../../models/KYC";
 import { Wallet } from "../../models/Wallet";
 import jwtUtil from "../../utils/jwt";
@@ -105,13 +105,13 @@ export class authController {
             registeredUser.isVerified = true
 
 
-            const kyc = await KYC.create({ userId: registeredUser._id, status: "not_started", level: 0, type: registeredUser.role })
+            const kyc = await kycService.getOrCreateKYC(registeredUser._id.toString())
             const newWallet = await Wallet.create({ userId: registeredUser._id })
             registeredUser.wallet = newWallet._id as any
             await registeredUser.save()
 
             const tokens = jwtUtil.generateTokenPair({
-                userId: registeredUser._id as string,
+                userId: registeredUser._id.toString() as string,
                 email: registeredUser.email,
                 role: registeredUser.role,
             });
@@ -119,7 +119,7 @@ export class authController {
             // Save refresh token
             await Authservice.saveRefreshToken(
                 tokens.tokenId,
-                registeredUser._id as string,
+                registeredUser._id.toString() as string,
                 registeredUser.role,
                 tokens.refreshToken
             );
@@ -152,8 +152,8 @@ export class authController {
                 }
                 return ip;
             };
-
             const cleanIp = normalizeIp(ip);
+            let location: { data: any } | null = null;
 
             if (
                 cleanIp === "127.0.0.1" ||
@@ -163,16 +163,38 @@ export class authController {
             ) {
                 console.log("Skipping geolocation for local/private IP");
             } else {
-                // call ipapi
+                try {
+                    location = await axios.get(`https://ipapi.co/${cleanIp}/json/`);
+                } catch (geoErr: any) {
+                    logger.warn("Geolocation lookup failed, continuing without it", { message: geoErr.message });
+                }
             }
 
-            const location = await axios.get(`https://ipapi.co/${cleanIp}/json/`);
-            console.log({ location: location.data })
+            user.lastLogin = new Date();
+            user.lastLoginIp = cleanIp;
+            user.lastLoginLocation = location?.data ?? null;
+            await user.save();
 
-            user.lastLogin = new Date()
-            user.lastLoginIp = cleanIp
-            user.lastLoginLocation = location.data
-            await user.save()
+
+
+            // if (
+            //     cleanIp === "127.0.0.1" ||
+            //     cleanIp === "::1" ||
+            //     cleanIp.startsWith("192.168.") ||
+            //     cleanIp.startsWith("10.")
+            // ) {
+            //     console.log("Skipping geolocation for local/private IP");
+            // } else {
+            //     // call ipapi
+            // }
+
+            // const location = await axios.get(`https://ipapi.co/${cleanIp}/json/`);
+            // console.log({ location: location.data })
+
+            // user.lastLogin = new Date()
+            // user.lastLoginIp = cleanIp
+            // user.lastLoginLocation = location.data
+            // await user.save()
             return res.status(200).json({ message: "Login successful", response });
         } catch (err: any) {
             //  return res.status(500).json({ message: "Internal Server Error", error: err })

@@ -1,5 +1,4 @@
 import admin from "firebase-admin";
-import { firebase } from "googleapis/build/src/apis/firebase";
 
 if (!admin.apps.length) {
     admin.initializeApp({

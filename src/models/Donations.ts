@@ -37,6 +37,7 @@ export interface IDonation extends Document {
     // =========================
     providerTransactionId: string; // NEW - ID from SafeHaven
     providerReference: string; // NEW - external payment reference
+    campaignOwner?: Types.ObjectId;
 
     // =========================
     // 🔴 NEW: IDEMPOTENCY / SAFETY
@@ -106,6 +107,11 @@ const DonationSchema = new Schema<IDonation>(
             ref: "Campaign",
             required: true,
             index: true,
+        },
+        campaignOwner: {
+            type: Schema.Types.ObjectId,
+            ref: "Account",
+            default: null,
         },
 
         donor: {
@@ -268,105 +274,3 @@ const DonationSchema = new Schema<IDonation>(
 );
 
 export const Donation = model<IDonation>("Donation", DonationSchema);
-// import { Schema, Document, Types, model } from "mongoose";
-
-// export interface IDonation extends Document {
-//     campaign: Types.ObjectId;
-
-//     donor?: Types.ObjectId; // optional (anonymous users)
-//     donorName?: string;     // snapshot (important!)
-
-//     amount: number;
-
-//     currency: string;
-
-//     // ===== PAYMENT =====
-//     paymentProvider: "safe haven" | "google pay" | "manual";
-//     transactionRef: string; // unique (VERY IMPORTANT)
-//     paymentStatus: "pending" | "success" | "failed";
-
-//     // ===== OPTIONS =====
-//     isAnonymous: boolean;
-
-//     // ===== METADATA =====
-//     message?: string; // optional donor message
-
-//     // ===== SYSTEM =====
-//     isDeleted: boolean;
-
-//     createdAt: Date;
-//     updatedAt: Date;
-// }
-
-
-// const DonationSchema = new Schema<IDonation>(
-//     {
-//         campaign: {
-//             type: Schema.Types.ObjectId,
-//             ref: "Campaign",
-//             required: true,
-//             index: true,
-//         },
-
-//         donor: {
-//             type: Schema.Types.ObjectId,
-//             ref: "Account",
-//             default: null,
-//         },
-
-//         donorName: {
-//             type: String,
-//             default: null,
-//         },
-
-//         amount: {
-//             type: Number,
-//             required: true,
-//         },
-
-//         currency: {
-//             type: String,
-//             default: "NGN",
-//         },
-
-//         // ===== PAYMENT =====
-//         paymentProvider: {
-//             type: String,
-//             enum: ["safe haven", "google pay", "manual"],
-//             required: true,
-//         },
-
-//         transactionRef: {
-//             type: String,
-//             required: true,
-//             unique: true, // 🔥 prevents duplicate webhook issues
-//         },
-
-//         paymentStatus: {
-//             type: String,
-//             enum: ["pending", "success", "failed"],
-//             default: "pending",
-//             index: true,
-//         },
-
-//         // ===== OPTIONS =====
-//         isAnonymous: {
-//             type: Boolean,
-//             default: false,
-//         },
-
-//         message: {
-//             type: String,
-//             maxlength: 300,
-//         },
-
-//         // ===== SYSTEM =====
-//         isDeleted: {
-//             type: Boolean,
-//             default: false,
-//         },
-//     },
-//     { timestamps: true }
-// );
-
-// export const Donation = model<IDonation>("Donation", DonationSchema);

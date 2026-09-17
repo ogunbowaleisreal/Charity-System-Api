@@ -24,7 +24,7 @@ export class FAQController {
 
     getFAQById = async (req: Request, res: Response): Promise<void> => {
         try {
-            const faq = await this.faqService.getFAQById(req.params.id);
+            const faq = await this.faqService.getFAQById(req.params.id as string);
             sendSuccessResponse(res, faq, "FAQ retrieved successfully");
         } catch (error: any) {
             logger.error("Failed to get FAQ by ID", {
@@ -53,7 +53,7 @@ export class FAQController {
             const faq = await this.faqService.createFAQ(req.body);
 
             logger.info("FAQ created", {
-                faqId: faq._id as string,
+                faqId: faq._id.toString() as string,
                 createdBy: adminId,
                 category: faq.category,
             });

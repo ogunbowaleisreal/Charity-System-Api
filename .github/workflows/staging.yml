@@ -58,7 +58,7 @@ jobs:
             npm ci --omit=dev
 
             # Reload app
-            pm2 reload ecosystem.config.js --env production
+            pm2 reload ecosystem.config.js --only api.help-me-nigeria.staging --env production
 
             # Save PM2 state
             pm2 save

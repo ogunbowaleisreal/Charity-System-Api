@@ -9,14 +9,6 @@ import { PushNotificationService } from "../pushNotificationService";
 import { NotificationService } from "../notification.Services";
 import favouriteService from "./favourite.service";
 import { sanitizeDonation } from "../../utils/helpers";
-// type createCampaign = {
-//     title: string;
-//     description: string;
-//     category: string;
-//     targetAmount: number;
-//     deadline: Date;
-//     image: string;
-// };
 
 export type donationFilter = {
     sort: "top" | "latest";
@@ -155,28 +147,6 @@ export class CampaignService {
             const bucket = grouped.get(key)!;
             if (bucket.length >= 3) continue;       // already have 3 for this campaign
 
-            // bucket.push({
-            //     _id: donation._id as Types.ObjectId,
-            //     amount: donation.amount,
-            //     currency: donation.currency,
-            //     message: donation.message,
-            //     isAnonymous: donation.isAnonymous,
-            //     createdAt: donation.createdAt,
-            //     paymentMethod: donation.paymentMethod,
-            //     paymentStatus: donation.paymentStatus,
-
-            //     // ── Anonymity masking ──────────────────────────────────────────
-            //     // Strip donor identity when isAnonymous is true.
-            //     // We never expose the donor ObjectId either — that alone could be
-            //     // used to correlate across requests.
-            //     donorName: donation.isAnonymous
-            //         ? null
-            //         : (donation.donorName ?? null),
-
-            //     donor: donation.isAnonymous
-            //         ? null
-            //         : (donation.donor as DonorSnapshot | null),
-            // });
             bucket.push(
                 sanitizeDonation({
                     _id: donation._id as Types.ObjectId,
@@ -196,38 +166,89 @@ export class CampaignService {
         return grouped;
     }
 
+    // async createCampaign(payload: CreateCampaignDTO, userId: string) {
+    //     const user = await Account.findById(userId);
+    //     if (!user) throw new Error("User not found");
+    //     payload.owner = user._id.toString() as string;
+    //     payload.ownerType = user.role;
+    //     payload.firstName = user.firstName;
+    //     payload.lastName = user.lastName;
+    //     payload.userName = user.userName;
+    //     payload.companyName = user.companyName;
+    //     if (payload.startImmediately) payload.startDate = new Date();
+    //     console.log(payload)
+    //     user.noOfCampaigns += 1
+    //     await user.save()
+
+
+    //     const campaign = await Campaign.create({
+    //         ...payload,
+    //         owner: userId,
+    //     });
+
+    //     await NotificationService.createForUser({
+    //         userId: user._id as any,
+    //         title: "Campaign Creation",
+    //         message: `A new campaign '${campaign.title}' has been created`
+    //     })
+    //     await PushNotificationService.sendToUser(user._id as any, {
+    //         title: "Campaign Creation",
+    //         body: "`A new campaign '${campaign.title}' has been created`",
+    //     })
+
+    //     return campaign
+
+    // }
+
     async createCampaign(payload: CreateCampaignDTO, userId: string) {
         const user = await Account.findById(userId);
         if (!user) throw new Error("User not found");
-        payload.owner = user._id as string;
+
+        payload.owner = user._id.toString() as string;
         payload.ownerType = user.role;
         payload.firstName = user.firstName;
         payload.lastName = user.lastName;
         payload.userName = user.userName;
         payload.companyName = user.companyName;
-        if (payload.startImmediately) payload.startDate = new Date();
-        console.log(payload)
-        user.noOfCampaigns += 1
-        await user.save()
 
+        if (payload.startImmediately) payload.startDate = new Date();
+
+        user.noOfCampaigns += 1;
+        await user.save();
 
         const campaign = await Campaign.create({
             ...payload,
             owner: userId,
         });
 
-        await NotificationService.createForUser({
-            userId: user._id as any,
-            title: "Campaign Creation",
-            message: `A new campaign '${campaign.title}' has been created`
-        })
-        await PushNotificationService.sendToUser(user._id as any, {
-            title: "Campaign Creation",
-            body: "`A new campaign '${campaign.title}' has been created`",
-        })
+        // Notifications are a side effect — never let a failure here
+        // take down a successfully created campaign.
+        try {
+            // 1. Confirm to the owner (in-app)
+            await NotificationService.createForUser({
+                userId: user._id as any,
+                title: "Campaign Creation",
+                message: `A new campaign '${campaign.title}' has been created`,
+            });
 
-        return campaign
+            // 2. Confirm to the owner (push)
+            await PushNotificationService.sendToUser(user._id as any, {
+                title: "Campaign Creation",
+                body: `A new campaign '${campaign.title}' has been created`,
+            });
 
+            // 3. Let verified users know a new campaign exists to donate to (in-app only, no push)
+            await NotificationService.createBroadcast({
+                title: "New Campaign",
+                message: `${payload.companyName || payload.userName || "Someone"} just launched '${campaign.title}' — check it out`,
+                type: "GENERAL",
+                segment: "verifiedUsers",
+            });
+        } catch (err) {
+            console.error("Failed to send campaign creation notifications:", err);
+        }
+
+        return campaign;
     }
 
     async getFeaturedCampaigns(query: any) {
@@ -279,7 +300,12 @@ export class CampaignService {
         if (!campaign) throw new Error("Campaign not found or unauthorized");
 
         Object.assign(campaign, payload);
-        return await campaign.save();
+
+        if (campaign.endDate <= campaign.startDate) {
+            throw new Error("End date must be after start date");
+        }
+
+        return await campaign.save(); // pre-save hook recalculates status here
     }
 
     async deleteCampaign(campaignId: string, userId: string) {
@@ -514,66 +540,6 @@ export class CampaignService {
             },
         };
     }
-
-    // =============================
-    // 🔹 DONATIONS
-    // =============================
-
-    // async getCampaignDonations(campaignId: string, filter: donationFilter) {
-    //     let sort: any = { createdAt: -1 };
-
-    //     if (filter.sort === "top") {
-    //         return await Donation.aggregate([
-    //             {
-    //                 $match: {
-    //                     campaign: new Types.ObjectId(campaignId),
-    //                     paymentStatus: "success",
-    //                 },
-    //             },
-    //             {
-    //                 $group: {
-    //                     _id: "$donor",
-    //                     total: { $sum: "$amount" },
-    //                 },
-    //             },
-    //             { $sort: { total: -1 } },
-    //         ]);
-    //     }
-
-
-    //     const donations = await Donation.find({
-    //         campaign: campaignId,
-    //         paymentStatus: "success",
-    //     })
-    //         .sort(sort)
-    //         .skip((filter.page - 1) * filter.limit)
-    //         .limit(filter.limit)
-    //         .populate("donor", "firstName lastName profilePicture logo country state");
-
-    //     const total = await Donation.countDocuments({
-    //         campaign: campaignId,
-    //         paymentStatus: "success",
-    //     });
-
-    //     const totalPages = Math.ceil(total / filter.limit);
-
-
-    //     // donations.forEach((d) => {
-    //     //     d.createdAt = moment(d.createdAt).fromNow();
-    //     // })
-
-    //     return {
-    //         donations,
-    //         pagination: {
-    //             current_page: filter.page,
-    //             total_pages: totalPages,
-    //             per_page: filter.limit,
-    //             total_records: total,
-    //             has_next_page: filter.page < totalPages,
-    //             has_prev_page: filter.page > 1,
-    //         }
-    //     }
-    // }
 
     async getCampaignDonations(campaignId: string, filter: donationFilter) {
         let sort: any = { createdAt: -1 };

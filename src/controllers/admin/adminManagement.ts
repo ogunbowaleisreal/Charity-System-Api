@@ -70,7 +70,7 @@ export class AdminManagementController {
 
     getAdminById = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { adminId } = req.params;
+            const adminId = req.params.adminId as string;
             const admin = await this.adminManagementService.getAdminById(adminId);
 
             sendSuccessResponse(res, { admin }, "Admin retrieved successfully");
@@ -93,7 +93,7 @@ export class AdminManagementController {
         res: Response
     ): Promise<void> => {
         try {
-            const { adminId } = req.params;
+            const adminId = req.params.adminId as string;
             const updatedBy = req.admin?.adminId;
 
             if (!updatedBy) {
@@ -134,7 +134,7 @@ export class AdminManagementController {
         res: Response
     ): Promise<void> => {
         try {
-            const { adminId } = req.params;
+            const adminId = req.params.adminId as string;
             const suspendedBy = req.admin.adminId
             const reason = req.body.reason
             const action = req.body.action
@@ -166,7 +166,7 @@ export class AdminManagementController {
         res: Response
     ): Promise<void> => {
         try {
-            const { adminId } = req.params;
+            const adminId = req.params.adminId as string;
             const deactivatedBy = req.admin?.adminId;
 
             if (!deactivatedBy) {
@@ -202,7 +202,7 @@ export class AdminManagementController {
         res: Response
     ): Promise<void> => {
         try {
-            const { adminId } = req.params;
+            const adminId = req.params.adminId as string;
             const resetBy = req.admin?.adminId;
 
             if (!resetBy) {

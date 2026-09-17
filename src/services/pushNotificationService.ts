@@ -1,17 +1,22 @@
+import type { Notification } from "firebase-admin/messaging";
 import { messaging } from "../config/firebase";
 import { NotificationToken } from "../models/NotificationToken";
 import { Account } from "../models/Accounts";
 
-export class PushNotificationService {
+// FCM requires every value in `data` to be a string.
+export type PushData = Record<string, string>;
 
-    // Save token
-    // static async saveToken(userId: string, token: string) {
-    //     await NotificationToken.findOneAndUpdate(
-    //         { token },
-    //         { userId, token },
-    //         { upsert: true, new: true }
-    //     );
-    // }
+export interface PushResult {
+    success: boolean;
+    successCount: number;
+    failureCount: number;
+    invalidTokensRemoved: number;
+    error?: string;
+}
+
+const FCM_CHUNK_SIZE = 500; // hard limit imposed by FCM multicast
+
+export class PushNotificationService {
 
     static async saveToken(
         userId: string,
@@ -20,14 +25,12 @@ export class PushNotificationService {
     ) {
         await NotificationToken.findOneAndUpdate(
             { token }, // unique identifier
-
             {
                 userId,
                 token,
                 platform,
                 lastUsedAt: new Date(),
             },
-
             {
                 upsert: true,   // create if not exists
                 new: true,      // return updated doc
@@ -42,7 +45,7 @@ export class PushNotificationService {
     }
 
     // Send to topic (BEST for your use case)
-    static async sendToTopic(topic: string, title: string, body: string) {
+    static async sendToTopic(topic: string, title: string, body: string): Promise<PushResult> {
         try {
             await messaging.send({
                 topic,
@@ -51,30 +54,43 @@ export class PushNotificationService {
                     url: process.env.FRONTEND_URL ?? ""
                 }
             });
+            return { success: true, successCount: 1, failureCount: 0, invalidTokensRemoved: 0 };
         } catch (error) {
             console.error("Push notification error (sendToTopic):", error);
+            return {
+                success: false,
+                successCount: 0,
+                failureCount: 1,
+                invalidTokensRemoved: 0,
+                error: error instanceof Error ? error.message : String(error),
+            };
         }
     }
 
-    // Send to specific users (optional)
-
-    static async sendToUsers(payload: any) {
+    // Send to all verified users
+    static async sendToUsers(notification: Notification, data?: PushData): Promise<PushResult> {
         const tokens = [...new Set(await this.getAllVerifiedUserTokens())];
 
-        if (!tokens.length) throw new Error("No tokens found");
+        if (!tokens.length) {
+            return { success: false, successCount: 0, failureCount: 0, invalidTokensRemoved: 0, error: "No tokens found" };
+        }
 
-        // FCM allows a max of 500 tokens per multicast call, so we chunk
-        const chunkSize = 500;
         const failedTokens: string[] = [];
+        let successCount = 0;
+        let failureCount = 0;
 
         try {
-            for (let i = 0; i < tokens.length; i += chunkSize) {
-                const chunk = tokens.slice(i, i + chunkSize);
+            for (let i = 0; i < tokens.length; i += FCM_CHUNK_SIZE) {
+                const chunk = tokens.slice(i, i + FCM_CHUNK_SIZE);
 
                 const response = await messaging.sendEachForMulticast({
                     tokens: chunk,
-                    notification: payload,
+                    notification,
+                    data,
                 });
+
+                successCount += response.successCount;
+                failureCount += response.failureCount;
 
                 // cleanup invalid tokens
                 response.responses.forEach((res, index) => {
@@ -95,68 +111,88 @@ export class PushNotificationService {
                     token: { $in: failedTokens }
                 });
             }
+
+            return {
+                success: failureCount === 0,
+                successCount,
+                failureCount,
+                invalidTokensRemoved: failedTokens.length,
+            };
         } catch (error) {
             console.error("Push notification error (sendToUsers):", error);
+            return {
+                success: false,
+                successCount,
+                failureCount,
+                invalidTokensRemoved: failedTokens.length,
+                error: error instanceof Error ? error.message : String(error),
+            };
         }
     }
 
-    // send to single User 
-
-    static async sendToUser(userId: string, payload: any) {
+    // Send to a single user (across all of their registered devices)
+    static async sendToUser(userId: string, notification: Notification, data?: PushData): Promise<PushResult> {
         const userTokens = await NotificationToken.find({ userId });
 
-        if (!userTokens.length) return;
+        if (!userTokens.length) {
+            return { success: false, successCount: 0, failureCount: 0, invalidTokensRemoved: 0, error: "No tokens found for user" };
+        }
 
         const tokens = [...new Set(userTokens.map(t => t.token))];
+        const failedTokens: string[] = [];
+        let successCount = 0;
+        let failureCount = 0;
 
         try {
-            const response = await messaging.sendEachForMulticast({
-                tokens,
-                notification: payload,
-            });
+            // Chunk defensively in case a user ever accumulates >500 devices/tokens
+            for (let i = 0; i < tokens.length; i += FCM_CHUNK_SIZE) {
+                const chunk = tokens.slice(i, i + FCM_CHUNK_SIZE);
 
-            // Handle failures
-            const failedTokens: string[] = [];
+                const response = await messaging.sendEachForMulticast({
+                    tokens: chunk,
+                    notification,
+                    data,
+                });
 
-            response.responses.forEach((res, index) => {
-                if (!res.success) {
-                    const errorCode = res.error?.code;
+                successCount += response.successCount;
+                failureCount += response.failureCount;
 
-                    if (
-                        errorCode === "messaging/registration-token-not-registered" ||
-                        errorCode === "messaging/invalid-registration-token"
-                    ) {
-                        failedTokens.push(tokens[index]);
+                response.responses.forEach((res, index) => {
+                    if (!res.success) {
+                        const errorCode = res.error?.code;
+                        if (
+                            errorCode === "messaging/registration-token-not-registered" ||
+                            errorCode === "messaging/invalid-registration-token"
+                        ) {
+                            failedTokens.push(chunk[index]);
+                        }
                     }
-                }
-            });
+                });
+            }
 
-            // Remove invalid tokens
             if (failedTokens.length) {
                 await NotificationToken.deleteMany({
                     token: { $in: failedTokens }
                 });
             }
 
+            return {
+                success: failureCount === 0,
+                successCount,
+                failureCount,
+                invalidTokensRemoved: failedTokens.length,
+            };
         } catch (error) {
-            console.error("Push notification error:", error);
+            console.error("Push notification error (sendToUser):", error);
+            return {
+                success: false,
+                successCount,
+                failureCount,
+                invalidTokensRemoved: failedTokens.length,
+                error: error instanceof Error ? error.message : String(error),
+            };
         }
     }
-
-    // static async sendToUser(userId: string, payload: any) {
-    //     const token = await NotificationToken.findOne({ userId });
-    //     if (!token) return;
-    //     const response = await messaging.send({
-    //         token: token.token,
-    //         notification: payload,
-    //     });
-    //     if (!response.success) {
-    //         const errorCode = response.error?.code;
-    //         if (errorCode === "messaging/registration-token-not-registered") {
-    //             NotificationToken.deleteOne({ token: token.token });
-    //         }
-    //     }
-    // }
 
     static async getAllUserTokens() {
         const tokens = await NotificationToken.find();
@@ -170,3 +206,4 @@ export class PushNotificationService {
         return tokens.map(t => t.token);
     }
 }
+

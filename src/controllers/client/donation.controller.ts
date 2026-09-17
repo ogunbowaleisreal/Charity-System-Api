@@ -163,7 +163,7 @@ export class DonationController {
         next: NextFunction
     ) {
         try {
-            const { reference } = req.params;
+            const reference = req.params.reference as string;
 
             const result = await donationService.verifyPayment(reference);
 

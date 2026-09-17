@@ -16,9 +16,13 @@ import { ResendEmailService } from "../ResesndServices";
 import CacheService from "../cacheServices";
 import bcryptUtil from "../../utils/bcryptutils";
 import { NotificationService } from "../notification.Services";
+import { logAudit } from "../audit.services";
+import { AUDIT_ACTIONS, ActorType } from "../../types/auditlogs.types";
+import { KYCService } from "../kyc.services";
 const flutterwave = new FlutterwaveService();
 const otpService = new OTPService();
 const emailService = new ResendEmailService()
+const kycService = new KYCService();
 
 export class WithdrawalService {
     async withdrawFundsToWallet(
@@ -47,7 +51,16 @@ export class WithdrawalService {
             if (!campaign) throw new Error("Campaign not found");
             //  if (campaign.status == "ongoing" || campaign.status == "upcoming") throw new AppError("Campaign is still ongoing or has not started yet", 400);
 
-            // if (campaign.owner.toString() != userId) throw new AppError("Unauthorized, ypu are not the owner of this campaign", 401);
+            if (campaign.owner.toString() != userId) throw new AppError("Unauthorized, you are not the owner of this campaign", 401);
+            const daysSinceCreation =
+                (Date.now() - new Date(campaign.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+
+            if (daysSinceCreation < 5) {
+                throw new AppError(
+                    "Withdrawals are only allowed 5 days after the campaign was created",
+                    400
+                );
+            }
 
             const userWallet = await Wallet.findOne({
                 userId: userId,
@@ -104,6 +117,22 @@ export class WithdrawalService {
                 reference
             }], { session });
 
+            await logAudit({
+                actorType: ActorType.USER,
+                actorId: userId,
+                actorEmail: user.email,
+                action: AUDIT_ACTIONS.PAYOUT.WITHDRAWN_TO_WALLET,
+                targetType: "Campaign",
+                targetId: campaignId,
+                metadata: {
+                    amount,
+                    reference,
+                    campaignTitle: campaign.title,
+                    availableBalanceAfter: campaign.availableBalance - amount,
+                },
+                session,
+            });
+
             await NotificationService.createForUser({
                 userId: userWallet.userId as Types.ObjectId,
                 title: "Withdrawal",
@@ -121,6 +150,12 @@ export class WithdrawalService {
             throw err;
         }
 
+    }
+
+    static isMoreThan5DaysAfter(otherDate: Date) {
+        const diffMs = Date.now() - new Date(otherDate).getTime();
+        const diffDays = diffMs / (1000 * 60 * 60 * 24);
+        return diffDays > 5;
     }
 
     async firstTimeWalletPinSet(userId: string, pin: string) {
@@ -151,6 +186,12 @@ export class WithdrawalService {
 
         user.isWalletPinSet = true
         await user.save()
+        await logAudit({
+            actorType: ActorType.USER,
+            actorId: userId,
+            actorEmail: user.email,
+            action: AUDIT_ACTIONS.WALLET.PIN_SET,
+        });
         return user
     }
 
@@ -217,6 +258,13 @@ export class WithdrawalService {
         await CacheService.delete(
             `wallet_pin_reset_verified:${user.email}`
         );
+
+        await logAudit({
+            actorType: ActorType.USER,
+            actorId: userId,
+            actorEmail: user.email,
+            action: AUDIT_ACTIONS.WALLET.PIN_CHANGED,
+        });
 
         return user;
     }
@@ -298,7 +346,9 @@ export class WithdrawalService {
         console.log(userId)
         const user = await Account.findById(userId)
         if (!user) throw new Error("Account not found")
-
+        const kyc = await kycService.getKYCByUserId(userId)
+        if (!kyc) throw new Error("KYC not found")
+        if (kyc.status !== "verified") throw new Error("KYC not approved, Plss complete KYC first")
         if (user.twoFactorWithdrawalEnabled) {
             await otpService.generateAndSendOTP(user.email, "2fa")
             return { message: "Otp sent to email to confirm withdrawal", status: 201 }
@@ -343,6 +393,21 @@ export class WithdrawalService {
             },
         });
 
+        await logAudit({
+            actorType: ActorType.USER,
+            actorId: userId,
+            actorEmail: user.email,
+            action: AUDIT_ACTIONS.PAYOUT.REQUESTED,
+            targetType: "WithdrawalRequest",
+            targetId: withdrawalRequest._id.toString(),
+            metadata: {
+                amount,
+                reference,
+                bankName: bank_name,
+                accountNumberLast4: accountNumber?.slice(-4), // don't log full account number
+            },
+        });
+
         await emailService.sendNewWwithdrawalRequestNotification(withdrawalRequest)
         await PushNotificationService.sendToUser(userId,
             {
@@ -350,22 +415,6 @@ export class WithdrawalService {
                 body: `You have made a new withdrawal request of ${amount} from Help Me Nigeria`,
             }
         )
-        //await PushNotificationService.sendToUsers()
-
-        // const newTransaction = new WalletTransaction({
-        //     wallet: walletId,
-        //     amount,
-        //     type: "withdrawal",
-        //     status: "pending",
-        //     narration,
-        //     method: "bank_transfer",
-        //     bankDetails: {
-        //         bankName: bank_name,
-        //         accountNumber,
-        //         accountName: accountName,
-        //     },
-        // });
-        // await newTransaction.save();
 
         return withdrawalRequest
 
@@ -416,6 +465,19 @@ export class WithdrawalService {
             },
             reference
         });
+        await logAudit({
+            actorType: ActorType.USER,
+            actorId: userId,
+            action: AUDIT_ACTIONS.PAYOUT.REQUESTED,
+            targetType: "WithdrawalRequest",
+            targetId: withdrawalRequest._id.toString(),
+            metadata: {
+                amount,
+                reference,
+                via2FA: true,
+                accountNumberLast4: accountNumber?.slice(-4),
+            },
+        });
 
         await emailService.sendNewWwithdrawalRequestNotification(withdrawalRequest)
 
@@ -457,6 +519,12 @@ export class WithdrawalService {
         }
         user.twoFactorWithdrawalEnabled = false
         user.save()
+        await logAudit({
+            actorType: ActorType.USER,
+            actorId: userId,
+            actorEmail: user.email,
+            action: AUDIT_ACTIONS.WALLET.TWO_FA_WITHDRAWAL_DISABLED,
+        });
         return { message: "2fa has been disabled", user, status: 200 }
     }
 

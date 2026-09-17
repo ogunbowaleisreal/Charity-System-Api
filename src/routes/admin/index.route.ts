@@ -26,6 +26,7 @@ import transactionRoutes from "./transaction.management"
 import kycRoutes from "./kyc.routes"
 import serviceFeeRoutes from "./service.fee.routes"
 import bannerRoutes from "./banner.routes"
+import blogRoutes from "./blog.router"
 //import reportRoutes from "./reports.route"
 //import subscriptionManagementRoutes from "./subscriptionManagement"
 import planRoutes from "./adminPlanManagement"
@@ -35,7 +36,10 @@ const router = Router();
 
 router.use('/auth', adminAuthRoute);
 router.use('/announcement', announcementRoutes)
+
+
 router.use('/management', managementRoutes);
+router.use("/blogs", blogRoutes)
 router.use('/dashboard', adminDashboardRoutes)
 router.use('/roles', roleRoutes)
 router.use('/category', categoryRoutes)

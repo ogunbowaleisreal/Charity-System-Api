@@ -63,7 +63,7 @@ export const createCampaignSchema = z
 
         allowComments: z.boolean(),
 
-        showDonationHistory: z.boolean(),
+        showDonations: z.boolean(),
 
         isActive: z.boolean(),
 
@@ -98,7 +98,6 @@ export const createCampaignSchema = z
     })
     .strict();
 
-
 export const updateCampaignSchema = z
     .object({
         title: z
@@ -125,20 +124,21 @@ export const updateCampaignSchema = z
             .array(objectIdSchema)
             .optional(),
 
-        closing: z
+        startDate: z
             .coerce
             .date()
             .optional(),
 
-        thumbnailUrl: z
-            .url()
+        endDate: z
+            .coerce
+            .date()
             .optional(),
 
         isActive: z
             .boolean()
             .optional(),
 
-        showDonationHistory: z
+        showDonations: z
             .boolean()
             .optional(),
 
@@ -150,7 +150,15 @@ export const updateCampaignSchema = z
             .array(imageSchema)
             .optional(),
     })
-    .strict();
+    .strict()
+    .refine(
+        (data) =>
+            !data.startDate || !data.endDate || data.endDate > data.startDate,
+        {
+            path: ["endDate"],
+            message: "End date must be after start date",
+        }
+    );
 
 export const campaignParamsSchema = z.object({
     campaignId: objectIdSchema,

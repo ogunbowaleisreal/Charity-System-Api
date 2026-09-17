@@ -81,7 +81,7 @@ export class CampaignCategoryController {
     // -------------------------------------------
     getCampaignCategoryById = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { categoryId } = req.params;
+            const categoryId = req.params.categoryId as string;
 
             const category = await this.categoryService.getCategoryById(categoryId);
 

@@ -37,7 +37,7 @@ export class AccountManagementController {
     async suspendAccount(req: AdminAuthenticatedRequest, res: Response, next: NextFunction) {
         try {
             const accountId = req.admin?.adminId
-            const suspendedAccount = await accountManagementService.suspendAccount(req.params.account_id)
+            const suspendedAccount = await accountManagementService.suspendAccount(req.params.account_id, req.body.reason)
             return sendSuccessResponse(res, suspendedAccount, "account suspended successfully", HTTP_STATUS.OK,)
         } catch (err: any) {
             logger.error(err.message)
