@@ -25,6 +25,7 @@ const emailService = new ResendEmailService()
 const kycService = new KYCService();
 
 export class WithdrawalService {
+
     async withdrawFundsToWallet(
         userId: string,
         campaignId: string,
@@ -32,26 +33,23 @@ export class WithdrawalService {
         amount: number,
         narration?: string
     ) {
+        const session = await startSession();
         try {
-
-            const session = await startSession();
             session.startTransaction();
 
             const isVerified = await this.verifyWalletPin(userId, walletPin);
             if (!isVerified) throw new Error("Invalid wallet pin");
 
-            const user = await Account.findById(userId);
+            const user = await Account.findById(userId).session(session);
             if (!user) throw new Error("User not found");
 
-            const reference = `WIT_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`; //crypto.randomUUID();
+            const reference = `WIT_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
 
-
-            const campaign = await Campaign.findById(campaignId);
-
+            const campaign = await Campaign.findById(campaignId).session(session);
             if (!campaign) throw new Error("Campaign not found");
-            //  if (campaign.status == "ongoing" || campaign.status == "upcoming") throw new AppError("Campaign is still ongoing or has not started yet", 400);
 
             if (campaign.owner.toString() != userId) throw new AppError("Unauthorized, you are not the owner of this campaign", 401);
+
             const daysSinceCreation =
                 (Date.now() - new Date(campaign.createdAt).getTime()) / (1000 * 60 * 60 * 24);
 
@@ -62,45 +60,41 @@ export class WithdrawalService {
                 );
             }
 
-            const userWallet = await Wallet.findOne({
-                userId: userId,
-            });
-
+            const userWallet = await Wallet.findOne({ userId: userId }).session(session);
             if (!userWallet) throw new Error("Wallet not found");
-
-            if (campaign.availableBalance < amount) {
-                throw new Error("Insufficient balance on campaign",);
-            }
 
             // if (user.twoFactorWithdrawalEnabled == true) {
             //     const otp = await otpService.generateAndSendOTP(user.email, "2fa");
-
             //     return {
             //         "success": true,
             //         "message": "Just one more step! We've sent a verification code to your email. Please check your inbox and enter the code to complete your withdrawl.",
             //         "statusCode": HTTP_STATUS.NO_CONTENT
             //     }
-
-
             // }
 
-
-            await Campaign.updateOne(
-                { _id: campaignId },
+            // Atomic check-and-decrement: prevents double-spend from concurrent requests
+            const updatedCampaign = await Campaign.findOneAndUpdate(
+                {
+                    _id: campaignId,
+                    owner: userId,
+                    availableBalance: { $gte: amount }
+                },
                 {
                     $inc: {
                         availableBalance: -amount,
                         totalWithdrawn: amount
                     }
                 },
-                { session }
+                { session, new: true }
             );
+
+            if (!updatedCampaign) {
+                throw new Error("Insufficient balance on campaign");
+            }
 
             await Wallet.updateOne(
                 { userId },
-                {
-                    $inc: { availableBalance: amount }
-                },
+                { $inc: { availableBalance: amount } },
                 { session }
             );
 
@@ -128,29 +122,161 @@ export class WithdrawalService {
                     amount,
                     reference,
                     campaignTitle: campaign.title,
-                    availableBalanceAfter: campaign.availableBalance - amount,
+                    availableBalanceAfter: updatedCampaign.availableBalance,
                 },
                 session,
             });
 
+            await session.commitTransaction();
+
+            // Non-critical side effects: fire after commit so a notification failure
+            // can't roll back a successful withdrawal
             await NotificationService.createForUser({
                 userId: userWallet.userId as Types.ObjectId,
                 title: "Withdrawal",
                 message: `You have successfully withdrawn ${amount} from ${campaign.title} campaign`,
                 type: "WITHDRAWAL"
-            })
+            });
             await PushNotificationService.sendToUser(userId, {
                 title: "Withdrawal",
                 body: `You have successfully withdrawn ${amount} from ${campaign.title} campaign`,
             });
 
-            await session.commitTransaction();
         } catch (err) {
-            // await session.abortTransaction();
+            await session.abortTransaction();
             throw err;
+        } finally {
+            await session.endSession();
         }
-
     }
+
+
+    // async withdrawFundsToWallet(
+    //     userId: string,
+    //     campaignId: string,
+    //     walletPin: string,
+    //     amount: number,
+    //     narration?: string
+    // ) {
+    //     try {
+
+    //         const session = await startSession();
+    //         session.startTransaction();
+
+    //         const isVerified = await this.verifyWalletPin(userId, walletPin);
+    //         if (!isVerified) throw new Error("Invalid wallet pin");
+
+    //         const user = await Account.findById(userId);
+    //         if (!user) throw new Error("User not found");
+
+    //         const reference = `WIT_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`; //crypto.randomUUID();
+
+
+    //         const campaign = await Campaign.findById(campaignId);
+
+    //         if (!campaign) throw new Error("Campaign not found");
+    //         //  if (campaign.status == "ongoing" || campaign.status == "upcoming") throw new AppError("Campaign is still ongoing or has not started yet", 400);
+
+    //         if (campaign.owner.toString() != userId) throw new AppError("Unauthorized, you are not the owner of this campaign", 401);
+    //         const daysSinceCreation =
+    //             (Date.now() - new Date(campaign.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+
+    //         if (daysSinceCreation < 5) {
+    //             throw new AppError(
+    //                 "Withdrawals are only allowed 5 days after the campaign was created",
+    //                 400
+    //             );
+    //         }
+
+    //         const userWallet = await Wallet.findOne({
+    //             userId: userId,
+    //         });
+
+    //         if (!userWallet) throw new Error("Wallet not found");
+
+    //         if (campaign.availableBalance < amount) {
+    //             throw new Error("Insufficient balance on campaign",);
+    //         }
+
+    //         // if (user.twoFactorWithdrawalEnabled == true) {
+    //         //     const otp = await otpService.generateAndSendOTP(user.email, "2fa");
+
+    //         //     return {
+    //         //         "success": true,
+    //         //         "message": "Just one more step! We've sent a verification code to your email. Please check your inbox and enter the code to complete your withdrawl.",
+    //         //         "statusCode": HTTP_STATUS.NO_CONTENT
+    //         //     }
+
+
+    //         // }
+
+
+    //         await Campaign.updateOne(
+    //             { _id: campaignId },
+    //             {
+    //                 $inc: {
+    //                     availableBalance: -amount,
+    //                     totalWithdrawn: amount
+    //                 }
+    //             },
+    //             { session }
+    //         );
+
+    //         await Wallet.updateOne(
+    //             { userId },
+    //             {
+    //                 $inc: { availableBalance: amount }
+    //             },
+    //             { session }
+    //         );
+
+    //         await WalletTransaction.create([{
+    //             wallet: userWallet._id,
+    //             amount,
+    //             type: "user",
+    //             status: "successful",
+    //             fullName: `${user.firstName} ${user.lastName}`,
+    //             category: "wallet_credit",
+    //             provider: "flutterwave",
+    //             method: "wallet",
+    //             narration,
+    //             reference
+    //         }], { session });
+
+    //         await logAudit({
+    //             actorType: ActorType.USER,
+    //             actorId: userId,
+    //             actorEmail: user.email,
+    //             action: AUDIT_ACTIONS.PAYOUT.WITHDRAWN_TO_WALLET,
+    //             targetType: "Campaign",
+    //             targetId: campaignId,
+    //             metadata: {
+    //                 amount,
+    //                 reference,
+    //                 campaignTitle: campaign.title,
+    //                 availableBalanceAfter: campaign.availableBalance - amount,
+    //             },
+    //             session,
+    //         });
+
+    //         await NotificationService.createForUser({
+    //             userId: userWallet.userId as Types.ObjectId,
+    //             title: "Withdrawal",
+    //             message: `You have successfully withdrawn ${amount} from ${campaign.title} campaign`,
+    //             type: "WITHDRAWAL"
+    //         })
+    //         await PushNotificationService.sendToUser(userId, {
+    //             title: "Withdrawal",
+    //             body: `You have successfully withdrawn ${amount} from ${campaign.title} campaign`,
+    //         });
+
+    //         await session.commitTransaction();
+    //     } catch (err) {
+    //         // await session.abortTransaction();
+    //         throw err;
+    //     }
+
+    // }
 
     static isMoreThan5DaysAfter(otherDate: Date) {
         const diffMs = Date.now() - new Date(otherDate).getTime();

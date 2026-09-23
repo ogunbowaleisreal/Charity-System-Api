@@ -41,8 +41,13 @@ async function startServer() {
 
 startServer();
 
+let isShuttingDown = false;
+
+
 // Graceful shutdown
 const gracefulShutdown = async (signal: string) => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
     console.log(`\nReceived ${signal}. Shutting down gracefully...`);
 
     // Stop accepting new connections
