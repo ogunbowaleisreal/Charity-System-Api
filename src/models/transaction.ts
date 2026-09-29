@@ -41,6 +41,10 @@ export interface IWalletTransaction extends Document {
     providerReference?: string; // FlutterWave reference
     providerTransactionId: number;
 
+    paymentCurrency?: string;
+    paymentAmount?: number;
+    exchangeRate?: number;
+
     bankDetails?: {
         bankName: string;
         accountNumber: string;
@@ -132,6 +136,10 @@ const WalletTransactionSchema = new Schema<IWalletTransaction>(
             type: Number,
             // required: true,
         },
+
+        paymentCurrency: { type: String, default: "NGN" },
+        paymentAmount: { type: Number },
+        exchangeRate: { type: Number, default: 1 },
 
         serviceCharge: {
             type: Number,

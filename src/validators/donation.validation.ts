@@ -52,6 +52,9 @@ export const initiateDonationSchema = z
         donateAnonymously: z
             .boolean()
             .default(false),
+        isInternational: z
+            .boolean()
+            .default(false),
     })
     // .superRefine((data, ctx) => {
     //     // Require a name unless donating anonymously

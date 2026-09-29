@@ -31,10 +31,18 @@ export type googlePayDetails = {
     campaignId: string;
 }
 
+const SUPPORTED_CURRENCIES = {
+    NGN: { min: 100 },   // adjust to your own minimums
+    USD: { min: 1 },
+} as const;
+type SupportedCurrency = keyof typeof SUPPORTED_CURRENCIES;
+
 export class DonationService {
     // =========================
     // 🔹 INITIATE DONATION
     // =========================
+
+
     async initiateDonation(userId: string, data: {
         campaignId: string;
         email: string;
@@ -44,6 +52,7 @@ export class DonationService {
         amount: number;
         gratuityPercentage?: number
         donateAnonymously?: boolean
+        isInternational?: boolean;
         // paymentMethod: "card" | "bank_transfer";
     }) {
         if (!data.email && data.donateAnonymously == true) throw new Error("Email is required for anonymous donations")
@@ -54,12 +63,12 @@ export class DonationService {
         }
         data.email = data.email.trim().toLowerCase();
 
-        // if (data.phoneNumber && !isValidPhoneNumber(data.phoneNumber)) {
-        //     throw new Error("Invalid phone number provided");
-        // }
-        // if (data.phoneNumber) {
-        //     data.phoneNumber = normalizePhoneNumber(data.phoneNumber);
-        // }
+        const currency: SupportedCurrency = data.isInternational ? "USD" : "NGN";
+        const scope = data.isInternational ? "international" : "local";
+
+        if (data.amount < SUPPORTED_CURRENCIES[currency].min) {
+            throw new Error(`Minimum donation is ${SUPPORTED_CURRENCIES[currency].min} ${currency}`);
+        }
 
         const reference = `DON_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`; //crypto.randomUUID();
         const user = await Account.findById(userId) as any
@@ -75,11 +84,20 @@ export class DonationService {
         if (campaign.isActive == false) throw new Error("Campaign is not active or has been suspended, ");
         if (campaign.status == "completed" || campaign.status == "upcoming") throw new Error("Campaign is still upcoming or has been completed");
 
-        const amountData = this.computeDonationBreakdown(data.amount, data.gratuityPercentage || 0);
+        const rate = currency === "NGN" ? 1 : await flutterwave.getUsdNgnRate();
+        if (!rate || rate <= 0) throw new Error("Exchange rate not configured");
+
+        const breakdown = this.computeDonationBreakdown(data.amount, data.gratuityPercentage || 0);
+        const toNgn = (n: number) => Math.round(n * rate * 100) / 100;
+
+        const amountData = {
+            donationAmount: toNgn(breakdown.donationAmount),
+            gratuityAmount: toNgn(breakdown.gratuityAmount),
+            gratuityPercentage: breakdown.gratuityPercentage,
+            totalAmount: toNgn(breakdown.totalAmount),
+        };
+
         const serviceFee = await ServiceFeeConfig.findOne({ isActive: true })
-        // if(!serviceFee) 
-
-
         const transaction = await WalletTransaction.create({
             //walletId: user.walletId,
             category: "donation",
@@ -87,6 +105,9 @@ export class DonationService {
             status: "pending",
             amount: amountData.totalAmount,
             currency: "NGN",
+            paymentCurrency: currency,
+            paymentAmount: breakdown.totalAmount,
+            exchangeRate: rate,
             method: "bank_transfer",
             gratuityAmount: amountData.gratuityAmount,
             gratuityPercentage: amountData.gratuityPercentage,
@@ -121,8 +142,9 @@ export class DonationService {
         // 2. Initiate payment with Flutterwave
         const res = await flutterwave.initiateCardPayment({
             txRef: reference,
-            amount: amountData.totalAmount, // convert to kobo
-            currency: "NGN",
+            amount: breakdown.totalAmount,
+            // amount: amountData.totalAmount, // convert to kobo
+            currency,
             redirectUrl: `${process.env.REDIRECT_URL}`,
             customerEmail: data.email,
             customerName: data.donateAnonymously ? "Anonymous" : `${data.firstname} ${data.lastname}`,
@@ -142,7 +164,7 @@ export class DonationService {
                 transactionId: transaction._id.toString(),
                 reference,
                 amount: amountData.totalAmount,
-                currency: "NGN",
+                currency,
                 isAnonymous: !!data.donateAnonymously,
                 donorType: user ? "user" : "guest",
             },
@@ -306,39 +328,6 @@ export class DonationService {
             //donorEmailSnapshot: paymentDetails.donorEmailSnapshot,
         });
     }
-
-    // async getUserDonations(userId: string, query: donationFilter) {
-    //     const { page, limit } = query;
-
-    //     const donations = await Donation.find({ donor: userId, type: "user" })
-    //         .populate("donor", "firstName lastName profilePicture logo country state")
-    //         .populate({
-    //             path: "campaign",
-    //             select: "title image description owner",
-    //             populate: {
-    //                 path: "owner",
-    //                 select: "firstName lastName profilePicture logo email country state",
-    //             },
-    //         })
-    //         .sort({ createdAt: -1 })
-    //         .skip((page - 1) * limit)
-    //         .limit(limit);
-
-    //     const total = await Donation.countDocuments({ donor: userId, type: "user" });
-    //     const totalPages = Math.ceil(total / limit);
-
-    //     return {
-    //         donations,
-    //         pagination: {
-    //             current_page: page,
-    //             total_pages: totalPages,
-    //             per_page: limit,
-    //             total_records: total,
-    //             has_next_page: page < totalPages,
-    //             has_prev_page: page > 1,
-    //         },
-    //     };
-    // }
 
     async getUserDonations(userId: string, query: donationFilter) {
         const { page, limit } = query;

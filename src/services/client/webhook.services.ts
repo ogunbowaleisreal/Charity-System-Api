@@ -346,6 +346,9 @@ export class webhookServices {
                     },
                 });
 
+                //  await session.commitTransaction();
+                return { transaction, status: "failed" };
+
                 return { transaction, status: "failed" };
             }
             default: {
@@ -401,128 +404,153 @@ export class webhookServices {
                         const response = await flutterwave.verifyTransaction(data.id);
                         console.log(response)
 
-                        if (response.status == "successful") {
+                        const ok =
+                            response.status === "successful" &&
+                            response.tx_ref === transaction.reference &&
+                            response.currency === transaction.paymentCurrency &&
+                            Number(response.amount) >= Number(transaction.paymentAmount);
 
-                            transaction.status = "successful";
-                            transaction.providerReference = data.flw_ref;
-                            transaction.providerTransactionId = data.id;
-                            transaction.updatedAt = new Date();
-
-
-                            await transaction.save({ session });
-
-                            logger.info(
-                                "Transaction successful, not trying to update campaign and create donation",
-                                { reference: data.tx_ref }
-                            );
-
-                            const {
-                                donationAmount,
-                                gratuityAmount,
-                                gratuityPercentage,
-                                feeType,
-                                feeValue
-                            } = transaction.metadata as any;
-
-                            const donationCalc = await this.calculateDonation(
-                                donationAmount,
-                                feeType,
-                                feeValue
-                            );
-                            transaction.netAmount = donationCalc.netAmount;
-                            await transaction.save({ session });
-
-
-                            const donation = await Donation.create([{
-                                campaign: transaction.campaignId,
-                                amount: donationCalc.grossAmount,
-                                serviceFee: donationCalc.fee,
-                                netAmount: donationCalc.netAmount,
-                                type: transaction.type,
-                                donor: transaction.userId,
-                                donorName: transaction.fullName,
-                                currency: "NGN",
-                                paymentProvider: "flutterwave",
-                                reference: transaction.reference,
-                                donorPhoneNumber: transaction.phoneNumber,
-                                isAnonymous: transaction.isAnonymous, //== "Anonymous" ? true : false,
-                                //providerR
-                                paymentStatus: "success",
-                                paymentStatusExtended: "initialized",
-                                settlementStatus: "settled",
-                                allocationStatus: "allocated_to_campaign",
-                                paymentMethod: transaction.method,
-                                campaignOwner: campaign.owner,
-                            }], { session });
-
-                            if (gratuityAmount > 0) {
-                                await Gratuity.create([{
-                                    amount: gratuityAmount,
-                                    percentage: gratuityPercentage,
-                                    userId: transaction.userId,
-                                    fullName: transaction.fullName,
-                                    transactionReference: transaction.reference,
-                                    campaign: transaction.campaignId,
-                                    //purposeTitle: transaction.metadata?.purposeTitle,
-                                    currency: "NGN",
-                                }], { session });
-                            }
-
-                            if (donationCalc.fee > 0) {
-                                await ServiceCharge.create([{
-                                    amount: donationCalc.fee,
-                                    feeType,
-                                    feeValue,
-                                    userId: transaction.userId,
-                                    fullName: transaction.fullName,
-                                    transactionReference: transaction.reference,
-                                    campaign: transaction.campaignId,
-                                    currency: "NGN",
-                                }], { session });
-                            }
-
-                            await Campaign.updateOne(
-                                { _id: transaction.campaignId },
-                                {
-                                    $inc: {
-                                        availableBalance: donationCalc.netAmount,
-                                        donationCount: 1,
-                                        totalRaised: donationCalc.grossAmount
-                                    }
-                                },
-                                { session }
-                            );
-
-                            await logAudit({
-                                actorType: transaction.userId ? ActorType.USER : ActorType.USER, // see note below
-                                actorId: transaction.userId ? transaction.userId.toString() : `guest:${transaction.reference}`,
-                                action: AUDIT_ACTIONS.DONATION.CREATED,
-                                targetType: "Campaign",
-                                targetId: campaign._id.toString(),
-                                metadata: {
-                                    donationId: donation[0]._id.toString(),
-                                    transactionRef: transaction.reference,
-                                    grossAmount: donationCalc.grossAmount,
-                                    netAmount: donationCalc.netAmount,
-                                    serviceFee: donationCalc.fee,
-                                    gratuityAmount: gratuityAmount || 0,
-                                    isAnonymous: transaction.isAnonymous,
-                                    paymentProvider: "flutterwave",
-                                },
-                                session,
+                        if (!ok) {
+                            logger.error("Verification mismatch", {
+                                reference: data.tx_ref,
+                                expected: { amount: transaction.paymentAmount, currency: transaction.paymentCurrency },
+                                got: { amount: response.amount, currency: response.currency, tx_ref: response.tx_ref },
                             });
-                            if (transaction.userId) {
-                                PushNotificationService.sendToUser(
-                                    transaction.userId.toString(),
-                                    {
-                                        title: "Donation successful",
-                                        body: `You have successfully donated ${donationCalc.grossAmount} to ${campaign.title}`,
-                                    }
-                                ).catch(err => {
-                                    logger.error("Push notification failed", err);
-                                });
+                            await session.abortTransaction();   // stays pending for manual review
+                            return;
+                        }
 
-                            }
+                        // const amountMatches = Number(response.amount) >= Number(transaction.grossAmount);
+                        // const currencyMatches = response.currency === transaction.currency;
+                        // const refMatches = response.tx_ref === transaction.reference;
+
+                        // if (response.status !== "successful" || !amountMatches || !currencyMatches || !refMatches) {
+
+                        transaction.status = "successful";
+                        transaction.providerReference = data.flw_ref;
+                        transaction.providerTransactionId = data.id;
+                        transaction.updatedAt = new Date();
+
+
+                        await transaction.save({ session });
+
+                        logger.info(
+                            "Transaction successful, not trying to update campaign and create donation",
+                            { reference: data.tx_ref }
+                        );
+
+                        const {
+                            donationAmount,
+                            gratuityAmount,
+                            gratuityPercentage,
+                            feeType,
+                            feeValue
+                        } = transaction.metadata as any;
+
+                        const donationCalc = await this.calculateDonation(
+                            donationAmount,
+                            feeType,
+                            feeValue
+                        );
+                        transaction.netAmount = donationCalc.netAmount;
+                        await transaction.save({ session });
+
+
+                        const donation = await Donation.create([{
+                            campaign: transaction.campaignId,
+                            amount: donationCalc.grossAmount,
+                            serviceFee: donationCalc.fee,
+                            netAmount: donationCalc.netAmount,
+                            type: transaction.type,
+                            donor: transaction.userId,
+                            donorName: transaction.fullName,
+                            currency: "NGN",
+                            paymentCurrency: transaction.paymentCurrency ?? "NGN",
+                            paymentAmount: transaction.paymentAmount ?? transaction.grossAmount,
+                            exchangeRate: transaction.exchangeRate ?? 1,
+                            paymentProvider: "flutterwave",
+                            reference: transaction.reference,
+                            donorPhoneNumber: transaction.phoneNumber,
+                            isAnonymous: transaction.isAnonymous, //== "Anonymous" ? true : false,
+                            //providerR
+                            paymentStatus: "success",
+                            paymentStatusExtended: "initialized",
+                            settlementStatus: "settled",
+                            allocationStatus: "allocated_to_campaign",
+                            paymentMethod: transaction.method,
+                            campaignOwner: campaign.owner,
+                        }], { session });
+
+                        if (gratuityAmount > 0) {
+                            await Gratuity.create([{
+                                amount: gratuityAmount,
+                                percentage: gratuityPercentage,
+                                userId: transaction.userId,
+                                fullName: transaction.fullName,
+                                transactionReference: transaction.reference,
+                                campaign: transaction.campaignId,
+                                //purposeTitle: transaction.metadata?.purposeTitle,
+                                currency: "NGN",
+                            }], { session });
+                        }
+
+                        if (donationCalc.fee > 0) {
+                            await ServiceCharge.create([{
+                                amount: donationCalc.fee,
+                                feeType,
+                                feeValue,
+                                userId: transaction.userId,
+                                fullName: transaction.fullName,
+                                transactionReference: transaction.reference,
+                                campaign: transaction.campaignId,
+                                currency: data.currency,
+                            }], { session });
+                        }
+
+                        await Campaign.updateOne(
+                            { _id: transaction.campaignId },
+                            {
+                                $inc: {
+                                    availableBalance: donationCalc.netAmount,
+                                    donationCount: 1,
+                                    totalRaised: donationCalc.grossAmount
+                                }
+                            },
+                            { session }
+                        );
+
+                        await logAudit({
+                            actorType: transaction.userId ? ActorType.USER : ActorType.USER, // see note below
+                            actorId: transaction.userId ? transaction.userId.toString() : `guest:${transaction.reference}`,
+                            action: AUDIT_ACTIONS.DONATION.CREATED,
+                            targetType: "Campaign",
+                            targetId: campaign._id.toString(),
+                            metadata: {
+                                donationId: donation[0]._id.toString(),
+                                transactionRef: transaction.reference,
+                                grossAmount: donationCalc.grossAmount,
+                                netAmount: donationCalc.netAmount,
+                                currency: "NGN",
+                                paymentCurrency: transaction.paymentCurrency,
+                                paymentAmount: transaction.paymentAmount,
+                                serviceFee: donationCalc.fee,
+                                gratuityAmount: gratuityAmount || 0,
+                                isAnonymous: transaction.isAnonymous,
+                                paymentProvider: "flutterwave",
+                            },
+                            session,
+                        });
+                        if (transaction.userId) {
+                            PushNotificationService.sendToUser(
+                                transaction.userId.toString(),
+                                {
+                                    title: "Donation successful",
+                                    body: `You have successfully donated ${transaction.paymentCurrency ?? "NGN"} ${transaction.paymentAmount ?? donationCalc.grossAmount} to ${campaign.title}`,
+                                }
+                            ).catch(err => {
+                                logger.error("Push notification failed", err);
+                            });
+
                         }
 
                         logger.info("Transaction successful", { reference: data.tx_ref });
@@ -568,7 +596,10 @@ export class webhookServices {
                             session,
                         });
 
+                        await session.commitTransaction();
                         return { transaction, status: "failed" };
+
+                        //return { transaction, status: "failed" };
                     }
 
                     default: {

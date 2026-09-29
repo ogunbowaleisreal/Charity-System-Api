@@ -151,9 +151,10 @@ const mockNameEnquiryResponse = (bank_code: string, accountNumber: string) => {
 export class FlutterwaveService {
     private client: AxiosInstance;
     private provider = PROVIDERS.FLUTTERWAVE;
-    // private webhookService = new webhookServices()
-    // private webhookService
-    //private webhookService
+    private rateCache: { rate: number; at: number } | null = null;
+    private static RATE_TTL_MS = 30 * 60 * 1000; // refresh every 30 min
+    private static RATE_BUFFER = 0.98;           // credit 2% below the fetched rate
+
 
 
     constructor() {
@@ -275,94 +276,6 @@ export class FlutterwaveService {
             }
         }
     }
-    // async handleTransferCompleted(
-    //     payload: IFlutterwaveTransferCompletedWebhook
-    // ) {
-    //     const data = payload.data;
-    //     const status = data.status;
-
-    //     console.log(payload);
-
-    //     switch (status) {
-    //         case "SUCCESSFUL": {
-    //             logger.info("Transfer successful");
-
-    //             const transaction = await WalletTransaction.findOne({ reference: data.reference });
-    //             if (!transaction) throw new Error("Transaction not found");
-    //             if (transaction.status === "successful") { logger.info("Transaction already successful", { reference: data.reference }); return }
-    //             if (transaction.status === "failed") { logger.info("Transaction already failed", { reference: data.reference }); return }
-
-    //             transaction.status = "successful";
-    //             transaction.providerReference = data.reference;
-    //             transaction.providerTransactionId = data.id;
-
-    //             await transaction.save();
-
-    //             await Wallet.updateOne(
-    //                 { userId: transaction.userId },
-    //                 { $inc: { lockedBalance: -data.amount } }
-    //             );
-
-    //             // const userWallet = await Wallet.findOne({ userId: transaction.userId });
-    //             // if (!userWallet) throw new Error("Wallet not found");
-
-    //             // userWallet.lockedBalance -= data.amount;
-    //             // await userWallet.save();
-
-    //             const request = await WithdrawalRequest.findOne({ reference: data.reference });
-    //             if (!request) throw new Error("Withdrawal request not found");
-
-    //             request.status = "completed";
-    //             request.providerReference = data.reference;
-    //             request.providerTransactionId = data.id.toString();
-
-    //             await request.save();
-
-    //             logger.info("Transfer successful", { reference: data.reference });
-
-    //             return { transaction, status: "successful" };
-    //         }
-
-    //         case "FAILED": {
-    //             logger.info("Transfer failed");
-
-    //             const transaction = await WalletTransaction.findOne({ reference: data.reference });
-    //             if (!transaction) throw new Error("Transaction not found");
-
-    //             if (transaction.status === "successful") { logger.info("Transaction already successful", { reference: data.reference }); return }
-    //             if (transaction.status === "failed") { logger.info("Transaction already failed", { reference: data.reference }); return }
-
-    //             transaction.status = "failed";
-    //             transaction.providerReference = data.reference;
-    //             transaction.providerTransactionId = data.id;
-
-    //             await transaction.save();
-
-    //             await Wallet.updateOne(
-    //                 { userId: transaction.userId },
-    //                 {
-    //                     $inc: {
-    //                         availableBalance: data.amount,
-    //                         lockedBalance: -data.amount
-    //                     }
-    //                 }
-    //             );
-
-    //             // const userWallet = await Wallet.findOne({ userId: transaction.userId });
-    //             // if (!userWallet) throw new Error("Wallet not found");
-
-    //             // userWallet.availableBalance += data.amount;
-    //             // userWallet.lockedBalance -= data.amount;
-    //             // await userWallet.save();
-
-    //             return { transaction, status: "failed" };
-    //         }
-    //         default: {
-    //             logger.warn("Unhandled charge status", { status });
-    //             return null;
-    //         }
-    //     }
-    // }
 
     private isSuccessResponse(status: string): boolean {
         return status === "success";
@@ -588,6 +501,54 @@ export class FlutterwaveService {
         }
     }
 
+    // ---- USD → NGN rate (cached) ----
+
+
+    /** Returns NGN per 1 USD, with the safety buffer already applied. */
+    async getUsdNgnRate(): Promise<number> {
+        const now = Date.now();
+        if (this.rateCache && now - this.rateCache.at < FlutterwaveService.RATE_TTL_MS) {
+            return this.rateCache.rate;
+        }
+
+        try {
+            const response = await this.client.get("/transfers/rates", {
+                params: { amount: 1, source_currency: "NGN", destination_currency: "USD" },
+            });
+
+            if (response.status !== 200 || !this.isSuccessResponse(response.data?.status)) {
+                throw new Error(response.data?.message || "Rate request failed");
+            }
+
+            // NGN needed to send 1 USD
+            const live = Number(response.data?.data?.source?.amount);
+
+            // sanity check so a bad response can't zero out or explode your credits
+            if (!live || live < 100 || live > 10000) {
+                throw new Error(`Unreasonable rate returned: ${live}`);
+            }
+
+            const rate = Math.round(live * FlutterwaveService.RATE_BUFFER * 100) / 100;
+            this.rateCache = { rate, at: now };
+            logger.info("Flutterwave: USD/NGN rate refreshed", { live, rate });
+            return rate;
+        } catch (error: any) {
+            logger.error("Flutterwave: rate fetch failed, using fallback", { message: error?.message });
+
+            if (this.rateCache) return this.rateCache.rate; // last known good
+
+            const fallback = Number(process.env.USD_NGN_RATE);
+            if (!fallback || fallback <= 0) {
+                throw new AppError(
+                    "Exchange rate unavailable, please try again shortly",
+                    503,
+                    ERROR_CODES.SERVICE_UNAVAILABLE
+                );
+            }
+            return fallback;
+        }
+    }
+
     // Initiate Card Payment
     async initiateCardPayment(data: {
         txRef: string;
@@ -600,6 +561,8 @@ export class FlutterwaveService {
         link_expiration: string
     }): Promise<FlutterwavePaymentInitResponse> {
         try {
+
+            const currency = data.currency || "NGN";
             const payload: any = {
                 tx_ref: data.txRef,
                 amount: data.amount,
@@ -611,12 +574,17 @@ export class FlutterwaveService {
                     phonenumber: data.customerPhone,
                 },
                 customizations: {
-                    title: "Wallet Funding",
-                    description: "Fund your wallet",
+                    title: "Donation",           // yours says "Wallet Funding"
+                    description: "Support this campaign",
                 },
-                payment_options: "card", // Only card
+                payment_options: currency === "NGN"
+                    ? "card,ussd,banktransfer"
+                    : "card",
+                // payment_options: ["card", "ussd", "mobilemoneyghana"],
                 link_expiration: data.link_expiration
             };
+
+            logger.info("Initiating Flutterwave card payment:", payload);
 
             const response = await this.client.post("/payments", payload);
 

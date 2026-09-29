@@ -51,6 +51,12 @@ export function isValidPhoneNumber(phone: string): boolean {
     return intlRegex.test(trimmed) || localRegex.test(trimmed);
 }
 
+let cached: { rate: number; at: number } | null = null;
+const TTL = 30 * 60 * 1000;   // refresh every 30 minutes
+const BUFFER = 0.98;          // credit 2% below market to cover spread/fees
+
+
+
 /**
  * Normalizes a valid Nigerian number to international E.164 format
  * (+234XXXXXXXXXX). Call isValidPhoneNumber() first — this doesn't

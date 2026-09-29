@@ -59,6 +59,10 @@ export interface IDonation extends Document {
 
     settlementStatus: "unsettled" | "settled" | "failed"; // NEW
 
+    paymentCurrency?: string;
+    paymentAmount?: number;
+    exchangeRate?: number;
+
     allocationStatus:
     | "unallocated"
     | "allocated_to_campaign"
@@ -137,6 +141,10 @@ const DonationSchema = new Schema<IDonation>(
             type: Number,
             default: 0,
         },
+
+        paymentCurrency: { type: String, default: "NGN" },
+        paymentAmount: { type: Number },
+        exchangeRate: { type: Number, default: 1 },
 
         netAmount: {
             type: Number,

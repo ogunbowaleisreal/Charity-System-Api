@@ -17,6 +17,7 @@ export type initiateDonation = {
     amount: number;
     paymentMethod: "card" | "bank_transfer";
     gratuityPercentage?: number;
+    isInternational?: boolean;
 }
 
 export type googlePayDetails = {
